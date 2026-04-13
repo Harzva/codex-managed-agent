@@ -1,26 +1,41 @@
 # Codex-Managed-Agent VS Code Extension
 
-This extension now renders a native VS Code webview for `Codex-Managed-Agent` in the editor area instead of embedding the browser app through an iframe.
+`Codex-Managed-Agent` is a VS Code extension for managing Codex agent threads inside the editor.
+
+It provides a native VS Code surface for:
+
+- browsing and filtering threads
+- pinning and grouping active work
+- inspecting logs and conversation history
+- running lifecycle actions
+- opening and controlling the local dashboard service
 
 ## What it does
 
-- Opens `Codex-Managed-Agent` as an editor tab in the center area
-- Opens a native sidebar dashboard rendered by the extension
+- Opens `Codex-Managed-Agent` in the editor area, sidebar, or bottom panel
 - Detects whether the local `Codex-Managed-Agent` server is reachable
-- Can auto-start the FastAPI server on `8787`
-- Lets you reopen the dashboard in the browser when needed
+- Can auto-start the local FastAPI server on `8787`
+- Supports thread search, filter, sort, and pin workflows
+- Includes an inspector drawer with conversation, logs, and command helpers
+- Supports single-thread and batch lifecycle actions
 
-## How to use
+## Current status
 
-1. Make sure the FastAPI app is running:
+This extension is currently a preview build intended for local and team workflows.
+
+It works best when paired with the local `codex_manager` service that exposes thread and log data.
+
+## Development usage
+
+1. Start the local service:
 
    ```bash
-   cd /home/clashuser/hzh/work_bo/codex_manager
+   cd <your-workspace>/codex_manager
    source .venv/bin/activate
    uvicorn codex_manager.app:app --reload --port 8787
    ```
 
-2. In VS Code, open the `codex_manager/vscode-extension` folder
+2. In VS Code, open this extension folder
 3. Press `F5`
 4. Choose `Run Codex Agent Extension` if VS Code asks for a launch target
 5. A new `Extension Development Host` window opens
@@ -44,7 +59,7 @@ Notes:
 
 If the server is not running, the extension will try to start it automatically when the panel opens.
 
-## Setting
+## Settings
 
 - `codexAgent.baseUrl`
   - default: `http://127.0.0.1:8787/`
@@ -54,10 +69,17 @@ If the server is not running, the extension will try to start it automatically w
   - starts the local FastAPI service when the panel cannot connect
 - `codexAgent.pythonPath`
   - optional override for the Python binary used to launch the server
+- `codexAgent.serverRoot`
+  - optional absolute path to the local `codex_manager` server root
 
 ## Commands
 
-- `Codex-Managed-Agent: Focus Panel`
+- `Codex-Managed-Agent: Open Dashboard`
+- `Codex-Managed-Agent: Show in Sidebar`
+- `Codex-Managed-Agent: Show in Bottom Panel`
+- `Codex-Managed-Agent: Open to Side`
+- `Codex-Managed-Agent: Full Screen`
+- `Codex-Managed-Agent: Move to New Window`
 - `Codex-Managed-Agent: Refresh Panel`
 - `Codex-Managed-Agent: Open in Browser`
 - `Codex-Managed-Agent: Start Local Server`
@@ -67,7 +89,7 @@ If the server is not running, the extension will try to start it automatically w
 Local installable package:
 
 ```bash
-cd /home/clashuser/hzh/work_bo/codex_manager/vscode-extension
+cd /path/to/codex-managed-agent
 npx @vscode/vsce package
 ```
 
@@ -84,23 +106,20 @@ Then install it in VS Code:
 3. Choose `Install from VSIX...`
 4. Select the generated `.vsix`
 
-## Publish more broadly
+## Publish to Marketplace
 
-If you want to publish beyond local VSIX install, there are two paths:
+Typical release flow:
 
-1. Private / team-only distribution
-   - keep sharing the `.vsix` file directly
-   - simplest path for internal use
+```bash
+npx @vscode/vsce package
+npx @vscode/vsce publish
+```
 
-2. Visual Studio Marketplace
-   - create a real publisher account
-   - replace `"publisher": "local"` in `package.json`
-   - create a Personal Access Token for Marketplace publishing
-   - run:
+Publishing requires:
 
-   ```bash
-   npx @vscode/vsce login <publisher-name>
-   npx @vscode/vsce publish
-   ```
+- a valid Visual Studio Marketplace publisher
+- authentication for `vsce publish`
 
-For Marketplace publishing, the extension metadata usually needs a better publisher name, repository URL, and polished README/icon assets.
+## Repository
+
+- Source: `https://github.com/Harzva/codex-managed-agent`

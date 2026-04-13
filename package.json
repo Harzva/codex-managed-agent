@@ -1,11 +1,24 @@
 {
   "name": "codex-managed-agent",
   "displayName": "Codex-Managed-Agent",
-  "description": "Open the local Codex-Managed-Agent dashboard inside VS Code.",
+  "description": "Manage Codex agent threads inside VS Code with search, lifecycle actions, inspector views, and local dashboard integration.",
   "version": "0.0.1",
-  "publisher": "local",
+  "publisher": "Harzva",
   "icon": "media/codex-agent.png",
   "license": "UNLICENSED",
+  "preview": true,
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/Harzva/codex-managed-agent.git"
+  },
+  "homepage": "https://github.com/Harzva/codex-managed-agent",
+  "bugs": {
+    "url": "https://github.com/Harzva/codex-managed-agent/issues"
+  },
+  "galleryBanner": {
+    "color": "#08111f",
+    "theme": "dark"
+  },
   "engines": {
     "vscode": "^1.90.0"
   },
@@ -13,7 +26,8 @@
     "workspace"
   ],
   "categories": [
-    "Other"
+    "Other",
+    "Productivity"
   ],
   "keywords": [
     "codex",
@@ -23,7 +37,8 @@
   ],
   "scripts": {
     "package": "npx @vscode/vsce package",
-    "publish:vsix": "npx @vscode/vsce package"
+    "publish:vsix": "npx @vscode/vsce package",
+    "publish:marketplace": "npx @vscode/vsce publish"
   },
   "activationEvents": [
     "onView:codexAgent.sidebar",
