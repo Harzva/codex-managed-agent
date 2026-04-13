@@ -3,7 +3,7 @@
   "displayName": "Codex-Managed-Agent",
   "description": "Manage Codex agent threads inside VS Code with search, lifecycle actions, inspector views, and local dashboard integration.",
   "version": "0.0.1",
-  "publisher": "Harzva",
+  "publisher": "harzva",
   "icon": "media/codex-agent.png",
   "license": "MIT",
   "preview": true,
@@ -26,8 +26,7 @@
     "workspace"
   ],
   "categories": [
-    "Other",
-    "Productivity"
+    "Other"
   ],
   "keywords": [
     "codex",
