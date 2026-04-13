@@ -1,0 +1,158 @@
+{
+  "name": "codex-managed-agent",
+  "displayName": "Codex-Managed-Agent",
+  "description": "Open the local Codex-Managed-Agent dashboard inside VS Code.",
+  "version": "0.0.1",
+  "publisher": "local",
+  "icon": "media/codex-agent.png",
+  "license": "UNLICENSED",
+  "engines": {
+    "vscode": "^1.90.0"
+  },
+  "extensionKind": [
+    "workspace"
+  ],
+  "categories": [
+    "Other"
+  ],
+  "keywords": [
+    "codex",
+    "agent",
+    "dashboard",
+    "thread-manager"
+  ],
+  "scripts": {
+    "package": "npx @vscode/vsce package",
+    "publish:vsix": "npx @vscode/vsce package"
+  },
+  "activationEvents": [
+    "onView:codexAgent.sidebar",
+    "onView:codexAgent.bottom",
+    "onCommand:codexAgent.openPanel",
+    "onCommand:codexAgent.openPanelBeside",
+    "onCommand:codexAgent.showSidebar",
+    "onCommand:codexAgent.showBottomPanel",
+    "onCommand:codexAgent.maximizeDashboard",
+    "onCommand:codexAgent.movePanelToNewWindow",
+    "onCommand:codexAgent.openExternal",
+    "onCommand:codexAgent.refreshPanel",
+    "onCommand:codexAgent.startServer"
+  ],
+  "main": "./extension.js",
+  "contributes": {
+    "configuration": {
+      "title": "Codex-Managed-Agent",
+      "properties": {
+        "codexAgent.baseUrl": {
+          "type": "string",
+          "default": "http://127.0.0.1:8787/",
+          "description": "Base URL for the running Codex-Managed-Agent web app."
+        },
+        "codexAgent.autoStartServer": {
+          "type": "boolean",
+          "default": true,
+          "description": "Automatically start the local Codex-Managed-Agent FastAPI service when the panel opens and the server is not reachable."
+        },
+        "codexAgent.pythonPath": {
+          "type": "string",
+          "default": "",
+          "description": "Optional Python executable used to launch the local Codex-Managed-Agent server. Leave empty to auto-detect .venv/bin/python3 or use python3."
+        },
+        "codexAgent.serverRoot": {
+          "type": "string",
+          "default": "",
+          "description": "Optional absolute path to the Codex Manager server root directory that contains the Python package folder `codex_manager/`."
+        }
+      }
+    },
+    "commands": [
+      {
+        "command": "codexAgent.openPanel",
+        "title": "Codex-Managed-Agent: Open Dashboard"
+      },
+      {
+        "command": "codexAgent.openExternal",
+        "title": "Codex-Managed-Agent: Open in Browser"
+      },
+      {
+        "command": "codexAgent.showSidebar",
+        "title": "Codex-Managed-Agent: Show in Sidebar"
+      },
+      {
+        "command": "codexAgent.showBottomPanel",
+        "title": "Codex-Managed-Agent: Show in Bottom Panel"
+      },
+      {
+        "command": "codexAgent.openPanelBeside",
+        "title": "Codex-Managed-Agent: Open to Side"
+      },
+      {
+        "command": "codexAgent.maximizeDashboard",
+        "title": "Codex-Managed-Agent: Full Screen"
+      },
+      {
+        "command": "codexAgent.movePanelToNewWindow",
+        "title": "Codex-Managed-Agent: Move to New Window"
+      },
+      {
+        "command": "codexAgent.refreshPanel",
+        "title": "Codex-Managed-Agent: Refresh Panel"
+      },
+      {
+        "command": "codexAgent.startServer",
+        "title": "Codex-Managed-Agent: Start Local Server"
+      }
+    ],
+    "viewsContainers": {
+      "activitybar": [
+        {
+          "id": "codexManagedAgentSidebar",
+          "title": "Codex-Managed-Agent",
+          "icon": "media/codex-agent.svg"
+        }
+      ],
+      "panel": [
+        {
+          "id": "codexManagedAgentPanel",
+          "title": "Codex-Managed-Agent",
+          "icon": "media/codex-agent.svg"
+        }
+      ]
+    },
+    "views": {
+      "codexManagedAgentSidebar": [
+        {
+          "type": "webview",
+          "id": "codexAgent.sidebar",
+          "name": "Dashboard"
+        }
+      ],
+      "codexManagedAgentPanel": [
+        {
+          "type": "webview",
+          "id": "codexAgent.bottom",
+          "name": "Dashboard"
+        }
+      ]
+    },
+    "menus": {
+      "view/title": [
+        {
+          "command": "codexAgent.refreshPanel",
+          "when": "view == codexAgent.sidebar || view == codexAgent.bottom",
+          "group": "navigation"
+        },
+        {
+          "command": "codexAgent.openPanel",
+          "when": "view == codexAgent.sidebar || view == codexAgent.bottom",
+          "group": "navigation"
+        },
+        {
+          "command": "codexAgent.maximizeDashboard",
+          "when": "view == codexAgent.bottom",
+          "group": "navigation"
+        }
+      ]
+    }
+  }
+}
