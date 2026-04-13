@@ -5,7 +5,7 @@
   "version": "0.0.1",
   "publisher": "Harzva",
   "icon": "media/codex-agent.png",
-  "license": "UNLICENSED",
+  "license": "MIT",
   "preview": true,
   "repository": {
     "type": "git",
