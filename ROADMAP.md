@@ -1,6 +1,14 @@
 # Codex-Managed-Agent Long-Range Roadmap
 
-This roadmap exists so we stop doing open-ended reactive edits and instead move in deliberate, reviewable milestones.
+This roadmap is the spine. It should stay short.
+
+Use it to answer:
+
+- what the main milestones are
+- what order we should execute them in
+- which task-plan file owns the concrete work
+
+Detailed work belongs in `task-plans/*.md`.
 
 ## North Star
 
@@ -9,139 +17,106 @@ Make `Codex-Managed-Agent` a dependable VS Code control surface for multi-thread
 - stable enough for daily use
 - structured enough to keep evolving
 - fast enough to feel responsive
-- clear enough that new features do not keep collapsing into one giant file
+- clear enough that new features do not collapse back into one giant file
 
 ## Product Principles
 
-- **One interactive board**: only one fully interactive board surface should exist at a time
-- **Server-aware, not server-fragile**: degraded state should stay usable and understandable
-- **Small, composable host modules**: host logic should be split by responsibility
-- **Board first, chrome second**: layout and interaction quality matter more than decorative additions
-- **Persistent memory**: insights, usage reports, and board preferences should survive reloads
+- **One interactive board**
+- **Server-aware, not server-fragile**
+- **Small, composable host modules**
+- **Board first, chrome second**
+- **Persistent memory**
 
 ## Milestones
 
 ### Milestone 1 — Architecture Stabilization
 
-Goal: stop the extension from growing as one tangled file.
+Goal:
 
-Targets:
+- keep the extension modular and reviewable
 
-- finish host-side modular split
-- define clean seams between host logic and webview logic
-- keep `extension.js` as a thin entry point
-- keep `panel.js` as orchestration only
-- ensure every split keeps packaging and activation intact
+Related plans:
 
-Exit criteria:
-
-- host responsibilities live in focused modules
-- webview responsibilities live in focused modules
-- adding a new feature does not require editing every major file
+- host/module cleanup is already largely completed
+- continue only when new architectural drift appears
 
 ### Milestone 2 — Board Interaction Quality
 
-Goal: make board interaction feel intentional and smooth.
+Goal:
 
-Targets:
+- make board interaction intentional, smooth, and predictable
 
-- improve drag smoothness and drop reliability
-- finish resize behavior for all supported directions
-- define clear card-size semantics for `T / S / M / L`
-- keep `Needs Human` useful without blocking the board
-- establish board-only interaction rules and remove duplicate surfaces
+Primary plan:
 
-Exit criteria:
-
-- drag and resize feel stable under normal use
-- `T / S / M / L` each have consistent density rules
-- users can manage many cards without layout confusion
+- `task-plans/board-interaction-quality-task-plan.md`
 
 ### Milestone 3 — Insight and Guidance Layer
 
-Goal: make the extension useful as a memory and reflection tool, not only a launcher.
+Goal:
 
-Targets:
+- make the extension useful as memory and workflow guidance, not only a launcher
 
-- stabilize usage report generation
-- make topic map, word cloud, and weekly shifts navigable
-- keep reports persisted locally
-- add explicit user-facing explanations for insights
-- make advice actionable instead of generic
+Primary plan:
 
-Exit criteria:
-
-- reports survive reloads
-- topic map and thread list stay linked
-- weekly report gives concrete behavior suggestions
+- `task-plans/insight-and-guidance-task-plan.md`
 
 ### Milestone 4 — Operational Reliability
 
-Goal: make background continue, looping, and server orchestration trustworthy.
+Goal:
 
-Targets:
+- make loop, background continue, and Codex visibility control trustworthy
 
-- keep background `codex exec resume` detached and observable
-- expose last result and log access clearly
-- refine degraded-state handling
-- separate “linked to Codex” from “actually running”
-- improve status semantics across cards and timelines
+Primary plans:
 
-Exit criteria:
-
-- no accidental TUI popups for background actions
-- users can tell whether a loop is armed, queued, running, or failed
-- server recovery is understandable from inside the extension
+- `task-plans/operational-reliability-task-plan.md`
+- `task-plans/codex-visibility-control-task-plan.md`
 
 ### Milestone 5 — Publishable Product Quality
 
-Goal: move from feature-rich beta to a maintainable public extension.
+Goal:
 
-Targets:
+- keep releases understandable, repeatable, and maintainable
 
-- tighten repo structure and docs
-- improve screenshots and release notes
-- define validation routines and smoke checks
-- reduce polish debt in theme/layout options
-- prepare predictable release workflow
+Related plans:
 
-Exit criteria:
+- release and doc quality work should stay aligned with the current architecture and priority docs
 
-- releases are repeatable
-- repo structure is understandable to outside contributors
-- feature work no longer depends on undocumented knowledge
+## Delivery Order
 
-## Working Rules
+### Priority 1 — Must Stabilize First
 
-### What we should keep doing
+- `task-plans/board-interaction-quality-task-plan.md`
+- `task-plans/operational-reliability-task-plan.md`
+- `task-plans/codex-visibility-control-task-plan.md`
+- `task-plans/cross-path-unified-management-task-plan.md`
 
-- make one bounded change at a time
-- validate with syntax checks and package builds
-- sync clean repo and dev workspace together
-- keep a commit checkpoint after each architectural slice
+### Priority 2 — Workflow Multipliers
 
-### What we should stop doing
+- `task-plans/prompt-rule-memo-cards-task-plan.md`
+- `task-plans/insight-and-guidance-task-plan.md`
+- `task-plans/no-editor-first-workflows-task-plan.md`
 
-- adding major new behavior before finishing architectural seams
-- stacking decorative UI ideas faster than interaction quality can keep up
-- duplicating the same surface in multiple interactive places
-- letting `panel.js` become the dumping ground again
+### Priority 3 — Multi-Agent Expansion
 
-## Near-Term Sequence
+- `task-plans/codex-multi-agent-coordination-task-plan.md`
+- `task-plans/claude-codex-team-space-task-plan.md`
 
-1. Finish host/module cleanup
-2. Revisit board interaction smoothness
-3. Normalize size-density rules and compact surfaces
-4. Stabilize insights/report persistence
-5. Revisit polish and theme variants after interaction quality is solid
+### Priority 4 — Ecosystem Extensions
 
-## Review Cadence
+- `task-plans/wechat-bot-background-service-task-plan.md`
+- `task-plans/html-ppt-visual-extensions-task-plan.md`
 
-After each milestone slice we should ask:
+## Working Rule
 
-- Did this reduce structural complexity?
-- Did this make the extension more reliable or more legible?
-- Did this improve a core workflow, not just appearance?
-- Did we validate and package successfully?
+When new work appears:
 
-If the answer is mostly “no”, it probably belongs later.
+1. decide which priority bucket it belongs to
+2. attach it to an existing `task-plan` if possible
+3. create a new `task-plan` only when the work introduces a new delivery track
+4. keep `ROADMAP.md` as the index, not the implementation dump
+
+## Immediate Focus
+
+Current focus remains:
+
+- `task-plans/board-interaction-quality-task-plan.md`
