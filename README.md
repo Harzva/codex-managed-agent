@@ -1,48 +1,54 @@
 # Codex-Managed-Agent
 
-Manage Codex threads inside VS Code with a dedicated dashboard, board view, inspector, and local runtime controls.
+<p align="center">
+  <img src="./media/codex-agent.png" alt="Codex-Managed-Agent icon" width="96" />
+</p>
 
-`Codex-Managed-Agent` is built for people who want to work across many Codex threads without treating the official sidebar as the only control surface.
+<h3 align="center">A VS Code control surface for managing Codex threads, board workflows, and local runtime behavior.</h3>
 
-## Why this extension exists
+<p align="center">
+  <strong>Board-based thread management</strong> · <strong>Inspector and logs</strong> · <strong>Loop-aware operations</strong> · <strong>Codex-linked workflow control</strong>
+</p>
 
-Codex already gives you thread-level interaction. What it does not give you well is a strong in-editor management surface for:
+## What this extension is for
+
+`Codex-Managed-Agent` is built for people who want to work across many Codex threads without treating the official Codex sidebar as the only control surface.
+
+It turns VS Code into a working surface for:
 
 - scanning many threads at once
 - grouping and pinning active work
-- watching `Needs Human` states
+- surfacing `Needs Human` items
 - inspecting logs and conversation context
-- controlling loop and background runtime behavior
-- managing work across more than one project root
-
-`Codex-Managed-Agent` is the layer that sits above those threads and turns them into an operating workspace.
+- managing local runtime behavior
+- operating across more than one project root
 
 ## Core workflows
 
-### 1. Thread management inside VS Code
+### Thread management inside VS Code
 
 Use the dashboard to:
 
 - search, filter, sort, and pin threads
-- inspect logs and conversation context
+- inspect conversation and log context
 - manage lifecycle actions
 - move between list, board, and inspector views
 
-### 2. Board-based active work
+### Board-based active work
 
-Use the board when you need a higher-signal working surface:
+Use the board when you need a higher-signal operating workspace:
 
 - attach important threads to the board
-- keep `Needs Human` items visible
+- keep intervention work visible
 - resize and reorganize cards
-- track active operational state without opening each thread one by one
+- scan active state without opening every thread manually
 
-### 3. Runtime and local service control
+### Runtime and local service control
 
-The extension can work with the local `codex_manager` service and help with:
+When paired with the local `codex_manager` service, the extension helps with:
 
 - server reachability checks
-- starting the local service when needed
+- local service startup
 - degraded-state recovery visibility
 - local dashboard integration on `8787`
 
@@ -58,40 +64,23 @@ The extension can work with the local `codex_manager` service and help with:
 
 ## Screenshots
 
-Real screenshots should be used here for release-quality presentation. The current capture plan is tracked in:
-
-- [`SCREENSHOT_INVENTORY.md`](./SCREENSHOT_INVENTORY.md)
-
-Recommended screenshot sections for the marketplace page:
+> Replace these placeholders with final images after the capture pass in [`SCREENSHOT_INVENTORY.md`](./SCREENSHOT_INVENTORY.md).
 
 ### Main Dashboard
 
-Show:
-
-- thread list
-- board summary
-- one populated inspector state
+`docs/screenshots/main-dashboard.png`
 
 ### Board With Active Cards
 
-Show:
-
-- active cards
-- `Needs Human` presence
-- readable card density
+`docs/screenshots/board-active-cards.png`
 
 ### Needs Human Dock
 
-Show:
-
-- multiple urgent cards
-- compact but visible intervention space
+`docs/screenshots/needs-human-dock.png`
 
 ### Sidebar or Bottom Placement
 
-Show:
-
-- the extension docked in a normal VS Code layout
+`docs/screenshots/docked-layout.png`
 
 ## Installation
 
