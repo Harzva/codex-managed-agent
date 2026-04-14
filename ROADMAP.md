@@ -96,6 +96,7 @@ Related plans:
 - `task-plans/board-interaction-quality-task-plan.md`
 - `task-plans/operational-reliability-task-plan.md`
 - `task-plans/codex-visibility-control-task-plan.md`
+- `task-plans/cma-codex-communication-optimization-task-plan.md`
 - `task-plans/cross-path-unified-management-task-plan.md`
 
 ### Priority 2 — Workflow Multipliers
@@ -137,8 +138,10 @@ When creating or updating files under `task-plans/`:
 
 Core roadmap milestones are currently complete.
 
-No active follow-on track is currently open.
+Immediate follow-on track:
+
+- `task-plans/cma-codex-communication-optimization-task-plan.md`
 
 Current handoff state:
 
-- Re-anchor from `ROADMAP.md` before starting the next codex-loop
+- Re-anchor from `ROADMAP.md`, then start the communication-optimization follow-on track as the next bounded codex-loop sequence.
