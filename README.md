@@ -96,7 +96,7 @@ npx @vscode/vsce package
 This produces a file like:
 
 ```text
-codex-managed-agent-0.0.1.vsix
+codex-managed-agent-0.0.2.vsix
 ```
 
 Then install it in VS Code:
