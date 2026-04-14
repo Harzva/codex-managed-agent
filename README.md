@@ -64,11 +64,13 @@ When paired with the local `codex_manager` service, the extension helps with:
 
 ## Screenshots
 
-The screenshot workflow is now organized in three layers:
+The screenshot workflow is now organized in five layers:
 
 - capture inventory: [`SCREENSHOT_INVENTORY.md`](./SCREENSHOT_INVENTORY.md)
 - execution checklist: [`docs/screenshots/CAPTURE_CHECKLIST.md`](./docs/screenshots/CAPTURE_CHECKLIST.md)
 - UI preparation plan: [`docs/screenshots/RESOURCE_PLAN.md`](./docs/screenshots/RESOURCE_PLAN.md)
+- shoot order: [`docs/screenshots/SCREENSHOT_SHOOT_ORDER.md`](./docs/screenshots/SCREENSHOT_SHOOT_ORDER.md)
+- per-shot scene design: [`docs/screenshots/SCENE_DESIGN.md`](./docs/screenshots/SCENE_DESIGN.md)
 
 Planned final image paths:
 

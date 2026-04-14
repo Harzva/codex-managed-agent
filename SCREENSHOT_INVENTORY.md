@@ -162,3 +162,5 @@ The screenshot pass is complete when:
 - `docs/screenshots/README.md`
 - `docs/screenshots/CAPTURE_CHECKLIST.md`
 - `docs/screenshots/RESOURCE_PLAN.md`
+- `docs/screenshots/SCREENSHOT_SHOOT_ORDER.md`
+- `docs/screenshots/SCENE_DESIGN.md`
