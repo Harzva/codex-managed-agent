@@ -3,11 +3,6 @@ const vscode = require("vscode");
 const { registerCommands } = require("./host/commands");
 const {
   getConfig,
-  summarizeServiceState,
-  fetchDashboardState,
-  fetchThreadDetail,
-  probeServer,
-  startServer,
 } = require("./host/server");
 const {
   runLifecycleAction,
@@ -48,6 +43,14 @@ const {
   CodexAgentSidebarProvider,
   CodexAgentBottomProvider,
 } = require("./host/panel-view");
+const {
+  ensureServer,
+  openExternal,
+  postMessage,
+  broadcastState,
+  broadcastLinkState,
+  refresh,
+} = require("./host/state-sync");
 
 class CodexAgentPanel {
   constructor(extensionUri, storage) {
@@ -144,40 +147,7 @@ class CodexAgentPanel {
   }
 
   async ensureServer(options = {}) {
-    const config = getConfig();
-    const probe = await probeServer(config.baseUrl);
-    if (probe.ok) {
-      return summarizeServiceState(true, {
-        baseUrl: config.baseUrl,
-        autoStarted: false,
-        message: "Connected",
-      });
-    }
-
-    if (!config.autoStartServer && !options.forceStart) {
-      return summarizeServiceState(false, {
-        baseUrl: config.baseUrl,
-        autoStarted: false,
-        message: probe.error || "Server not reachable",
-      });
-    }
-
-    const start = await startServer(this.extensionUri);
-    if (!start.ok) {
-      return summarizeServiceState(false, {
-        baseUrl: config.baseUrl,
-        autoStarted: true,
-        message: start.error || "Failed to start server",
-        logPath: start.logPath,
-      });
-    }
-
-    return summarizeServiceState(true, {
-      baseUrl: config.baseUrl,
-      autoStarted: true,
-      message: "Server started",
-      logPath: start.logPath,
-    });
+    return ensureServer(this, options);
   }
 
   async runLifecycleAction(action, threadIdsOrOne) {
@@ -270,144 +240,23 @@ class CodexAgentPanel {
   }
 
   broadcastLinkState() {
-    if (!this.hasSurface() || !this.lastPayload) return;
-    this.broadcastState(this.lastPayload);
+    return broadcastLinkState(this);
   }
 
   async refresh(options = {}) {
-    if (!this.hasSurface()) return;
-
-    const service = await this.ensureServer();
-    if (!service.ok) {
-      this.broadcastState({
-        type: "state",
-        service,
-        dashboard: null,
-        selectedThreadId: this.selectedThreadId,
-        actionNotice: this.lastActionNotice,
-        lastSuccessfulRefreshAt: this.lastSuccessfulRefreshAt,
-      });
-      if (!options.silent) {
-        vscode.window.setStatusBarMessage(`Codex-Managed-Agent: ${service.message}`, 2500);
-      }
-      return;
-    }
-
-    try {
-      const dashboard = await fetchDashboardState(service.baseUrl);
-      const codexLinkState = this.getCodexLinkState();
-      const currentThreads = Array.isArray(dashboard.threads) ? dashboard.threads : [];
-      const effectiveRunningThreads = (dashboard.runningThreads || []).filter((thread) =>
-        this.isEffectivelyRunningThread(thread, codexLinkState),
-      );
-      const nextRunningIds = new Set(effectiveRunningThreads.map((thread) => thread.id));
-      const completedEvents = [...this.previousRunningIds]
-        .filter((threadId) => !nextRunningIds.has(threadId))
-        .map((threadId) => {
-          const thread = currentThreads.find((item) => item.id === threadId) || {};
-          return {
-            id: `${threadId}:${Date.now()}`,
-            threadId,
-            title: thread.title || threadId,
-            status: thread.status || "completed",
-            updatedAt: thread.updated_at_iso || "",
-          };
-        });
-      for (const item of completedEvents) {
-        const loopConfig = this.autoContinueConfigs[item.threadId];
-        if (loopConfig && loopConfig.active && loopConfig.remaining > 0) {
-          await this.triggerAutoContinue(item.threadId, loopConfig);
-        }
-      }
-      if (completedEvents.length) {
-        this.recentCompletions = [...completedEvents, ...this.recentCompletions].slice(0, 8);
-        const label = completedEvents.length === 1
-          ? completedEvents[0].title
-          : `${completedEvents.length} threads`;
-        vscode.window.showInformationMessage(`Codex-Managed-Agent: completed ${label}`);
-      }
-      this.previousRunningIds = nextRunningIds;
-      if (!this.selectedThreadId && dashboard.threads.length) {
-        this.selectedThreadId = dashboard.threads[0].id;
-      }
-      const hasSelected = dashboard.threads.some((thread) => thread.id === this.selectedThreadId);
-      if (!hasSelected) {
-        this.selectedThreadId = dashboard.threads[0]?.id;
-      }
-      const detail = this.selectedThreadId
-        ? await fetchThreadDetail(service.baseUrl, this.selectedThreadId).catch(() => null)
-        : null;
-      this.lastSuccessfulRefreshAt = new Date().toISOString();
-
-      this.broadcastState({
-        type: "state",
-        service,
-        dashboard,
-        effectiveRunningThreadIds: [...nextRunningIds],
-        selectedThreadId: this.selectedThreadId,
-        detail,
-        recentCompletions: this.recentCompletions,
-        autoContinueConfigs: this.enrichAutoContinueConfigs(),
-        actionNotice: this.lastActionNotice,
-        lastSuccessfulRefreshAt: this.lastSuccessfulRefreshAt,
-      });
-      if (!options.silent) {
-        vscode.window.setStatusBarMessage("Codex-Managed-Agent ready", 1800);
-      }
-    } catch (error) {
-      this.broadcastState({
-        type: "state",
-        service: summarizeServiceState(false, {
-          baseUrl: service.baseUrl,
-          autoStarted: service.autoStarted,
-          message: error instanceof Error ? error.message : String(error),
-          logPath: service.logPath,
-        }),
-        dashboard: null,
-        selectedThreadId: this.selectedThreadId,
-        actionNotice: this.lastActionNotice,
-        lastSuccessfulRefreshAt: this.lastSuccessfulRefreshAt,
-      });
-    }
+    return refresh(this, options);
   }
 
   async openExternal() {
-    const config = getConfig();
-    const target = await vscode.env.asExternalUri(vscode.Uri.parse(config.baseUrl));
-    await vscode.env.openExternal(target);
+    return openExternal(this);
   }
 
   postMessage(payload) {
-    if (this.panel) this.panel.webview.postMessage(payload);
-    if (this.sidebarView) this.sidebarView.webview.postMessage(payload);
-    if (this.bottomView) this.bottomView.webview.postMessage(payload);
+    return postMessage(this, payload);
   }
 
   broadcastState(payload) {
-    const codexLinkState = this.getCodexLinkState();
-    const enrichedPayload = {
-      ...payload,
-      codexLinkState,
-    };
-    this.lastPayload = enrichedPayload;
-    if (this.panel) {
-      this.panel.webview.postMessage({
-        ...enrichedPayload,
-        currentSurface: this.editorSurface,
-      });
-    }
-    if (this.sidebarView) {
-      this.sidebarView.webview.postMessage({
-        ...enrichedPayload,
-        currentSurface: "left",
-      });
-    }
-    if (this.bottomView) {
-      this.bottomView.webview.postMessage({
-        ...enrichedPayload,
-        currentSurface: "bottom",
-      });
-    }
+    return broadcastState(this, payload);
   }
 }
 
