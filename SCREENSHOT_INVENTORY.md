@@ -155,3 +155,10 @@ The screenshot pass is complete when:
 - each shot has a stable filename
 - each shot is readable in the README / Marketplace layout
 - the README uses the final paths instead of placeholder text
+
+
+## Related Files
+
+- `docs/screenshots/README.md`
+- `docs/screenshots/CAPTURE_CHECKLIST.md`
+- `docs/screenshots/RESOURCE_PLAN.md`

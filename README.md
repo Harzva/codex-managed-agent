@@ -64,23 +64,23 @@ When paired with the local `codex_manager` service, the extension helps with:
 
 ## Screenshots
 
-> Replace these placeholders with final images after the capture pass in [`SCREENSHOT_INVENTORY.md`](./SCREENSHOT_INVENTORY.md).
+The screenshot workflow is now organized in three layers:
 
-### Main Dashboard
+- capture inventory: [`SCREENSHOT_INVENTORY.md`](./SCREENSHOT_INVENTORY.md)
+- execution checklist: [`docs/screenshots/CAPTURE_CHECKLIST.md`](./docs/screenshots/CAPTURE_CHECKLIST.md)
+- UI preparation plan: [`docs/screenshots/RESOURCE_PLAN.md`](./docs/screenshots/RESOURCE_PLAN.md)
 
-`docs/screenshots/main-dashboard.png`
+Planned final image paths:
 
-### Board With Active Cards
+- `docs/screenshots/main-dashboard.png`
+- `docs/screenshots/board-active-cards.png`
+- `docs/screenshots/needs-human-dock.png`
+- `docs/screenshots/docked-layout.png`
 
-`docs/screenshots/board-active-cards.png`
+Optional:
 
-### Needs Human Dock
-
-`docs/screenshots/needs-human-dock.png`
-
-### Sidebar or Bottom Placement
-
-`docs/screenshots/docked-layout.png`
+- `docs/screenshots/insights-topic-map.png`
+- `docs/screenshots/inspector-detail.png`
 
 ## Installation
 
