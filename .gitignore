@@ -5,3 +5,5 @@ out/
 dist/
 coverage/
 .DS_Store
+
+.codex-loop/state/
