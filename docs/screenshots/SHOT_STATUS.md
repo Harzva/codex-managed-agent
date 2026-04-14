@@ -24,6 +24,7 @@ Notes:
 
 - Goal: show the main dashboard as the default control surface
 - Reference: `SCENE_DESIGN.md` → Scene 1
+- Shot spec: `docs/screenshots/main-dashboard-shot.md`
 
 ### 2. `board-active-cards.png`
 
