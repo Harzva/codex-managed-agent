@@ -818,6 +818,7 @@ function getWebviewHtml(webview, extensionUri) {
         gap: 8px;
       }
       .keyword-chip {
+        appearance: none;
         display: inline-flex;
         align-items: center;
         gap: 6px;
@@ -827,6 +828,16 @@ function getWebviewHtml(webview, extensionUri) {
         background: rgba(126, 231, 255, 0.06);
         font-size: 11px;
         color: var(--fg);
+        cursor: pointer;
+        font: inherit;
+        transition: transform 120ms ease, background 120ms ease, border-color 120ms ease;
+      }
+      .keyword-chip:hover,
+      .keyword-chip:focus-visible {
+        background: rgba(126, 231, 255, 0.12);
+        border-color: rgba(126, 231, 255, 0.24);
+        transform: translateY(-1px);
+        outline: none;
       }
       .keyword-chip .count {
         color: var(--muted);
@@ -930,10 +941,23 @@ function getWebviewHtml(webview, extensionUri) {
         padding: 10px 4px 2px;
       }
       .word-cloud-token {
+        appearance: none;
+        border: 0;
+        background: rgba(255,255,255,0.04);
+        cursor: pointer;
+        font: inherit;
         line-height: 1;
         color: rgba(255,255,255,0.9);
         padding: 4px 6px;
         border-radius: 10px;
+        transition: transform 120ms ease, background 120ms ease, color 120ms ease;
+      }
+      .word-cloud-token:hover,
+      .word-cloud-token:focus-visible {
+        background: rgba(126, 231, 255, 0.12);
+        color: rgba(219,255,240,0.98);
+        transform: translateY(-1px);
+        outline: none;
       }
       .word-cloud-token.weight-1 { font-size: 12px; opacity: 0.66; }
       .word-cloud-token.weight-2 { font-size: 14px; opacity: 0.74; }
@@ -1145,6 +1169,101 @@ function getWebviewHtml(webview, extensionUri) {
         margin-top: 6px;
         font-size: 15px;
         font-weight: 700;
+      }
+      .spotlight-log-cue {
+        margin-top: 12px;
+        padding: 12px;
+        border-radius: 14px;
+        border: 1px solid rgba(126, 231, 255, 0.08);
+        background: rgba(3, 7, 13, 0.98);
+        display: grid;
+        gap: 6px;
+      }
+      .spotlight-log-head {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        gap: 10px;
+      }
+      .spotlight-log-title {
+        color: var(--text);
+        font-size: 11px;
+        text-transform: uppercase;
+        letter-spacing: 0.08em;
+      }
+      .spotlight-log-meta {
+        color: var(--muted);
+        font-size: 11px;
+      }
+      .spotlight-log-copy {
+        color: var(--muted-soft);
+        font-size: 12px;
+        line-height: 1.45;
+      }
+      .memory-shell-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+        gap: 12px;
+      }
+      .memory-shell-card {
+        --memory-border: rgba(255,255,255,0.08);
+        --memory-bg: rgba(255,255,255,0.03);
+        --memory-pill: rgba(255,255,255,0.08);
+        border: 1px solid var(--memory-border);
+        border-radius: 18px;
+        background: linear-gradient(180deg, var(--memory-bg), rgba(255,255,255,0.018));
+        padding: 14px;
+        display: grid;
+        gap: 10px;
+      }
+      .memory-shell-card.type-prompt {
+        --memory-border: rgba(126, 231, 255, 0.16);
+        --memory-bg: rgba(36, 89, 122, 0.14);
+        --memory-pill: rgba(126, 231, 255, 0.16);
+      }
+      .memory-shell-card.type-rule {
+        --memory-border: rgba(255, 214, 107, 0.16);
+        --memory-bg: rgba(120, 76, 9, 0.14);
+        --memory-pill: rgba(255, 214, 107, 0.16);
+      }
+      .memory-shell-card.type-memo {
+        --memory-border: rgba(84, 242, 176, 0.16);
+        --memory-bg: rgba(18, 73, 53, 0.14);
+        --memory-pill: rgba(84, 242, 176, 0.16);
+      }
+      .memory-shell-head {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 10px;
+      }
+      .memory-shell-kicker {
+        display: inline-flex;
+        align-items: center;
+        min-height: 24px;
+        padding: 0 8px;
+        border-radius: 999px;
+        background: var(--memory-pill);
+        color: var(--text-strong);
+        font-size: 11px;
+        font-weight: 700;
+        letter-spacing: 0.04em;
+        text-transform: uppercase;
+      }
+      .memory-shell-title {
+        font-size: 14px;
+        font-weight: 800;
+        color: var(--text-strong);
+      }
+      .memory-shell-copy {
+        color: var(--muted);
+        font-size: 12px;
+        line-height: 1.55;
+      }
+      .memory-shell-meta {
+        display: flex;
+        gap: 8px;
+        flex-wrap: wrap;
       }
       .subpane {
         display: none;
@@ -1951,7 +2070,38 @@ function getWebviewHtml(webview, extensionUri) {
         gap: 8px;
       }
       .running-card.compact-card {
-        min-height: 92px;
+        min-height: 156px;
+      }
+      .running-card.compact-card .compact-card-titlebar {
+        display: flex;
+        align-items: flex-start;
+        justify-content: space-between;
+        gap: 8px;
+        padding: 2px 0 4px;
+        margin-bottom: 2px;
+        border-bottom: 1px solid rgba(255,255,255,0.08);
+      }
+      .running-card.compact-card .compact-card-title {
+        font-size: 14px;
+        font-weight: 800;
+        line-height: 1.35;
+        color: var(--text-strong);
+        display: -webkit-box;
+        -webkit-line-clamp: 3;
+        -webkit-box-orient: vertical;
+        overflow: hidden;
+      }
+      .running-card.compact-card .compact-card-titlebar .tool-btn {
+        flex: 0 0 auto;
+        min-height: 28px;
+        padding: 0 10px;
+      }
+      .running-card.compact-card .compact-card-titlebar .tool-btn span {
+        display: inline;
+      }
+      .running-card.compact-card .running-card-body .running-card-title,
+      .running-card.compact-card .running-card-footer {
+        display: none;
       }
       .running-card.size-tiny.fixed-tiny .running-card-top {
         align-items: start;
@@ -2053,7 +2203,7 @@ function getWebviewHtml(webview, extensionUri) {
         font-size: 13px;
         line-height: 1.35;
         display: -webkit-box;
-        -webkit-line-clamp: 2;
+        -webkit-line-clamp: 3;
         -webkit-box-orient: vertical;
         overflow: hidden;
       }
@@ -2733,6 +2883,12 @@ function getWebviewHtml(webview, extensionUri) {
         gap: 10px;
         align-content: start;
       }
+      .running-card-path-row {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        flex-wrap: wrap;
+      }
       .size-switch {
         display: inline-flex;
         align-items: center;
@@ -2922,6 +3078,23 @@ function getWebviewHtml(webview, extensionUri) {
         padding: 2px 8px;
         color: var(--muted);
         font-size: 11px;
+      }
+      button.meta-pill {
+        appearance: none;
+        background: rgba(255,255,255,0.04);
+        cursor: pointer;
+        font: inherit;
+      }
+      button.meta-pill:hover,
+      button.meta-pill:focus-visible {
+        border-color: rgba(126, 231, 255, 0.26);
+        color: var(--text);
+        outline: none;
+      }
+      button.meta-pill.active {
+        border-color: rgba(126, 231, 255, 0.34);
+        background: rgba(126, 231, 255, 0.12);
+        color: rgba(219,255,240,0.98);
       }
       .drawer-backdrop {
         position: fixed;
@@ -3535,6 +3708,11 @@ function getWebviewHtml(webview, extensionUri) {
             <div class="section-note">Keep the current thread in focus while the drawer handles deep inspection and lifecycle actions.</div>
             <div id="spotlightPanel"></div>
           </div>
+          <div class="panel">
+            <div class="section-title">Working Memory Cards</div>
+            <div class="section-note">Prompt, rule, and memo cards will live here as first-class memory objects instead of blending into agent cards.</div>
+            <div id="memoryCardsPanel"></div>
+          </div>
         </section>
       </section>
 ${renderDrawerShell()}    </div>
@@ -3570,6 +3748,7 @@ ${renderDrawerShell()}    </div>
           themeMode: persisted.themeMode || "vivid",
           search: persisted.search || "",
           topicFocus: persisted.topicFocus || null,
+          rootFilter: persisted.rootFilter || null,
           filter: persisted.filter || "all",
           sort: persisted.sort || "updated",
           pinnedOnly: Boolean(persisted.pinnedOnly),
@@ -3614,6 +3793,7 @@ ${renderDrawerShell()}    </div>
           themeMode: state.ui.themeMode,
           search: state.ui.search,
           topicFocus: state.ui.topicFocus,
+          rootFilter: state.ui.rootFilter,
           filter: state.ui.filter,
           sort: state.ui.sort,
           pinnedOnly: state.ui.pinnedOnly,
@@ -3743,8 +3923,55 @@ ${renderDrawerShell()}    </div>
         '</div>';
       }
 
+      function renderMemoryShellCard(kind, title, copy) {
+        const sourceAction = kind === "prompt"
+          ? '<button class="chip" data-open-repo-file="plan.md" type="button">Open Plan</button>'
+          : (kind === "rule"
+          ? '<button class="chip" data-open-repo-file="ROADMAP.md" type="button">Open ROADMAP</button>'
+          : (kind === "memo"
+            ? '<button class="chip" data-open-repo-file=".claude/plans/ACTIVE_PLAN.md" type="button">Open Active Plan</button>'
+            : ''));
+        const sourceState = kind === "prompt"
+          ? "plan.md linked"
+          : (kind === "rule"
+          ? "ROADMAP linked"
+          : (kind === "memo" ? "ACTIVE_PLAN linked" : "No source linked yet"));
+        return '<div class="memory-shell-card type-' + esc(kind) + '">' +
+          '<div class="memory-shell-head">' +
+            '<span class="memory-shell-kicker">' + esc(kind) + '</span>' +
+            '<span class="meta-pill">Shell Only</span>' +
+          '</div>' +
+          '<div class="memory-shell-title">' + esc(title) + '</div>' +
+          '<div class="memory-shell-copy">' + esc(copy) + '</div>' +
+          '<div class="memory-shell-meta">' +
+            '<span class="meta-pill">Task 1</span>' +
+            '<span class="meta-pill">' + esc(sourceState) + '</span>' +
+          '</div>' +
+          sourceAction +
+        '</div>';
+      }
+
+      function renderMemoryShellGrid() {
+        return '<div class="memory-shell-grid">' +
+          renderMemoryShellCard("prompt", "Prompt Card", "Keep a reusable working prompt visible beside live agent activity.") +
+          renderMemoryShellCard("rule", "Rule Card", "Surface durable guardrails and loop rules without burying them in tabs.") +
+          renderMemoryShellCard("memo", "Memo Card", "Hold compact decisions and reminders that should persist across iterations.") +
+        '</div>';
+      }
+
       function renderKeywordChip(item) {
-        return '<span class="keyword-chip"><span>' + esc(item.keyword || '') + '</span><span class="count">×' + esc(String(item.count || 0)) + '</span></span>';
+        const keyword = item.keyword || "";
+        return '<button class="keyword-chip" type="button" data-topic-node="true" data-topic-group="keyword" data-topic-label="' + esc(keyword) + '" data-topic-focus="' + esc(keyword) + '"><span>' + esc(keyword) + '</span><span class="count">×' + esc(String(item.count || 0)) + '</span></button>';
+      }
+
+      function renderVibeAdviceEvidence(insights) {
+        if (!insights) {
+          return "Suggestions grounded in simple stack, plan-first, stepwise verification, and modular context control.";
+        }
+        const persona = ((insights.guidance && insights.guidance.usage_persona) || ["均衡型"]).join(" · ");
+        const shortPromptRatio = Math.round(Number(((insights.summary && insights.summary.short_prompt_ratio) || 0)) * 100);
+        const compactions = Number((insights.summary && insights.summary.total_compactions) || 0);
+        return "Grounded in current signals: persona " + persona + " · short prompts " + shortPromptRatio + "% · compactions " + compactions + ".";
       }
 
       function renderWeeklyShift(insights) {
@@ -3792,7 +4019,8 @@ ${renderDrawerShell()}    </div>
         return items.slice(0, 18).map((item) => {
           const ratio = Number(item.count || 0) / maxCount;
           const bucket = ratio >= 0.85 ? 5 : ratio >= 0.65 ? 4 : ratio >= 0.45 ? 3 : ratio >= 0.25 ? 2 : 1;
-          return '<span class="word-cloud-token weight-' + bucket + '">' + esc(item.keyword || "") + '</span>';
+          const keyword = item.keyword || "";
+          return '<button class="word-cloud-token weight-' + bucket + '" type="button" data-topic-node="true" data-topic-group="keyword" data-topic-label="' + esc(keyword) + '" data-topic-focus="' + esc(keyword) + '">' + esc(keyword) + '</button>';
         }).join("");
       }
 
@@ -3857,22 +4085,28 @@ ${renderDrawerShell()}    </div>
         return '<svg viewBox="0 0 620 320" role="img" aria-label="topic map">' + edges + nodes + '</svg>';
       }
 
-      function renderThreadSummaryMarkup(visibleCount, totalCount, topicFocus, sort) {
+      function renderThreadSummaryMarkup(visibleCount, totalCount, topicFocus, sort, rootFilter) {
         const summaryText = visibleCount
           ? (
               topicFocus
                 ? ("Showing " + visibleCount + " linked threads from topic map · " + (topicFocus.group === "thread" ? "focused thread" : (topicFocus.value || topicFocus.group)))
+                : rootFilter
+                  ? ("Showing " + visibleCount + " of " + totalCount + " loaded threads · root " + rootFilter + " · sorted by " + sort)
                 : ("Showing " + visibleCount + " of " + totalCount + " loaded threads · sorted by " + sort)
             )
-          : (topicFocus ? "No threads match the current topic-map focus." : "No threads match the current search/filter.");
-        if (!topicFocus) return esc(summaryText);
-        return '<span>' + esc(summaryText) + '</span> <button class="chip" data-clear-topic-focus="true" type="button">Clear topic focus</button>';
+          : (topicFocus ? "No threads match the current topic-map focus." : (rootFilter ? "No threads match the current root filter." : "No threads match the current search/filter."));
+        const actions = [];
+        if (topicFocus) actions.push('<button class="chip" data-clear-topic-focus="true" type="button">Clear topic focus</button>');
+        if (rootFilter) actions.push('<button class="chip" data-clear-root-filter="true" type="button">Clear root filter</button>');
+        if (!actions.length) return esc(summaryText);
+        return '<span>' + esc(summaryText) + '</span> ' + actions.join(" ");
       }
 
       function renderToolIcon(name, filled = false) {
         const icons = {
           rename: '<svg viewBox="0 0 16 16" aria-hidden="true"><path d="M3 11.5V13h1.5L11.8 5.7 10.3 4.2 3 11.5Z"></path><path d="M9.8 4.7 11.3 3.2 12.8 4.7 11.3 6.2"></path></svg>',
           open: '<svg viewBox="0 0 16 16" aria-hidden="true"><path d="M6 4h6v6"></path><path d="M5 11 12 4"></path><path d="M12 9.5V12H4V4h2.5"></path></svg>',
+          prompt: '<svg viewBox="0 0 16 16" aria-hidden="true"><path d="M3 3.5h10v7H7.5L5 13v-2.5H3z"></path><path d="M5.5 6.2h5"></path><path d="M5.5 8.4h3.8"></path></svg>',
           codex: '<svg viewBox="0 0 16 16" aria-hidden="true"><path d="M8 2.5 12.5 5v6L8 13.5 3.5 11V5L8 2.5Z"></path><path d="M5.5 6.2 8 7.7l2.5-1.5"></path><path d="M8 7.8V11"></path></svg>',
           board: '<svg viewBox="0 0 16 16" aria-hidden="true"><rect x="2.5" y="3" width="11" height="10" rx="2"></rect><path d="M7.5 3v10"></path><path d="M2.5 7.8h11"></path></svg>',
           pin: filled
@@ -3885,6 +4119,26 @@ ${renderDrawerShell()}    </div>
       function short(value, len = 120) {
         if (!value) return "";
         return value.length > len ? value.slice(0, len) + "..." : value;
+      }
+
+      function compactRootIdentity(cwd) {
+        const raw = String(cwd || "").trim();
+        if (!raw) return "-";
+        const normalized = raw.replace(/\\/g, "/").replace(/\/+$/, "");
+        if (!normalized) return raw;
+        const parts = normalized.split("/").filter(Boolean);
+        if (!parts.length) return raw;
+        return parts[parts.length - 1] || raw;
+      }
+
+      function renderRootIdentityPill(cwd, options = {}) {
+        const fullPath = String(cwd || "").trim();
+        const root = compactRootIdentity(fullPath);
+        if (!options.interactive) {
+          return '<span class="meta-pill mono" title="' + esc(fullPath || "-") + '">Root ' + esc(short(root, 20)) + '</span>';
+        }
+        const active = state.ui.rootFilter && state.ui.rootFilter === root;
+        return '<button class="meta-pill mono' + (active ? ' active' : '') + '" type="button" data-root-filter="' + esc(root) + '" title="' + esc(fullPath || "-") + '">Root ' + esc(short(root, 20)) + '</button>';
       }
 
       function formatTimestamp(value) {
@@ -4819,6 +5073,14 @@ ${renderDrawerShell()}    </div>
         render(state.payload);
       }
 
+      function applyRootFilter(root) {
+        const nextRoot = root && state.ui.rootFilter === root ? null : (root || null);
+        state.ui.rootFilter = nextRoot;
+        state.ui.currentView = "threads";
+        persistUi();
+        render(state.payload);
+      }
+
       function threadMatches(thread) {
         const query = normalize(state.ui.search).trim();
         const haystack = [
@@ -4838,6 +5100,7 @@ ${renderDrawerShell()}    </div>
 
         const matchesQuery = !query || haystack.includes(query);
         const matchesTopic = topicFocusMatches(thread, state.ui.topicFocus);
+        const matchesRoot = !state.ui.rootFilter || compactRootIdentity(thread.cwd) === state.ui.rootFilter;
         const matchesFilter =
           state.ui.filter === "all" ||
           (state.ui.filter === "running" && running) ||
@@ -4847,7 +5110,7 @@ ${renderDrawerShell()}    </div>
           (state.ui.filter === "archived" && archived) ||
           (state.ui.filter === "soft_deleted" && softDeleted);
         const matchesPinned = !state.ui.pinnedOnly || isPinned(thread.id);
-        return matchesQuery && matchesTopic && matchesFilter && matchesPinned;
+        return matchesQuery && matchesTopic && matchesRoot && matchesFilter && matchesPinned;
       }
 
       function sortThreads(threads) {
@@ -5125,7 +5388,7 @@ ${renderDrawerShell()}    </div>
           '</div>' +
           '<div class="thread-title">' + esc(short(thread.title || "(no title)", 110)) + '</div>' +
           '<div class="thread-meta">' +
-            '<span class="meta-pill mono">' + esc(short(thread.cwd || "-", 42)) + '</span>' +
+            renderRootIdentityPill(thread.cwd, { interactive: true }) +
             renderPhaseChip(phase) +
             renderThreadVisibilityPill(thread) +
             '<span class="meta-pill">Cmd ' + esc(String(thread.user_command_count || 0)) + '</span>' +
@@ -5140,29 +5403,38 @@ ${renderDrawerShell()}    </div>
           return renderCuteEmpty("Spotlight is waiting", "Select a thread to show the inspector spotlight and keep one cute helper nearby.", MEDIA.spotlight);
         }
         const merged = Object.assign({}, thread || {}, (detail && detail.thread) || {});
+        const latestLog = Array.isArray(merged.preview_logs) && merged.preview_logs.length ? merged.preview_logs[0] : undefined;
         const progress = extractThreadProgress(merged);
         const status = effectiveThreadStatus(merged, state.payload);
         const linkMeta = codexLinkMeta(merged.id);
         const linkLabel = linkMeta.isFocused ? "Focused in Codex" : (linkMeta.isOpen ? "Open in Codex" : (linkMeta.pending ? "Linking to Codex" : "Not linked"));
         const loopMeta = autoLoopStateMeta(merged.id);
         const autoLoop = loopMeta.autoLoop;
+        const memoryShortcutRow = '<div class="chip-row">' +
+          '<span class="meta-pill">Memory</span>' +
+          '<button class="chip" data-open-repo-file="plan.md" type="button">Prompt</button>' +
+          '<button class="chip" data-open-repo-file="ROADMAP.md" type="button">Rule</button>' +
+          '<button class="chip" data-open-repo-file=".claude/plans/ACTIVE_PLAN.md" type="button">Memo</button>' +
+        '</div>';
         return '<div class="spotlight-grid">' +
           '<div>' +
             statusBadge(status) +
             codexLinkBadge(merged.id) +
+            renderRootIdentityPill(merged.cwd) +
             '<div class="spotlight-title">' + esc(short(merged.title || merged.id || "Selected agent", 120)) + '</div>' +
             '<div class="spotlight-copy">' + esc(short(merged.cwd || "No workspace path available.", 140)) + '</div>' +
           '</div>' +
           '<div class="spotlight-actions">' +
             '<button class="chip" data-open-drawer="true" type="button">Open Drawer</button>' +
             '<button class="chip" data-rename-thread="' + esc(merged.id || "") + '" data-current-title="' + esc(merged.title || "") + '" type="button">Rename</button>' +
-            '<button class="chip" data-open-codex-editor="' + esc(merged.id || "") + '" type="button">Open Codex</button>' +
+            '<button class="chip" data-open-codex-editor="' + esc(merged.id || "") + '" type="button">Open in Editor</button>' +
             '<button class="chip" data-codex-thread="' + esc(merged.id || "") + '" type="button">Sidebar Codex</button>' +
             (autoLoop && autoLoop.lastLogPath ? '<button class="chip" data-open-log="' + esc(autoLoop.lastLogPath) + '" type="button">Loop Log</button>' : '') +
             '<button class="chip" data-subtab-shortcut="history" type="button">History</button>' +
             '<button class="chip" data-subtab-shortcut="console" type="button">Console</button>' +
           '</div>' +
         '</div>' +
+        memoryShortcutRow +
         '<div class="spotlight-metrics">' +
           '<div class="spotlight-stat"><div class="spotlight-stat-label">Updated</div><div class="spotlight-stat-value">' + esc(merged.updated_at_iso || merged.updated_age || "-") + '</div></div>' +
           '<div class="spotlight-stat"><div class="spotlight-stat-label">Progress</div><div class="spotlight-stat-value">' + esc(progress.percent !== undefined ? (String(progress.percent) + "%") : progress.label) + '</div></div>' +
@@ -5171,6 +5443,10 @@ ${renderDrawerShell()}    </div>
           '<div class="spotlight-stat"><div class="spotlight-stat-label">Auto Loop</div><div class="spotlight-stat-value">' + esc(loopMeta.label) + '</div></div>' +
           '<div class="spotlight-stat"><div class="spotlight-stat-label">Commands</div><div class="spotlight-stat-value">' + esc(String(merged.user_command_count || 0)) + '</div></div>' +
           '<div class="spotlight-stat"><div class="spotlight-stat-label">Compactions</div><div class="spotlight-stat-value">' + esc(String(merged.compaction_count || 0)) + '</div></div>' +
+        '</div>' +
+        '<div class="spotlight-log-cue">' +
+          '<div class="spotlight-log-head"><span class="spotlight-log-title">Recent Log</span><span class="spotlight-log-meta">' + esc(latestLog ? ((latestLog.level || "INFO") + " · " + (latestLog.ts_iso || "now")) : "No preview log yet") + '</span></div>' +
+          '<div class="spotlight-log-copy">' + esc(latestLog ? short(latestLog.message || latestLog.target || "Recent log event", 180) : "Use Console for the full live stream when this thread starts emitting logs.") + '</div>' +
         '</div>' +
         '<div class="progress-head"><span class="progress-label">' + esc(progress.label) + '</span><span class="progress-value">' + esc(progress.percent !== undefined ? (String(progress.percent) + "%") : status) + '</span></div>' +
         '<div class="progress-track"><div class="progress-bar" style="width:' + esc(String(progress.percent !== undefined ? progress.percent : 18)) + '%"></div></div>' +
@@ -5284,13 +5560,21 @@ ${renderDrawerShell()}    </div>
             : "";
           const draggable = options.locked || options.compact || state.ui.layoutLocked ? "false" : "true";
           const placement = options.compact ? undefined : placementState.placements.get(thread.id);
-          const layout = options.compact ? { cols: 1, height: 92 } : getRunningCardLayout(thread.id, size);
+          const layout = options.compact ? { cols: 1, height: 156 } : getRunningCardLayout(thread.id, size);
           const cardStyle = options.compact
-            ? ' style="grid-column: span ' + esc(String(layout.cols)) + '; min-height:' + esc(String(layout.height)) + 'px; height:' + esc(String(layout.height)) + 'px;"'
+            ? ' style="grid-column: span ' + esc(String(layout.cols)) + '; min-height:' + esc(String(layout.height)) + 'px; height:auto;"'
             : ' style="grid-column: ' + esc(String((placement && placement.col) || 1)) + ' / span ' + esc(String((placement && placement.cols) || layout.cols)) + '; grid-row: ' + esc(String((placement && placement.row) || 1)) + ' / span ' + esc(String((placement && placement.rows) || layoutHeightToRows(layout.height, { gap: 12, rowHeight: 18 }))) + '; min-height:' + esc(String((placement && placement.height) || layout.height)) + 'px; height:' + esc(String((placement && placement.height) || layout.height)) + 'px;"';
-          const subtitle = (thread.board_source === "attached" || thread.board_source === "linked" || status === "attached" || status === "linked")
-            ? short((thread.updated_at_iso || "Attached to board") + " · " + (thread.cwd || "-"), size === "l" ? 120 : size === "m" ? 88 : size === "s" ? 70 : 44)
-            : short(thread.cwd || "-", size === "l" ? 108 : size === "m" ? 72 : size === "s" ? 56 : 40);
+          const boardSourceLabel = thread.board_source === "attached" || status === "attached"
+            ? "Attached to board"
+            : thread.board_source === "linked" || status === "linked"
+              ? "Linked on board"
+              : "Running on board";
+          const subtitle = short(
+            thread.updated_at_iso
+              ? (thread.updated_at_iso + " · " + boardSourceLabel)
+              : boardSourceLabel,
+            size === "l" ? 120 : size === "m" ? 88 : size === "s" ? 70 : 44
+          );
           const preview = (thread.board_source === "attached" || status === "attached")
             ? short((thread.preview || thread.db_title || "Attached thread ready for quick access from the board."), size === "l" ? 180 : size === "m" ? 128 : size === "s" ? 92 : 52)
             : (thread.board_source === "linked" || status === "linked")
@@ -5300,6 +5584,18 @@ ${renderDrawerShell()}    </div>
           const showRichPhase = size === "m" || size === "l";
           const showProgress = size !== "tiny";
           const showPreview = size === "m" || size === "l";
+          const rootCue = thread.cwd
+            ? '<div class="running-card-path-row">' + renderRootIdentityPill(thread.cwd) + '</div>'
+            : '';
+          const compactTitlebar = options.compact
+            ? (
+                '<div class="compact-card-titlebar">' +
+                  '<div class="compact-card-title">' + esc(short(thread.title || thread.id || "Running agent", 96)) + '</div>' +
+                  '<button class="tool-btn' + (isQuickComposerOpen ? ' primary' : '') + '" data-open-composer="' + esc(thread.id) + '" data-current-prompt="' + esc(quickPrompt) + '" type="button">' + renderToolIcon('prompt') + '<span>Prompt</span></button>' +
+                  '<button class="tool-btn codex-link primary" data-codex-thread="' + esc(thread.id) + '" type="button">' + renderToolIcon('codex') + '<span>Codex</span></button>' +
+                '</div>'
+              )
+            : '';
           const conversationStats = (size === "m" || size === "l")
             ? '<div class="running-card-note">Commands ' + esc(String(thread.user_command_count || 0)) + ' · Compactions ' + esc(String(thread.compaction_count || 0)) + '</div>'
             : '';
@@ -5307,6 +5603,7 @@ ${renderDrawerShell()}    </div>
             ? (
                 '<div class="running-card-copy">' +
                   '<div class="running-card-title">' + esc(short(thread.title || thread.id || "Running agent", titleMax)) + '</div>' +
+                  rootCue +
                   '<div class="running-card-subtitle">' + esc(subtitle) + '</div>' +
                   '<div class="preview">' + esc(preview) + '</div>' +
                   conversationStats +
@@ -5321,6 +5618,7 @@ ${renderDrawerShell()}    </div>
               )
             : (
                 '<div class="running-card-title">' + esc(short(thread.title || thread.id || "Running agent", titleMax)) + '</div>' +
+                rootCue +
                 '<div class="running-card-subtitle">' + esc(subtitle) + '</div>' +
                 (showPreview ? '<div class="preview">' + esc(preview) + '</div>' : '') +
                 conversationStats +
@@ -5340,6 +5638,7 @@ ${renderDrawerShell()}    </div>
             '<div class="drop-slot left"></div>' +
             '<div class="drop-slot right"></div>' +
             (!options.compact ? '<div class="resize-handle nw" data-resize-card="' + esc(thread.id) + '" data-resize-corner="nw"></div><div class="resize-handle ne" data-resize-card="' + esc(thread.id) + '" data-resize-corner="ne"></div><div class="resize-handle sw" data-resize-card="' + esc(thread.id) + '" data-resize-corner="sw"></div><div class="resize-handle se" data-resize-card="' + esc(thread.id) + '" data-resize-corner="se"></div><div class="resize-handle e" data-resize-card="' + esc(thread.id) + '" data-resize-corner="e"></div><div class="resize-handle w" data-resize-card="' + esc(thread.id) + '" data-resize-corner="w"></div><div class="resize-handle n" data-resize-card="' + esc(thread.id) + '" data-resize-corner="n"></div><div class="resize-handle s" data-resize-card="' + esc(thread.id) + '" data-resize-corner="s"></div>' : '') +
+            compactTitlebar +
             '<div class="running-card-top">' +
               '<div class="running-card-control">' +
                 '<div class="control-label left">Status</div>' +
@@ -5402,11 +5701,13 @@ ${renderDrawerShell()}    </div>
                 '<div class="running-action-rail">' +
                   ((isTiny || isCompactTiny)
                     ? (
+                        '<button class="tool-btn' + (isQuickComposerOpen ? ' primary' : '') + '" data-open-composer="' + esc(thread.id) + '" data-current-prompt="' + esc(quickPrompt) + '" type="button">' + renderToolIcon('prompt') + '<span>Prompt</span></button>' +
                         '<button class="tool-btn codex-link primary" data-codex-thread="' + esc(thread.id) + '" type="button">' + renderToolIcon('codex') + '<span>Codex</span></button>'
                       )
                     : (
                         '<button class="tool-btn" data-rename-thread="' + esc(thread.id) + '" data-current-title="' + esc(thread.title || "") + '" type="button">' + renderToolIcon('rename') + '<span>Rename</span></button>' +
-                        '<button class="tool-btn primary" data-open-codex-editor="' + esc(thread.id) + '" type="button">' + renderToolIcon('open') + '<span>Open</span></button>' +
+                        '<button class="tool-btn primary" data-open-codex-editor="' + esc(thread.id) + '" type="button">' + renderToolIcon('open') + '<span>Editor</span></button>' +
+                        '<button class="tool-btn' + (isQuickComposerOpen ? ' primary' : '') + '" data-open-composer="' + esc(thread.id) + '" data-current-prompt="' + esc(quickPrompt) + '" type="button">' + renderToolIcon('prompt') + '<span>Prompt</span></button>' +
                         '<button class="tool-btn" data-codex-thread="' + esc(thread.id) + '" type="button">' + renderToolIcon('codex') + '<span>Codex</span></button>' +
                         '<button class="tool-btn board' + (isBoardAttached(thread.id) ? ' attached' : '') + '" data-board-attach="' + esc(thread.id) + '" type="button">' + renderToolIcon('board') + '<span>' + (isBoardAttached(thread.id) ? 'Attached' : 'Board') + '</span></button>' +
                         '<button class="tool-btn' + (autoLoop ? ' primary' : '') + '" data-auto-loop="' + esc(thread.id) + '" data-auto-prompt="' + esc((autoLoop && autoLoop.prompt) || "continue") + '" data-auto-count="' + esc(String((autoLoop && autoLoop.remaining) || 10)) + '" type="button">' + renderToolIcon('codex') + '<span>' + (autoLoop ? ('Loop ' + autoLoop.remaining) : 'Loop') + '</span></button>' +
@@ -5503,7 +5804,7 @@ ${renderDrawerShell()}    </div>
               isSoftDeleted
                 ? [
                     renderQuickActionButton("rename", "Rename", "secondary", thread.id || "", thread.title || ""),
-                    renderQuickActionButton("open_editor", "Open Codex", "secondary", thread.id || "", ""),
+                    renderQuickActionButton("open_editor", "Open in Editor", "secondary", thread.id || "", ""),
                     renderQuickActionButton("sidebar", "Sidebar Codex", "secondary", thread.id || "", ""),
                     renderActionButton("restore", "Restore", "secondary", "RS", thread.id || ""),
                     renderActionButton("hard_delete", "Hard Delete", "danger", "HD", thread.id || ""),
@@ -5511,7 +5812,7 @@ ${renderDrawerShell()}    </div>
                   ]
                 : [
                     renderQuickActionButton("rename", "Rename", "secondary", thread.id || "", thread.title || ""),
-                    renderQuickActionButton("show_in_codex", "Show in Codex", "secondary", thread.id || "", thread.title || ""),
+                    renderQuickActionButton("show_in_codex", "Show in Editor", "secondary", thread.id || "", thread.title || ""),
                     renderQuickActionButton("sidebar", "Sidebar Codex", "secondary", thread.id || "", ""),
                     renderActionButton(isArchived ? "unarchive" : "archive", isArchived ? "Unarchive" : "Hide from Codex", "secondary", isArchived ? "UA" : "AR", thread.id || ""),
                     renderActionButton("soft_delete", "Soft Delete", "warn", "SD", thread.id || ""),
@@ -5547,8 +5848,8 @@ ${renderDrawerShell()}    </div>
           '<div class="drawer-section">' +
             renderSectionHeading("Commands", "CM") +
             '<div class="cmd-grid">' +
-              renderCommandCard("Resume", resumeCommand, "Resume", thread.id || "") +
-              renderCommandCard("Fork", forkCommand, "Fork", thread.id || "") +
+              renderCommandCard("Resume in Terminal", resumeCommand, "Resume", thread.id || "") +
+              renderCommandCard("Fork in Terminal", forkCommand, "Fork", thread.id || "") +
             '</div>' +
           '</div>',
           '<div class="drawer-section">' +
@@ -5698,8 +5999,8 @@ ${renderDrawerShell()}    </div>
           '</div>' +
           '<div class="code-line' + (available ? '' : ' empty') + '">' + esc(command || "No command available.") + '</div>' +
           '<div class="cmd-actions">' +
-            '<button class="action-btn secondary" data-run-command="' + esc(command || "") + '" data-command-label="' + esc(commandLabel) + '" data-command-thread="' + esc(threadId || "") + '" type="button"' + (available ? '' : ' disabled') + '>Run</button>' +
-            '<button class="action-btn secondary" data-copy-command="' + esc(command || "") + '" data-command-label="' + esc(commandLabel) + '" data-command-thread="' + esc(threadId || "") + '" type="button"' + (available ? '' : ' disabled') + '>Copy</button>' +
+            '<button class="action-btn secondary" data-run-command="' + esc(command || "") + '" data-command-label="' + esc(commandLabel) + '" data-command-thread="' + esc(threadId || "") + '" type="button"' + (available ? '' : ' disabled') + '>Run in Terminal</button>' +
+            '<button class="action-btn secondary" data-copy-command="' + esc(command || "") + '" data-command-label="' + esc(commandLabel) + '" data-command-thread="' + esc(threadId || "") + '" type="button"' + (available ? '' : ' disabled') + '>Copy Command</button>' +
           '</div>' +
         '</div>';
       }
@@ -5939,6 +6240,7 @@ ${renderDrawerShell()}    </div>
         document.getElementById("usageKeywords").innerHTML = insights && Array.isArray(insights.keywords) && insights.keywords.length
           ? insights.keywords.slice(0, 8).map((item) => renderKeywordChip(item)).join("")
           : '<span class="sub">暂无高频关键词</span>';
+        document.getElementById("vibeAdviceNote").textContent = renderVibeAdviceEvidence(insights);
         document.getElementById("vibeAdvice").innerHTML = insights && insights.guidance && Array.isArray(insights.guidance.vibe_coding_suggestions)
           ? insights.guidance.vibe_coding_suggestions.map((item, index) => renderInsightCard("Advice " + (index + 1), item, "Vibe Coding")).join("")
           : renderInsightCard("Advice", "还没有生成个性化建议，等本地报告生成后这里会显示。", "Pending");
@@ -6004,7 +6306,7 @@ ${renderDrawerShell()}    </div>
             '<div class="mini-thread-meta">' + esc(short(thread.cwd || "-", 52)) + '</div>' +
           '</div>';
         }).join("") || renderCuteEmpty("No urgent cards", "Needs Human threads will surface here while layout stays focused in the Board workspace.", MEDIA.rest);
-        const threadSummaryMarkup = renderThreadSummaryMarkup(visibleCount, (dashboard.threads || []).length, topicFocus, state.ui.sort);
+        const threadSummaryMarkup = renderThreadSummaryMarkup(visibleCount, (dashboard.threads || []).length, topicFocus, state.ui.sort, state.ui.rootFilter);
         document.getElementById("threadSummary").innerHTML = threadSummaryMarkup;
         document.getElementById("threadSummaryMirror").innerHTML = threadSummaryMarkup;
         scrollPendingThreadIntoView();
@@ -6070,6 +6372,7 @@ ${renderDrawerShell()}    </div>
         document.getElementById("interventionDockPrimary").innerHTML = interventionHtml;
         syncRunningDropIndicatorDom();
         document.getElementById("liveTimeline").innerHTML = renderLiveTimeline(effectiveRunningThreads, recentCompletions);
+        document.getElementById("memoryCardsPanel").innerHTML = renderMemoryShellGrid();
 
         const threadMarkup = [
           renderGroup("needs_human", "Needs Human", groups.needs_human),
@@ -6163,6 +6466,15 @@ ${renderDrawerShell()}    </div>
             vscode.postMessage({
               type: "openLogFile",
               path: node.dataset.openLog || "",
+            });
+          });
+        });
+        document.querySelectorAll("[data-open-repo-file]").forEach((node) => {
+          node.addEventListener("click", (event) => {
+            event.stopPropagation();
+            vscode.postMessage({
+              type: "openRepoFile",
+              path: node.dataset.openRepoFile || "",
             });
           });
         });
@@ -6553,6 +6865,14 @@ ${renderDrawerShell()}    </div>
           }
           if (target.dataset.clearTopicFocus) {
             applyTopicFocus(null);
+            return;
+          }
+          if (target.dataset.clearRootFilter) {
+            applyRootFilter(null);
+            return;
+          }
+          if (target.dataset.rootFilter !== undefined) {
+            applyRootFilter(target.dataset.rootFilter || null);
             return;
           }
           if (target.dataset.topicNode) {

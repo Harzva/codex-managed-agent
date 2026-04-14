@@ -1,5 +1,7 @@
 # No Editor First Workflows Task Plan
 
+Status: complete
+
 ## Priority
 
 Priority 2
@@ -19,18 +21,18 @@ Make the managed center the default place for routine agent operations.
 
 ### Task 1 — Card-Level Operations
 
-- keep prompt send, Codex jump, and loop actions usable from board cards
-- reduce unnecessary editor or terminal jumps
+- [x] keep prompt send, Codex jump, and loop actions usable from board cards
+- [x] reduce unnecessary editor or terminal jumps
 
 ### Task 2 — Embedded Status and Logs
 
-- show enough runtime/log context inside cards and drawer
-- avoid forcing users to open log files for common checks
+- [x] show enough runtime/log context inside cards and drawer
+- [x] avoid forcing users to open log files for common checks
 
 ### Task 3 — Controlled Fallbacks
 
-- use editor/terminal only when needed
-- make fallback actions explicit rather than surprising
+- [x] use editor/terminal only when needed
+- [x] make fallback actions explicit rather than surprising
 
 ## Constraints
 

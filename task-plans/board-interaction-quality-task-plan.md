@@ -1,5 +1,7 @@
 # Board Interaction Quality Task Plan
 
+Status: complete
+
 ## Priority
 
 Priority 1
@@ -25,33 +27,33 @@ The board is the main operating surface. If drag, resize, and card-density rules
 
 ### Task 1 — Drag Reliability
 
-- stabilize drag target computation
-- eliminate false drops and stuck drag states
-- ensure board coordinates persist correctly after drop
+- [x] stabilize drag target computation
+- [x] eliminate false drops and stuck drag states
+- [x] ensure board coordinates persist correctly after drop
 
 ### Task 2 — Resize Reliability
 
-- support left/right/bottom/corner resize consistently
-- align resize math with board grid rules
-- prevent card overlap and accidental snapping regressions
+- [x] support left/right/bottom/corner resize consistently
+- [x] align resize math with board grid rules
+- [x] prevent card overlap and accidental snapping regressions
 
 ### Task 3 — Density Normalization
 
-- define exact content rules for `T / S / M / L`
-- ensure typography, controls, and truncation scale with card size
-- make `L` a full-row layout by design
+- [x] define exact content rules for `T / S / M / L`
+- [x] ensure typography, controls, and truncation scale with card size
+- [x] make `L` a full-row layout by design
 
 ### Task 4 — Needs Human Compactness
 
-- keep the dock visible without covering core board content
-- support collapse/expand and bounded height behavior
-- keep urgent cards readable in compact mode
+- [x] keep the dock visible without covering core board content
+- [x] support collapse/expand and bounded height behavior
+- [x] keep urgent cards readable in compact mode
 
 ### Task 5 — Performance Cleanup
 
-- keep drag/resize on `requestAnimationFrame`
-- minimize board-wide re-render during interaction
-- keep overlay rendering isolated from card rendering
+- [x] keep drag/resize on `requestAnimationFrame`
+- [x] minimize board-wide re-render during interaction
+- [x] keep overlay rendering isolated from card rendering
 
 ## Dependencies
 

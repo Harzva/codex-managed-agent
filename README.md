@@ -96,8 +96,12 @@ npx @vscode/vsce package
 This produces a file like:
 
 ```text
-codex-managed-agent-0.0.2.vsix
+codex-managed-agent-0.0.3.vsix
 ```
+
+Before treating the package as release-ready, run through the repo smoke checklist:
+
+- [`SMOKE_CHECKLIST.md`](./SMOKE_CHECKLIST.md)
 
 Then install it in VS Code:
 
@@ -119,7 +123,11 @@ Publishing requires:
 
 - a valid Visual Studio Marketplace publisher
 - authentication for `vsce publish`
+- a completed pass through [`SMOKE_CHECKLIST.md`](./SMOKE_CHECKLIST.md) for the candidate VSIX
+- release-facing notes kept current in [`CHANGELOG.md`](./CHANGELOG.md)
 
 ## Repository
 
 - Source: `https://github.com/Harzva/codex-managed-agent`
+- Release notes: [`CHANGELOG.md`](./CHANGELOG.md)
+- Screenshot plan: [`SCREENSHOT_INVENTORY.md`](./SCREENSHOT_INVENTORY.md)

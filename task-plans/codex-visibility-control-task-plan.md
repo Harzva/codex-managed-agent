@@ -1,5 +1,7 @@
 # Codex Visibility Control Task Plan
 
+Status: complete
+
 ## Priority
 
 Priority 1
@@ -20,21 +22,21 @@ Give the user deliberate control over whether a thread is surfaced in the offici
 
 ### Task 1 — Show in Codex
 
-- unarchive when needed
-- sync preferred thread name
-- open the target thread in Codex
-- reflect resulting link state in the managed center
+- [x] unarchive when needed
+- [x] sync preferred thread name
+- [x] open the target thread in Codex
+- [x] reflect resulting link state in the managed center
 
 ### Task 2 — Hide from Codex
 
-- archive cleanly
-- preserve extension-side metadata and board preferences
-- update visible status immediately
+- [x] archive cleanly
+- [x] preserve extension-side metadata and board preferences
+- [x] update visible status immediately
 
 ### Task 3 — Visibility Feedback
 
-- show whether a thread is visible/hidden/linked/focused
-- make actions available from thread rows, cards, and drawer
+- [x] show whether a thread is visible/hidden/linked/focused
+- [x] make actions available from thread rows, cards, and drawer
 
 ## Constraints
 

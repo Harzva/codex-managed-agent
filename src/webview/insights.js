@@ -8,7 +8,7 @@ function renderInsightsSections() {
           </div>
           <div class="panel">
             <div class="section-title">Vibe Advice</div>
-            <div class="section-note">Suggestions grounded in simple stack, plan-first, stepwise verification, and modular context control.</div>
+            <div class="section-note" id="vibeAdviceNote">Suggestions grounded in simple stack, plan-first, stepwise verification, and modular context control.</div>
             <div class="insight-list" id="vibeAdvice"></div>
             <div class="insight-list" id="analysisViews"></div>
           </div>

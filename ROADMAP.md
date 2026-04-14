@@ -29,6 +29,14 @@ Make `Codex-Managed-Agent` a dependable VS Code control surface for multi-thread
 
 ## Milestones
 
+## Milestone Status
+
+- [x] Milestone 1 — Architecture Stabilization
+- [x] Milestone 2 — Board Interaction Quality
+- [x] Milestone 3 — Insight and Guidance Layer
+- [x] Milestone 4 — Operational Reliability
+- [x] Milestone 5 — Publishable Product Quality
+
 ### Milestone 1 — Architecture Stabilization
 
 Goal:
@@ -115,8 +123,22 @@ When new work appears:
 3. create a new `task-plan` only when the work introduces a new delivery track
 4. keep `ROADMAP.md` as the index, not the implementation dump
 
+## Task-Plan Formatting Rule
+
+When creating or updating files under `task-plans/`:
+
+1. put a `Status: planned`, `Status: active`, or `Status: complete` line directly below the title
+2. write task items as Markdown checkboxes using `[ ]` and `[x]`
+3. when work is completed, mark the relevant checkbox items as `[x]`
+4. when a task-plan is fully completed, set its top status line to `Status: complete`
+5. when adding new task items later, add them in the same checkbox format instead of plain bullets
+
 ## Immediate Focus
 
-Current focus remains:
+Core roadmap milestones are currently complete.
 
-- `task-plans/board-interaction-quality-task-plan.md`
+No active follow-on track is currently open.
+
+Current handoff state:
+
+- Re-anchor from `ROADMAP.md` before starting the next codex-loop

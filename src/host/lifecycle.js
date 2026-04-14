@@ -50,6 +50,20 @@ async function openLogFile(panel, filePath) {
   vscode.window.setStatusBarMessage(`Codex-Managed-Agent: ${panel.lastActionNotice}`, 2200);
 }
 
+async function openRepoFile(panel, relativePath) {
+  const nextPath = String(relativePath || "").trim();
+  if (!nextPath) return;
+  const uri = vscode.Uri.joinPath(panel.extensionUri, nextPath);
+  if (!fs.existsSync(uri.fsPath)) {
+    vscode.window.showWarningMessage(`Codex-Managed-Agent: repo file not found: ${nextPath}`);
+    return;
+  }
+  const doc = await vscode.workspace.openTextDocument(uri);
+  await vscode.window.showTextDocument(doc, { preview: false, preserveFocus: false });
+  panel.lastActionNotice = `Opened ${nextPath}`;
+  vscode.window.setStatusBarMessage(`Codex-Managed-Agent: ${panel.lastActionNotice}`, 2200);
+}
+
 async function renameThread(panel, threadId, currentTitle = "") {
   if (!threadId) return;
   const nextTitle = await vscode.window.showInputBox({
@@ -99,6 +113,7 @@ module.exports = {
   runLifecycleAction,
   copyText,
   openLogFile,
+  openRepoFile,
   renameThread,
   showThreadInCodex,
 };

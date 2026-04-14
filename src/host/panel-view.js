@@ -107,6 +107,9 @@ function attachWebview(panel, webview) {
     if (message.type === "openLogFile") {
       await panel.openLogFile(message.path);
     }
+    if (message.type === "openRepoFile") {
+      await panel.openRepoFile(message.path);
+    }
   });
   webview.html = getWebviewHtml(webview, panel.extensionUri);
 }

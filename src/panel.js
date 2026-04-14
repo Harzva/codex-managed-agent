@@ -8,6 +8,7 @@ const {
   runLifecycleAction,
   copyText,
   openLogFile,
+  openRepoFile,
   renameThread,
   showThreadInCodex,
 } = require("./host/lifecycle");
@@ -161,6 +162,10 @@ class CodexAgentPanel {
 
   async openLogFile(filePath) {
     return openLogFile(this, filePath);
+  }
+
+  async openRepoFile(relativePath) {
+    return openRepoFile(this, relativePath);
   }
 
   async runCommandInTerminal(command, label = "Command") {
