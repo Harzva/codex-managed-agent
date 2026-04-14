@@ -1,6 +1,5 @@
 const vscode = require("vscode");
 
-const { getWebviewHtml } = require("./webview-template");
 const { registerCommands } = require("./host/commands");
 const {
   getConfig,
@@ -33,6 +32,22 @@ const {
   sendPromptToThread,
   triggerAutoContinue,
 } = require("./host/auto-continue");
+const {
+  hasSurface,
+  ensureRefreshLoop,
+  attachWebview,
+  resolveSidebarView,
+  resolveBottomView,
+  createOrShow,
+  focus,
+  openBeside,
+  showSidebar,
+  showBottomPanel,
+  moveToNewWindow,
+  maximizeDashboard,
+  CodexAgentSidebarProvider,
+  CodexAgentBottomProvider,
+} = require("./host/panel-view");
 
 class CodexAgentPanel {
   constructor(extensionUri, storage) {
@@ -77,109 +92,15 @@ class CodexAgentPanel {
   }
 
   ensureRefreshLoop() {
-    if (this.refreshTimer) return;
-    this.refreshTimer = setInterval(() => {
-      this.refresh({ silent: true });
-    }, 4000);
+    return ensureRefreshLoop(this);
   }
 
   hasSurface() {
-    return Boolean(this.panel || this.sidebarView || this.bottomView);
+    return hasSurface(this);
   }
 
   attachWebview(webview) {
-    webview.options = {
-      enableScripts: true,
-      localResourceRoots: [vscode.Uri.joinPath(this.extensionUri, "media")],
-    };
-    webview.onDidReceiveMessage(async (message) => {
-      if (message.type === "ready") {
-        if (this.lastPayload) {
-          this.broadcastState(this.lastPayload);
-        } else {
-          await this.refresh({ silent: true });
-        }
-      }
-      if (message.type === "bootError") {
-        const detail = message.error || "Unknown webview boot error";
-        this.lastActionNotice = `Webview boot issue: ${detail}`;
-        vscode.window.showErrorMessage(`Codex-Managed-Agent: ${this.lastActionNotice}`);
-      }
-      if (message.type === "reload") {
-        await this.refresh();
-      }
-      if (message.type === "startServer") {
-        await this.ensureServer({ forceStart: true });
-        await this.refresh();
-      }
-      if (message.type === "restartServer") {
-        await this.ensureServer({ forceStart: true });
-        await this.refresh();
-      }
-      if (message.type === "openExternal") {
-        await this.openExternal();
-      }
-      if (message.type === "openPanel") {
-        await this.focus();
-      }
-      if (message.type === "openBeside") {
-        this.editorSurface = "editor";
-        this.createOrShow(vscode.ViewColumn.Beside);
-      }
-      if (message.type === "moveToNewWindow") {
-        await this.moveToNewWindow();
-      }
-      if (message.type === "showSidebar") {
-        await this.showSidebar();
-      }
-      if (message.type === "showBottomPanel") {
-        await this.showBottomPanel();
-      }
-      if (message.type === "maximizeDashboard") {
-        await this.maximizeDashboard();
-      }
-      if (message.type === "selectThread") {
-        this.selectedThreadId = message.threadId || undefined;
-        await this.refresh({ silent: true });
-      }
-      if (message.type === "lifecycle") {
-        await this.runLifecycleAction(message.action, message.threadId);
-      }
-      if (message.type === "lifecycleBatch") {
-        await this.runLifecycleAction(message.action, Array.isArray(message.threadIds) ? message.threadIds : []);
-      }
-      if (message.type === "copyText") {
-        await this.copyText(message.text, message.label);
-      }
-      if (message.type === "runCommand") {
-        await this.runCommandInTerminal(message.command, message.label);
-      }
-      if (message.type === "renameThread") {
-        await this.renameThread(message.threadId, message.currentTitle);
-      }
-      if (message.type === "openInCodexEditor") {
-        await this.openInCodexEditor(message.threadId);
-      }
-      if (message.type === "revealInCodexSidebar") {
-        await this.revealInCodexSidebar(message.threadId);
-      }
-      if (message.type === "configureAutoContinue") {
-        await this.configureAutoContinue(message.threadId, message.currentPrompt || "");
-      }
-      if (message.type === "setAutoContinue") {
-        await this.setAutoContinue(message.threadId, message.prompt, message.count);
-      }
-      if (message.type === "clearAutoContinue") {
-        await this.clearAutoContinue(message.threadId);
-      }
-      if (message.type === "sendPromptToThread") {
-        await this.sendPromptToThread(message.threadId, message.prompt);
-      }
-      if (message.type === "openLogFile") {
-        await this.openLogFile(message.path);
-      }
-    });
-    webview.html = getWebviewHtml(webview, this.extensionUri);
+    return attachWebview(this, webview);
   }
 
   saveAutoContinueConfigs() {
@@ -187,90 +108,39 @@ class CodexAgentPanel {
   }
 
   resolveSidebarView(webviewView) {
-    this.sidebarView = webviewView;
-    this.attachWebview(webviewView.webview);
-    this.ensureRefreshLoop();
-    this.refresh({ silent: true });
-    webviewView.onDidDispose(() => {
-      if (this.sidebarView === webviewView) this.sidebarView = undefined;
-    });
+    return resolveSidebarView(this, webviewView);
   }
 
   resolveBottomView(webviewView) {
-    this.bottomView = webviewView;
-    this.attachWebview(webviewView.webview);
-    this.ensureRefreshLoop();
-    this.refresh({ silent: true });
-    webviewView.onDidDispose(() => {
-      if (this.bottomView === webviewView) this.bottomView = undefined;
-    });
+    return resolveBottomView(this, webviewView);
   }
 
   createOrShow(viewColumn = vscode.ViewColumn.One) {
-    if (this.panel) {
-      this.panel.reveal(viewColumn);
-      return this.panel;
-    }
-
-    this.panel = vscode.window.createWebviewPanel(
-      "codexManagedAgent.dashboard",
-      "Codex-Managed-Agent",
-      { viewColumn, preserveFocus: false },
-      {
-        enableScripts: true,
-        retainContextWhenHidden: true,
-      },
-    );
-
-    this.attachWebview(this.panel.webview);
-    this.ensureRefreshLoop();
-    this.refresh();
-
-    this.panel.onDidDispose(() => {
-      this.panel = undefined;
-      if (!this.hasSurface() && this.refreshTimer) {
-        clearInterval(this.refreshTimer);
-        this.refreshTimer = undefined;
-      }
-    });
-
-    return this.panel;
+    return createOrShow(this, viewColumn);
   }
 
   async focus() {
-    this.editorSurface = "editor";
-    this.createOrShow();
-    await this.refresh({ silent: true });
+    return focus(this);
   }
 
   async openBeside() {
-    this.editorSurface = "editor";
-    this.createOrShow(vscode.ViewColumn.Beside);
-    await this.refresh({ silent: true });
+    return openBeside(this);
   }
 
   async showSidebar() {
-    await vscode.commands.executeCommand("workbench.view.extension.codexManagedAgentSidebar");
-    await this.refresh({ silent: true });
+    return showSidebar(this);
   }
 
   async showBottomPanel() {
-    await vscode.commands.executeCommand("workbench.view.extension.codexManagedAgentPanel");
-    await this.refresh({ silent: true });
+    return showBottomPanel(this);
   }
 
   async moveToNewWindow() {
-    this.editorSurface = "editor";
-    this.createOrShow();
-    await vscode.commands.executeCommand("workbench.action.moveEditorToNewWindow");
-    await this.refresh({ silent: true });
+    return moveToNewWindow(this);
   }
 
   async maximizeDashboard() {
-    this.editorSurface = "fullscreen";
-    this.createOrShow();
-    await vscode.commands.executeCommand("workbench.action.maximizeEditor");
-    await this.refresh({ silent: true });
+    return maximizeDashboard(this);
   }
 
   async ensureServer(options = {}) {
@@ -538,26 +408,6 @@ class CodexAgentPanel {
         currentSurface: "bottom",
       });
     }
-  }
-}
-
-class CodexAgentSidebarProvider {
-  constructor(host) {
-    this.host = host;
-  }
-
-  resolveWebviewView(webviewView) {
-    this.host.resolveSidebarView(webviewView);
-  }
-}
-
-class CodexAgentBottomProvider {
-  constructor(host) {
-    this.host = host;
-  }
-
-  resolveWebviewView(webviewView) {
-    this.host.resolveBottomView(webviewView);
   }
 }
 
