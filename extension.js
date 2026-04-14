@@ -20,8 +20,51 @@ function ensureTrailingSlash(value) {
   return value.endsWith("/") ? value : `${value}/`;
 }
 
+function shellSingleQuote(value) {
+  return `'${String(value).replace(/'/g, `'\"'\"'`)}'`;
+}
+
+function shortText(value, len = 120) {
+  const text = String(value || "");
+  return text.length > len ? `${text.slice(0, len)}...` : text;
+}
+
+function ensureDirSync(dirPath) {
+  fs.mkdirSync(dirPath, { recursive: true });
+  return dirPath;
+}
+
+function safeFileSlug(value, fallback = "thread") {
+  return String(value || fallback).replace(/[^a-zA-Z0-9._-]+/g, "-").replace(/^-+|-+$/g, "").slice(0, 48) || fallback;
+}
+
 function delay(ms) {
   return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+function readFileTail(filePath, maxBytes = 8192) {
+  if (!filePath || !fs.existsSync(filePath)) return "";
+  const stat = fs.statSync(filePath);
+  const start = Math.max(0, stat.size - maxBytes);
+  const fd = fs.openSync(filePath, "r");
+  try {
+    const length = stat.size - start;
+    const buffer = Buffer.alloc(length);
+    fs.readSync(fd, buffer, 0, length, start);
+    return buffer.toString("utf8");
+  } finally {
+    fs.closeSync(fd);
+  }
+}
+
+function readPersistedInsightsReport() {
+  try {
+    const reportPath = path.join(os.homedir(), ".codex", "codex_managed_agent_usage_report.json");
+    if (!fs.existsSync(reportPath)) return null;
+    return JSON.parse(fs.readFileSync(reportPath, "utf8"));
+  } catch {
+    return null;
+  }
 }
 
 function httpRequestJson(method, urlString, body, timeoutMs = 3000) {
@@ -187,15 +230,16 @@ function summarizeServiceState(ok, extra = {}) {
 }
 
 async function fetchDashboardState(baseUrl) {
-  const [threadsPayload, runningPayload] = await Promise.all([
+  const [threadsPayload, runningPayload, insightsPayload] = await Promise.all([
     httpGetJson(
       `${baseUrl}api/threads?limit=500&sort=updated_desc&include_logs=true&preview_limit=2&include_history=false&scope=all`,
       4000,
     ),
     httpGetJson(
-      `${baseUrl}api/threads?limit=16&status=running&sort=log_desc&include_logs=true&preview_limit=4&include_history=false&scope=live`,
+      `${baseUrl}api/threads?limit=16&status=running&sort=log_desc&include_logs=true&preview_limit=4&include_history=true&history_limit=4&scope=live`,
       4000,
     ),
+    httpGetJson(`${baseUrl}api/insights/report`, 1500).catch(() => readPersistedInsightsReport()),
   ]);
 
   return {
@@ -203,6 +247,7 @@ async function fetchDashboardState(baseUrl) {
     threadsMeta: threadsPayload.meta || {},
     runningThreads: runningPayload.items || [],
     runningMeta: runningPayload.meta || {},
+    insights: insightsPayload || null,
   };
 }
 
@@ -212,8 +257,9 @@ async function fetchThreadDetail(baseUrl, threadId) {
 }
 
 class CodexAgentPanel {
-  constructor(extensionUri) {
+  constructor(extensionUri, storage) {
     this.extensionUri = extensionUri;
+    this.storage = storage;
     this.panel = undefined;
     this.sidebarView = undefined;
     this.bottomView = undefined;
@@ -225,6 +271,7 @@ class CodexAgentPanel {
     this.lastSuccessfulRefreshAt = "";
     this.previousRunningIds = new Set();
     this.recentCompletions = [];
+    this.autoContinueConfigs = this.storage.get("codexAgent.autoContinueConfigs", {});
     this.codexTabWatcher = vscode.window.tabGroups.onDidChangeTabs(() => {
       this.broadcastLinkState();
     });
@@ -265,9 +312,21 @@ class CodexAgentPanel {
   attachWebview(webview) {
     webview.options = {
       enableScripts: true,
+      localResourceRoots: [vscode.Uri.joinPath(this.extensionUri, "media")],
     };
-    webview.html = getWebviewHtml();
     webview.onDidReceiveMessage(async (message) => {
+      if (message.type === "ready") {
+        if (this.lastPayload) {
+          this.broadcastState(this.lastPayload);
+        } else {
+          await this.refresh({ silent: true });
+        }
+      }
+      if (message.type === "bootError") {
+        const detail = message.error || "Unknown webview boot error";
+        this.lastActionNotice = `Webview boot issue: ${detail}`;
+        vscode.window.showErrorMessage(`Codex-Managed-Agent: ${this.lastActionNotice}`);
+      }
       if (message.type === "reload") {
         await this.refresh();
       }
@@ -326,7 +385,27 @@ class CodexAgentPanel {
       if (message.type === "revealInCodexSidebar") {
         await this.revealInCodexSidebar(message.threadId);
       }
+      if (message.type === "configureAutoContinue") {
+        await this.configureAutoContinue(message.threadId, message.currentPrompt || "");
+      }
+      if (message.type === "setAutoContinue") {
+        await this.setAutoContinue(message.threadId, message.prompt, message.count);
+      }
+      if (message.type === "clearAutoContinue") {
+        await this.clearAutoContinue(message.threadId);
+      }
+      if (message.type === "sendPromptToThread") {
+        await this.sendPromptToThread(message.threadId, message.prompt);
+      }
+      if (message.type === "openLogFile") {
+        await this.openLogFile(message.path);
+      }
     });
+    webview.html = getWebviewHtml(webview, this.extensionUri);
+  }
+
+  saveAutoContinueConfigs() {
+    return this.storage.update("codexAgent.autoContinueConfigs", this.autoContinueConfigs);
   }
 
   resolveSidebarView(webviewView) {
@@ -486,6 +565,19 @@ class CodexAgentPanel {
     await this.refresh({ silent: true });
   }
 
+  async openLogFile(filePath) {
+    if (!filePath) return;
+    if (!fs.existsSync(filePath)) {
+      vscode.window.showWarningMessage(`Codex-Managed-Agent: log file not found: ${filePath}`);
+      return;
+    }
+    const uri = vscode.Uri.file(filePath);
+    const doc = await vscode.workspace.openTextDocument(uri);
+    await vscode.window.showTextDocument(doc, { preview: false, preserveFocus: false });
+    this.lastActionNotice = "Opened background log";
+    vscode.window.setStatusBarMessage(`Codex-Managed-Agent: ${this.lastActionNotice}`, 2200);
+  }
+
   async runCommandInTerminal(command, label = "Command") {
     if (!command) return;
     const terminal = vscode.window.createTerminal({ name: "Codex-Managed-Agent" });
@@ -496,7 +588,7 @@ class CodexAgentPanel {
   }
 
   async renameThread(threadId, currentTitle = "") {
-    if (!threadId) return;
+      if (!threadId) return;
     const nextTitle = await vscode.window.showInputBox({
       title: "Rename Codex thread",
       prompt: "Update the thread label used by Codex-Managed-Agent",
@@ -518,6 +610,267 @@ class CodexAgentPanel {
       vscode.window.showErrorMessage(`Codex-Managed-Agent: ${this.lastActionNotice}`);
       await this.refresh({ silent: true });
     }
+  }
+
+  async configureAutoContinue(threadId, currentPrompt = "") {
+    if (!threadId) return;
+    const countPick = await vscode.window.showQuickPick(
+      [
+        { label: "10 times", value: 10 },
+        { label: "20 times", value: 20 },
+        { label: "50 times", value: 50 },
+        { label: "100 times", value: 100 },
+        { label: "Custom", value: -1 },
+      ],
+      {
+        title: "Auto continue loop",
+        placeHolder: "Choose how many times to auto resume this thread after it stops",
+        ignoreFocusOut: true,
+      },
+    );
+    if (!countPick) return;
+    let remaining = countPick.value;
+    if (remaining < 0) {
+      const customCount = await vscode.window.showInputBox({
+        title: "Auto continue loop",
+        prompt: "How many resume attempts should be allowed?",
+        value: "10",
+        ignoreFocusOut: true,
+        validateInput: (value) => {
+          const parsed = Number(String(value || "").trim());
+          return Number.isInteger(parsed) && parsed > 0 ? undefined : "Enter a positive integer";
+        },
+      });
+      if (customCount === undefined) return;
+      remaining = Number(customCount);
+    }
+    const prompt = await vscode.window.showInputBox({
+      title: "Auto continue loop",
+      prompt: "Prompt to send when the thread stops",
+      value: String(currentPrompt || "continue"),
+      ignoreFocusOut: true,
+      validateInput: (value) => String(value || "").trim() ? undefined : "Prompt cannot be empty",
+    });
+    if (prompt === undefined) return;
+    this.autoContinueConfigs[threadId] = {
+      prompt: String(prompt).trim(),
+      remaining,
+      total: remaining,
+      active: true,
+      lastTriggeredAt: 0,
+      lastLaunchStatus: "armed",
+      lastLogPath: "",
+      lastError: "",
+    };
+    await this.saveAutoContinueConfigs();
+    this.lastActionNotice = `Auto loop armed for ${remaining} run(s)`;
+    vscode.window.setStatusBarMessage(`Codex-Managed-Agent: ${this.lastActionNotice}`, 2800);
+    await this.refresh({ silent: true });
+  }
+
+  async setAutoContinue(threadId, prompt, count) {
+    if (!threadId) return;
+    const nextPrompt = String(prompt || "").trim();
+    const nextCount = Number(count);
+    if (!nextPrompt || !Number.isInteger(nextCount) || nextCount <= 0) {
+      vscode.window.showWarningMessage("Codex-Managed-Agent: auto loop needs a prompt and a positive count");
+      return;
+    }
+    this.autoContinueConfigs[threadId] = {
+      prompt: nextPrompt,
+      remaining: nextCount,
+      total: nextCount,
+      active: true,
+      lastTriggeredAt: 0,
+      lastLaunchStatus: "armed",
+      lastLogPath: "",
+      lastError: "",
+    };
+    await this.saveAutoContinueConfigs();
+    this.lastActionNotice = `Auto loop armed for ${nextCount} run(s)`;
+    vscode.window.setStatusBarMessage(`Codex-Managed-Agent: ${this.lastActionNotice}`, 2800);
+    await this.refresh({ silent: true });
+  }
+
+  async clearAutoContinue(threadId) {
+    if (!threadId || !this.autoContinueConfigs[threadId]) return;
+    delete this.autoContinueConfigs[threadId];
+    await this.saveAutoContinueConfigs();
+    this.lastActionNotice = "Auto loop removed";
+    vscode.window.setStatusBarMessage(`Codex-Managed-Agent: ${this.lastActionNotice}`, 2200);
+    await this.refresh({ silent: true });
+  }
+
+  findThreadContext(threadId) {
+    const dashboard = this.lastPayload?.dashboard;
+    const thread = dashboard?.threads?.find((item) => item.id === threadId)
+      || dashboard?.runningThreads?.find((item) => item.id === threadId)
+      || (this.lastPayload?.detail?.thread?.id === threadId ? this.lastPayload.detail.thread : undefined);
+    return thread || {};
+  }
+
+  isProcessAlive(pid) {
+    const value = Number(pid);
+    if (!Number.isInteger(value) || value <= 0) return false;
+    try {
+      process.kill(value, 0);
+      return true;
+    } catch (error) {
+      return false;
+    }
+  }
+
+  inferAutoContinueResult(config) {
+    if (!config) {
+      return {
+        state: "idle",
+        label: "Idle",
+        detail: "No background continue activity recorded yet.",
+        tailLine: "",
+      };
+    }
+    const pidAlive = this.isProcessAlive(config.lastPid);
+    const tail = readFileTail(config.lastLogPath, 10000).trim();
+    const tailLine = tail.split(/\n/).map((line) => line.trim()).filter(Boolean).slice(-1)[0] || "";
+    if (config.lastLaunchStatus === "failed") {
+      return {
+        state: "failed",
+        label: "Failed",
+        detail: config.lastError || "Background continue failed to launch.",
+        tailLine,
+      };
+    }
+    if (pidAlive) {
+      return {
+        state: "running",
+        label: "Still running",
+        detail: "The detached Codex resume process is still active.",
+        tailLine,
+      };
+    }
+    const failedRe = /(error:|failed|panic|unexpected argument|no rollout found|refusing to start|not authorized|permission denied)/i;
+    const successRe = /("task_complete"|"completed"|final_response|assistant_message|applied|done|finished successfully|patch applied)/i;
+    if (failedRe.test(tail)) {
+      return {
+        state: "failed",
+        label: "Failed",
+        detail: shortText(tailLine || config.lastError || "Background continue failed.", 180),
+        tailLine,
+      };
+    }
+    if (successRe.test(tail)) {
+      return {
+        state: "success",
+        label: "Succeeded",
+        detail: "The last detached continue appears to have completed successfully.",
+        tailLine,
+      };
+    }
+    if (config.lastTriggeredAt) {
+      return {
+        state: "queued",
+        label: "Queued",
+        detail: "The last detached continue was queued; waiting for a clearer completion signal.",
+        tailLine,
+      };
+    }
+    return {
+      state: "armed",
+      label: "Armed",
+      detail: "Auto loop is armed and waiting for a real stop signal.",
+      tailLine,
+    };
+  }
+
+  enrichAutoContinueConfigs() {
+    const result = {};
+    Object.entries(this.autoContinueConfigs || {}).forEach(([threadId, config]) => {
+      const inferred = this.inferAutoContinueResult(config);
+      result[threadId] = {
+        ...config,
+        lastResult: inferred,
+      };
+    });
+    return result;
+  }
+
+  launchCodexExecResume(threadId, prompt, cwd, reason = "manual") {
+    const logsDir = ensureDirSync(path.join(os.homedir(), ".codex-managed-agent", "logs"));
+    const stamp = new Date().toISOString().replace(/[:.]/g, "-");
+    const logPath = path.join(logsDir, `${safeFileSlug(threadId)}-${safeFileSlug(reason)}-${stamp}.log`);
+    const out = fs.openSync(logPath, "a");
+    const child = childProcess.spawn(
+      "codex",
+      ["exec", "resume", threadId, prompt, "--skip-git-repo-check", "--json"],
+      {
+        cwd,
+        detached: true,
+        stdio: ["ignore", out, out],
+        env: { ...process.env, TERM: process.env.TERM || "xterm-256color" },
+      },
+    );
+    child.unref();
+    return { pid: child.pid, logPath };
+  }
+
+  async sendPromptToThread(threadId, prompt) {
+    if (!threadId) return;
+    const nextPrompt = String(prompt || "").trim();
+    if (!nextPrompt) {
+      vscode.window.showWarningMessage("Codex-Managed-Agent: prompt cannot be empty");
+      return;
+    }
+
+    const thread = this.findThreadContext(threadId);
+    const fallbackCwd = vscode.workspace.workspaceFolders?.[0]?.uri.fsPath || os.homedir();
+    const cwd = thread.cwd || fallbackCwd;
+    try {
+      const launched = this.launchCodexExecResume(threadId, nextPrompt, cwd, "manual");
+      this.lastActionNotice = `Prompt queued in background · ${thread.title || threadId}`;
+      vscode.window.setStatusBarMessage(`Codex-Managed-Agent: ${this.lastActionNotice}`, 2600);
+      await this.refresh({ silent: true });
+      return launched;
+    } catch (error) {
+      const detail = error instanceof Error ? error.message : String(error);
+      vscode.window.showErrorMessage(`Codex-Managed-Agent: Failed to send prompt in background: ${detail}`);
+      throw error;
+    }
+  }
+
+  async triggerAutoContinue(threadId, config) {
+    if (!threadId || !config || !config.active || config.remaining <= 0) return false;
+    const now = Date.now();
+    if (config.lastTriggeredAt && now - config.lastTriggeredAt < 8000) {
+      return false;
+    }
+    const prompt = String(config.prompt || "continue").trim();
+    const thread = this.findThreadContext(threadId);
+    const fallbackCwd = vscode.workspace.workspaceFolders?.[0]?.uri.fsPath || os.homedir();
+    const cwd = thread.cwd || fallbackCwd;
+    try {
+      const launched = this.launchCodexExecResume(threadId, prompt, cwd, "auto-loop");
+      config.lastLaunchStatus = "queued";
+      config.lastLogPath = launched.logPath || "";
+      config.lastPid = launched.pid || 0;
+      config.lastError = "";
+    } catch (error) {
+      config.lastLaunchStatus = "failed";
+      config.lastError = error instanceof Error ? error.message : String(error);
+      await this.saveAutoContinueConfigs();
+      this.lastActionNotice = `Auto loop failed to queue`;
+      vscode.window.showWarningMessage(`Codex-Managed-Agent: ${this.lastActionNotice}`);
+      return false;
+    }
+    config.remaining -= 1;
+    config.lastTriggeredAt = now;
+    config.lastPrompt = prompt;
+    if (config.remaining <= 0) {
+      config.active = false;
+    }
+    await this.saveAutoContinueConfigs();
+    this.lastActionNotice = `Auto loop queued in background · ${config.remaining} left`;
+    vscode.window.setStatusBarMessage(`Codex-Managed-Agent: ${this.lastActionNotice}`, 3200);
+    return true;
   }
 
   async openInCodexEditor(threadId) {
@@ -588,6 +941,35 @@ class CodexAgentPanel {
     };
   }
 
+  getThreadLogCorpus(thread) {
+    const logs = Array.isArray(thread?.preview_logs) ? thread.preview_logs : [];
+    return logs
+      .map((item) => [item?.target || "", item?.message || ""].filter(Boolean).join(" "))
+      .join("\n")
+      .toLowerCase();
+  }
+
+  isPassiveLinkedThread(thread, codexLinkState = this.getCodexLinkState()) {
+    if (!thread || String(thread.status || "").toLowerCase() !== "running") return false;
+    const threadId = String(thread.id || "");
+    if (!threadId) return false;
+    const openThreadIds = new Set(codexLinkState?.openThreadIds || []);
+    const focusedThreadId = codexLinkState?.focusedThreadId;
+    const linked = openThreadIds.has(threadId) || focusedThreadId === threadId;
+    if (!linked) return false;
+
+    const corpus = this.getThreadLogCorpus(thread);
+    if (!corpus) return false;
+    const passiveRe = /(responses_websocket|sse::responses|stream_events_utils|trace_safe|log_only|tools::registry|op\.dispatch\.user_input|session_task\.turn|rpc\.method=\"thread\/resume\")/i;
+    const activeRe = /(apply_patch|update file|write file|create file|delete file|move to|pytest|npm run|build|compile|tool call|spawn|shell_snapshot|terminal|uvicorn|codex resume|search_query|web search|patch|refactor|implement|edit code)/i;
+    return passiveRe.test(corpus) && !activeRe.test(corpus);
+  }
+
+  isEffectivelyRunningThread(thread, codexLinkState = this.getCodexLinkState()) {
+    if (!thread || String(thread.status || "").toLowerCase() !== "running") return false;
+    return !this.isPassiveLinkedThread(thread, codexLinkState);
+  }
+
   broadcastLinkState() {
     if (!this.hasSurface() || !this.lastPayload) return;
     this.broadcastState(this.lastPayload);
@@ -614,8 +996,12 @@ class CodexAgentPanel {
 
     try {
       const dashboard = await fetchDashboardState(service.baseUrl);
+      const codexLinkState = this.getCodexLinkState();
       const currentThreads = Array.isArray(dashboard.threads) ? dashboard.threads : [];
-      const nextRunningIds = new Set((dashboard.runningThreads || []).map((thread) => thread.id));
+      const effectiveRunningThreads = (dashboard.runningThreads || []).filter((thread) =>
+        this.isEffectivelyRunningThread(thread, codexLinkState),
+      );
+      const nextRunningIds = new Set(effectiveRunningThreads.map((thread) => thread.id));
       const completedEvents = [...this.previousRunningIds]
         .filter((threadId) => !nextRunningIds.has(threadId))
         .map((threadId) => {
@@ -628,6 +1014,12 @@ class CodexAgentPanel {
             updatedAt: thread.updated_at_iso || "",
           };
         });
+      for (const item of completedEvents) {
+        const loopConfig = this.autoContinueConfigs[item.threadId];
+        if (loopConfig && loopConfig.active && loopConfig.remaining > 0) {
+          await this.triggerAutoContinue(item.threadId, loopConfig);
+        }
+      }
       if (completedEvents.length) {
         this.recentCompletions = [...completedEvents, ...this.recentCompletions].slice(0, 8);
         const label = completedEvents.length === 1
@@ -652,9 +1044,11 @@ class CodexAgentPanel {
         type: "state",
         service,
         dashboard,
+        effectiveRunningThreadIds: [...nextRunningIds],
         selectedThreadId: this.selectedThreadId,
         detail,
         recentCompletions: this.recentCompletions,
+        autoContinueConfigs: this.enrichAutoContinueConfigs(),
         actionNotice: this.lastActionNotice,
         lastSuccessfulRefreshAt: this.lastSuccessfulRefreshAt,
       });
@@ -691,9 +1085,10 @@ class CodexAgentPanel {
   }
 
   broadcastState(payload) {
+    const codexLinkState = this.getCodexLinkState();
     const enrichedPayload = {
       ...payload,
-      codexLinkState: this.getCodexLinkState(),
+      codexLinkState,
     };
     this.lastPayload = enrichedPayload;
     if (this.panel) {
@@ -737,15 +1132,29 @@ class CodexAgentBottomProvider {
   }
 }
 
-function getWebviewHtml() {
+function getWebviewHtml(webview, extensionUri) {
   const nonce = String(Date.now());
+  const mediaRoot = vscode.Uri.joinPath(extensionUri, "media");
+  const media = {
+    hero: webview.asWebviewUri(vscode.Uri.joinPath(mediaRoot, "home-runing.svg")).toString(),
+    board: webview.asWebviewUri(vscode.Uri.joinPath(mediaRoot, "卡通形象.svg")).toString(),
+    intervention: webview.asWebviewUri(vscode.Uri.joinPath(mediaRoot, "小鸡 动物 鸟.svg")).toString(),
+    spotlight: webview.asWebviewUri(vscode.Uri.joinPath(mediaRoot, "live照片.svg")).toString(),
+    timeline: webview.asWebviewUri(vscode.Uri.joinPath(mediaRoot, "toruning.svg")).toString(),
+    rest: webview.asWebviewUri(vscode.Uri.joinPath(mediaRoot, "婴儿枕头.svg")).toString(),
+    planning: webview.asWebviewUri(vscode.Uri.joinPath(mediaRoot, "createtask.svg")).toString(),
+    tooling: webview.asWebviewUri(vscode.Uri.joinPath(mediaRoot, "卡通手表.svg")).toString(),
+    editing: webview.asWebviewUri(vscode.Uri.joinPath(mediaRoot, "edit.svg")).toString(),
+    testing: webview.asWebviewUri(vscode.Uri.joinPath(mediaRoot, "runing.svg")).toString(),
+    waiting: webview.asWebviewUri(vscode.Uri.joinPath(mediaRoot, "卡通绵羊-copy.svg")).toString(),
+  };
   return `<!doctype html>
 <html lang="en">
   <head>
     <meta charset="utf-8" />
     <meta
       http-equiv="Content-Security-Policy"
-      content="default-src 'none'; style-src 'unsafe-inline'; script-src 'nonce-${nonce}';"
+      content="default-src 'none'; img-src ${webview.cspSource} data:; style-src 'unsafe-inline'; script-src 'nonce-${nonce}';"
     />
     <meta name="viewport" content="width=device-width,initial-scale=1" />
     <title>Codex-Managed-Agent</title>
@@ -795,6 +1204,50 @@ function getWebviewHtml() {
         display: grid;
         gap: 12px;
       }
+      .topbar.mode-collapsed .hero-stage,
+      .topbar.mode-collapsed .sub {
+        display: none;
+      }
+      .topbar.mode-collapsed .ascii-shell {
+        display: none;
+      }
+      .topbar.mode-collapsed .title-stack {
+        display: grid;
+      }
+      .topbar.mode-collapsed .topbar-nav {
+        padding-top: 0;
+        border-top: none;
+      }
+      .topbar.mode-collapsed .topbar-head {
+        gap: 8px;
+      }
+      .topbar.mode-collapsed .panel-density-note {
+        display: none;
+      }
+      .topbar.mode-ultra {
+        gap: 8px;
+      }
+      .topbar.mode-ultra .topbar-head {
+        display: flex;
+        justify-content: flex-end;
+      }
+      .topbar.mode-ultra .brand-cluster,
+      .topbar.mode-ultra .topbar-nav-right,
+      .topbar.mode-ultra #soundToggle {
+        display: none;
+      }
+      .topbar.mode-ultra .topbar-nav {
+        padding-top: 0;
+        border-top: none;
+      }
+      .topbar.mode-ultra .workspace-tabs {
+        gap: 6px;
+      }
+      .topbar.mode-ultra .workspace-tab {
+        min-height: 30px;
+        padding: 0 12px;
+        font-size: 11px;
+      }
       .topbar-head {
         display: grid;
         grid-template-columns: minmax(0, 1fr) auto;
@@ -816,16 +1269,102 @@ function getWebviewHtml() {
       }
       .brand-line {
         display: flex;
-        align-items: center;
+        align-items: flex-start;
         gap: 12px;
         flex-wrap: wrap;
       }
-      .title {
-        font-size: 21px;
+      .title-banner {
+        display: grid;
+        gap: 6px;
+        min-width: min(100%, 780px);
+      }
+      .ascii-shell {
+        padding: 10px 14px;
+        border-radius: 20px;
+        border: 1px solid rgba(255, 255, 255, 0.08);
+        background:
+          radial-gradient(circle at top left, rgba(124, 157, 255, 0.14), transparent 32%),
+          radial-gradient(circle at bottom right, rgba(255, 214, 107, 0.12), transparent 28%),
+          linear-gradient(180deg, rgba(255, 255, 255, 0.03), rgba(255, 255, 255, 0.012));
+        box-shadow:
+          inset 0 0 0 1px rgba(255, 255, 255, 0.03),
+          0 16px 34px rgba(0, 0, 0, 0.24);
+      }
+      .ascii-title {
+        margin: 0;
+        overflow-x: auto;
+        overflow-y: hidden;
+        font-size: 11px;
+        line-height: 1;
         font-weight: 800;
-        line-height: 1.2;
-        letter-spacing: -0.02em;
+        letter-spacing: -0.04em;
+        white-space: pre;
+        font-family: "JetBrains Mono", "SFMono-Regular", Consolas, monospace;
+        color: transparent;
+        background-image: linear-gradient(90deg, #9ee7ff 0%, #ffffff 24%, #ffd36c 50%, #9cffbb 76%, #7dbdff 100%);
+        -webkit-background-clip: text;
+        background-clip: text;
+        text-shadow:
+          0 0 14px rgba(124, 157, 255, 0.12),
+          0 0 28px rgba(255, 214, 107, 0.08);
+      }
+      .title-stack {
+        display: none;
+        gap: 2px;
+      }
+      .title {
+        display: inline-flex;
+        align-items: baseline;
+        gap: 0;
+        font-size: 22px;
+        font-weight: 900;
+        line-height: 1.05;
+        letter-spacing: -0.04em;
+        font-family: "Avenir Next Condensed", "DIN Alternate", "SF Pro Display", "Segoe UI", sans-serif;
         color: var(--text-strong);
+        text-shadow:
+          0 1px 0 rgba(255, 255, 255, 0.08),
+          0 0 18px rgba(124, 157, 255, 0.12);
+      }
+      .title-seg {
+        display: inline-block;
+        -webkit-background-clip: text;
+        background-clip: text;
+        color: transparent;
+      }
+      .title-seg.codex {
+        background-image: linear-gradient(135deg, #9ee7ff 0%, #d7f2ff 46%, #7dbdff 100%);
+      }
+      .title-seg.managed {
+        background-image: linear-gradient(135deg, #ffd36c 0%, #fff1b7 46%, #ff9d5c 100%);
+      }
+      .title-seg.agent {
+        background-image: linear-gradient(135deg, #9cffbb 0%, #d6ffe7 44%, #61ffc0 100%);
+      }
+      .title-hyphen {
+        color: rgba(255, 255, 255, 0.36);
+        margin: 0 -1px;
+      }
+      .title-strip {
+        display: inline-flex;
+        align-items: center;
+        gap: 10px;
+        color: rgba(210, 231, 255, 0.62);
+        font-size: 10px;
+        line-height: 1.2;
+        font-family: "JetBrains Mono", "SFMono-Regular", Consolas, monospace;
+        letter-spacing: 0.18em;
+        text-transform: uppercase;
+      }
+      .title-strip::before,
+      .title-strip::after {
+        content: "";
+        width: 22px;
+        height: 1px;
+        background: linear-gradient(90deg, transparent, rgba(126, 231, 255, 0.5));
+      }
+      .title-strip::after {
+        background: linear-gradient(90deg, rgba(255, 214, 107, 0.5), transparent);
       }
       .sub {
         color: var(--muted);
@@ -851,6 +1390,92 @@ function getWebviewHtml() {
         color: var(--muted);
         font-size: 11px;
         letter-spacing: 0.04em;
+      }
+      .mascot-art {
+        width: 26px;
+        height: 26px;
+        object-fit: contain;
+        filter: drop-shadow(0 4px 10px rgba(0, 0, 0, 0.26));
+        flex: 0 0 auto;
+      }
+      .theme-bar {
+        --bar-a: rgba(126, 231, 255, 0.95);
+        --bar-b: rgba(124, 157, 255, 0.8);
+        display: inline-block;
+        flex: 0 0 auto;
+        border-radius: 999px;
+        background: linear-gradient(135deg, var(--bar-a), var(--bar-b));
+        box-shadow: inset 0 1px 0 rgba(255,255,255,0.18), 0 8px 16px rgba(0,0,0,0.14);
+      }
+      .theme-bar.phase-planning {
+        --bar-a: rgba(126, 231, 255, 0.95);
+        --bar-b: rgba(124, 157, 255, 0.82);
+      }
+      .theme-bar.phase-tooling {
+        --bar-a: rgba(255, 214, 107, 0.95);
+        --bar-b: rgba(255, 157, 92, 0.82);
+      }
+      .theme-bar.phase-editing {
+        --bar-a: rgba(84, 242, 176, 0.95);
+        --bar-b: rgba(121, 237, 210, 0.82);
+      }
+      .theme-bar.phase-testing {
+        --bar-a: rgba(196, 163, 255, 0.95);
+        --bar-b: rgba(140, 127, 255, 0.82);
+      }
+      .theme-bar.phase-waiting {
+        --bar-a: rgba(173, 181, 197, 0.92);
+        --bar-b: rgba(124, 157, 255, 0.58);
+      }
+      .theme-bar.variant-hero {
+        width: 22px;
+        height: 22px;
+        border-radius: 8px;
+      }
+      .theme-bar.variant-summary,
+      .theme-bar.variant-metric {
+        width: 28px;
+        height: 28px;
+        border-radius: 10px;
+      }
+      .theme-bar.variant-empty {
+        width: 38px;
+        height: 12px;
+        border-radius: 999px;
+        margin-bottom: 8px;
+      }
+      .theme-bar.variant-phase,
+      .theme-bar.variant-mini,
+      .theme-bar.variant-intervention {
+        width: 18px;
+        height: 18px;
+        border-radius: 7px;
+      }
+      .theme-bar.variant-phase-chip {
+        width: 12px;
+        height: 12px;
+      }
+      .theme-bar.variant-timeline {
+        width: 18px;
+        height: 18px;
+        border-radius: 6px;
+      }
+      .theme-mode-pure .theme-is-optional {
+        display: none !important;
+      }
+      .theme-mode-vivid .hero-art-clean,
+      .theme-mode-vivid .board-icon-clean {
+        display: none !important;
+      }
+      .theme-mode-clean .hero-art-vivid,
+      .theme-mode-clean .board-icon-vivid {
+        display: none !important;
+      }
+      .theme-mode-pure .hero-art-vivid,
+      .theme-mode-pure .hero-art-clean,
+      .theme-mode-pure .board-icon-vivid,
+      .theme-mode-pure .board-icon-clean {
+        display: none !important;
       }
       .mascot-face {
         display: grid;
@@ -902,6 +1527,10 @@ function getWebviewHtml() {
         gap: 6px;
         flex-wrap: wrap;
         justify-content: flex-end;
+      }
+      .collapse-btn {
+        min-width: 34px;
+        padding: 0 10px;
       }
       .topbar-nav-left,
       .topbar-nav-right {
@@ -965,13 +1594,21 @@ function getWebviewHtml() {
         gap: 10px;
       }
       .metric {
+        --metric-border: rgba(255,255,255,0.06);
+        --metric-bg: rgba(255,255,255,0.038);
+        --metric-glow: rgba(255,255,255,0.04);
+        --metric-band: linear-gradient(90deg, var(--blue), rgba(196,163,255,0.82));
         border-radius: 18px;
         padding: 14px 14px 12px 14px;
-        background: linear-gradient(180deg, rgba(255,255,255,0.038), rgba(255,255,255,0.014));
-        border: 1px solid rgba(255,255,255,0.06);
+        background:
+          radial-gradient(circle at top right, var(--metric-glow), transparent 36%),
+          linear-gradient(180deg, var(--metric-bg), rgba(255,255,255,0.014));
+        border: 1px solid var(--metric-border);
         box-shadow: inset 0 1px 0 rgba(255,255,255,0.03);
         position: relative;
         overflow: hidden;
+        display: grid;
+        gap: 8px;
       }
       .metric::before {
         content: "";
@@ -981,7 +1618,46 @@ function getWebviewHtml() {
         width: 42px;
         height: 3px;
         border-radius: 999px;
-        background: linear-gradient(90deg, var(--blue), rgba(196,163,255,0.82));
+        background: var(--metric-band);
+      }
+      .metric.phase-planning {
+        --metric-border: rgba(126, 231, 255, 0.16);
+        --metric-bg: rgba(36, 89, 122, 0.14);
+        --metric-glow: rgba(126, 231, 255, 0.08);
+        --metric-band: linear-gradient(90deg, rgba(126, 231, 255, 0.95), rgba(124, 157, 255, 0.82));
+      }
+      .metric.phase-tooling {
+        --metric-border: rgba(255, 214, 107, 0.16);
+        --metric-bg: rgba(120, 76, 9, 0.14);
+        --metric-glow: rgba(255, 214, 107, 0.08);
+        --metric-band: linear-gradient(90deg, rgba(255, 214, 107, 0.95), rgba(255, 157, 92, 0.82));
+      }
+      .metric.phase-editing {
+        --metric-border: rgba(84, 242, 176, 0.16);
+        --metric-bg: rgba(18, 73, 53, 0.14);
+        --metric-glow: rgba(84, 242, 176, 0.08);
+        --metric-band: linear-gradient(90deg, rgba(84, 242, 176, 0.95), rgba(121, 237, 210, 0.82));
+      }
+      .metric.phase-waiting {
+        --metric-border: rgba(173, 181, 197, 0.16);
+        --metric-bg: rgba(58, 66, 80, 0.14);
+        --metric-glow: rgba(173, 181, 197, 0.08);
+        --metric-band: linear-gradient(90deg, rgba(173, 181, 197, 0.9), rgba(124, 157, 255, 0.58));
+      }
+      .metric-head {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+      }
+      .metric-art {
+        width: 28px;
+        height: 28px;
+        object-fit: contain;
+        flex: 0 0 auto;
+        filter: drop-shadow(0 4px 10px rgba(0, 0, 0, 0.22));
+      }
+      .metric-head-copy {
+        min-width: 0;
       }
       .metric-label {
         color: var(--muted);
@@ -1152,10 +1828,47 @@ function getWebviewHtml() {
         gap: 10px;
       }
       .summary-card {
+        --summary-border: rgba(255, 255, 255, 0.06);
+        --summary-bg: rgba(255,255,255,0.035);
+        --summary-glow: rgba(255,255,255,0.04);
         border-radius: 18px;
-        border: 1px solid rgba(255, 255, 255, 0.06);
-        background: linear-gradient(180deg, rgba(255,255,255,0.035), rgba(255,255,255,0.015));
+        border: 1px solid var(--summary-border);
+        background:
+          radial-gradient(circle at top right, var(--summary-glow), transparent 34%),
+          linear-gradient(180deg, var(--summary-bg), rgba(255,255,255,0.015));
         padding: 14px;
+        display: grid;
+        gap: 8px;
+      }
+      .summary-card.phase-planning {
+        --summary-border: rgba(126, 231, 255, 0.16);
+        --summary-bg: rgba(36, 89, 122, 0.14);
+        --summary-glow: rgba(126, 231, 255, 0.08);
+      }
+      .summary-card.phase-tooling {
+        --summary-border: rgba(255, 214, 107, 0.16);
+        --summary-bg: rgba(120, 76, 9, 0.14);
+        --summary-glow: rgba(255, 214, 107, 0.08);
+      }
+      .summary-card.phase-waiting {
+        --summary-border: rgba(173, 181, 197, 0.16);
+        --summary-bg: rgba(58, 66, 80, 0.14);
+        --summary-glow: rgba(173, 181, 197, 0.08);
+      }
+      .summary-head {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+      }
+      .summary-art {
+        width: 28px;
+        height: 28px;
+        object-fit: contain;
+        filter: drop-shadow(0 4px 10px rgba(0, 0, 0, 0.22));
+        flex: 0 0 auto;
+      }
+      .summary-head-copy {
+        min-width: 0;
       }
       .summary-label {
         font-size: 11px;
@@ -1197,6 +1910,153 @@ function getWebviewHtml() {
         color: var(--muted);
         font-size: 11px;
       }
+      .insight-list {
+        display: grid;
+        gap: 10px;
+      }
+      .insight-card {
+        border-radius: 16px;
+        border: 1px solid rgba(255,255,255,0.06);
+        background: rgba(255,255,255,0.025);
+        padding: 12px 14px;
+        display: grid;
+        gap: 6px;
+      }
+      .insight-card-head {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 10px;
+      }
+      .insight-card-title {
+        font-size: 13px;
+        font-weight: 700;
+      }
+      .insight-card-copy {
+        color: var(--muted-soft);
+        font-size: 12px;
+        line-height: 1.5;
+      }
+      .insight-chip-list {
+        margin-top: 12px;
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+      }
+      .keyword-chip {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        padding: 6px 10px;
+        border-radius: 999px;
+        border: 1px solid rgba(126, 231, 255, 0.12);
+        background: rgba(126, 231, 255, 0.06);
+        font-size: 11px;
+        color: var(--fg);
+      }
+      .keyword-chip .count {
+        color: var(--muted);
+      }
+      .topic-map {
+        border-radius: 18px;
+        border: 1px solid rgba(255,255,255,0.06);
+        background: rgba(255,255,255,0.02);
+        min-height: 320px;
+        overflow: hidden;
+      }
+      .topic-map svg {
+        display: block;
+        width: 100%;
+        height: 320px;
+      }
+      .topic-edge {
+        stroke: rgba(126, 231, 255, 0.32);
+        stroke-width: 1.4;
+      }
+      .topic-node rect {
+        fill: rgba(18, 20, 28, 0.92);
+        stroke: rgba(255,255,255,0.08);
+      }
+      .topic-node.center rect {
+        fill: rgba(126, 231, 255, 0.12);
+        stroke: rgba(126, 231, 255, 0.22);
+      }
+      .topic-node.style rect {
+        fill: rgba(126, 231, 255, 0.09);
+        stroke: rgba(126, 231, 255, 0.18);
+      }
+      .topic-node.keyword rect {
+        fill: rgba(255, 214, 107, 0.08);
+        stroke: rgba(255, 214, 107, 0.18);
+      }
+      .topic-node.thread rect {
+        fill: rgba(191, 155, 255, 0.08);
+        stroke: rgba(191, 155, 255, 0.18);
+      }
+      .topic-node text {
+        fill: rgba(255,255,255,0.92);
+        font-size: 11px;
+        font-family: Inter, ui-sans-serif, system-ui, sans-serif;
+        pointer-events: none;
+      }
+      .topic-node.interactive {
+        cursor: pointer;
+      }
+      .topic-node.interactive rect {
+        transition: transform 120ms ease, stroke-color 120ms ease, fill 120ms ease;
+      }
+      .topic-node.interactive:hover rect {
+        stroke: rgba(100, 255, 186, 0.45);
+        fill: rgba(100, 255, 186, 0.12);
+      }
+      .compact-title {
+        margin-top: 14px;
+      }
+      .shift-chip-row {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+      }
+      .shift-chip {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        padding: 7px 10px;
+        border-radius: 999px;
+        border: 1px solid rgba(255,255,255,0.08);
+        background: rgba(255,255,255,0.03);
+        font-size: 11px;
+      }
+      .shift-chip.up {
+        border-color: rgba(100, 255, 186, 0.22);
+        background: rgba(100, 255, 186, 0.08);
+      }
+      .shift-chip.down {
+        border-color: rgba(255, 142, 167, 0.22);
+        background: rgba(255, 142, 167, 0.08);
+      }
+      .shift-chip.flat {
+        border-color: rgba(173,181,197,0.18);
+        background: rgba(173,181,197,0.07);
+      }
+      .word-cloud {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 10px 12px;
+        align-items: center;
+        padding: 10px 4px 2px;
+      }
+      .word-cloud-token {
+        line-height: 1;
+        color: rgba(255,255,255,0.9);
+        padding: 4px 6px;
+        border-radius: 10px;
+      }
+      .word-cloud-token.weight-1 { font-size: 12px; opacity: 0.66; }
+      .word-cloud-token.weight-2 { font-size: 14px; opacity: 0.74; }
+      .word-cloud-token.weight-3 { font-size: 16px; opacity: 0.82; }
+      .word-cloud-token.weight-4 { font-size: 20px; opacity: 0.9; }
+      .word-cloud-token.weight-5 { font-size: 24px; opacity: 1; }
       .single-grid {
         display: grid;
         grid-template-columns: 1fr;
@@ -1207,10 +2067,44 @@ function getWebviewHtml() {
         gap: 12px;
       }
       .timeline-card {
+        --timeline-border: rgba(255,255,255,0.06);
+        --timeline-bg: rgba(255,255,255,0.032);
+        --timeline-dot: rgba(126, 231, 255, 0.95);
+        --timeline-dot-glow: rgba(126, 231, 255, 0.08);
         border-radius: 18px;
-        border: 1px solid rgba(255,255,255,0.06);
-        background: linear-gradient(180deg, rgba(255,255,255,0.032), rgba(255,255,255,0.014));
+        border: 1px solid var(--timeline-border);
+        background: linear-gradient(180deg, var(--timeline-bg), rgba(255,255,255,0.014));
         padding: 14px;
+      }
+      .timeline-card.phase-planning {
+        --timeline-border: rgba(126, 231, 255, 0.14);
+        --timeline-bg: rgba(36, 89, 122, 0.14);
+        --timeline-dot: rgba(126, 231, 255, 0.95);
+        --timeline-dot-glow: rgba(126, 231, 255, 0.08);
+      }
+      .timeline-card.phase-tooling {
+        --timeline-border: rgba(255, 214, 107, 0.14);
+        --timeline-bg: rgba(120, 76, 9, 0.14);
+        --timeline-dot: rgba(255, 214, 107, 0.95);
+        --timeline-dot-glow: rgba(255, 214, 107, 0.08);
+      }
+      .timeline-card.phase-editing {
+        --timeline-border: rgba(84, 242, 176, 0.14);
+        --timeline-bg: rgba(18, 73, 53, 0.14);
+        --timeline-dot: rgba(84, 242, 176, 0.95);
+        --timeline-dot-glow: rgba(84, 242, 176, 0.08);
+      }
+      .timeline-card.phase-testing {
+        --timeline-border: rgba(196, 163, 255, 0.16);
+        --timeline-bg: rgba(66, 43, 109, 0.14);
+        --timeline-dot: rgba(196, 163, 255, 0.95);
+        --timeline-dot-glow: rgba(196, 163, 255, 0.08);
+      }
+      .timeline-card.phase-waiting {
+        --timeline-border: rgba(173, 181, 197, 0.16);
+        --timeline-bg: rgba(58, 66, 80, 0.14);
+        --timeline-dot: rgba(173, 181, 197, 0.95);
+        --timeline-dot-glow: rgba(173, 181, 197, 0.08);
       }
       .timeline-header {
         display: flex;
@@ -1218,6 +2112,19 @@ function getWebviewHtml() {
         gap: 12px;
         align-items: center;
         margin-bottom: 10px;
+      }
+      .timeline-title-wrap {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        min-width: 0;
+      }
+      .timeline-phase-art {
+        width: 18px;
+        height: 18px;
+        object-fit: contain;
+        flex: 0 0 auto;
+        filter: drop-shadow(0 3px 8px rgba(0, 0, 0, 0.22));
       }
       .timeline-title {
         font-size: 14px;
@@ -1238,8 +2145,8 @@ function getWebviewHtml() {
         height: 10px;
         margin-top: 4px;
         border-radius: 999px;
-        background: rgba(126, 231, 255, 0.95);
-        box-shadow: 0 0 0 4px rgba(126, 231, 255, 0.08);
+        background: var(--timeline-dot);
+        box-shadow: 0 0 0 4px var(--timeline-dot-glow);
       }
       .timeline-dot.complete {
         background: rgba(75, 255, 181, 0.95);
@@ -1493,6 +2400,16 @@ function getWebviewHtml() {
       }
       .badge-running { color: var(--green); border-color: rgba(75, 255, 181, 0.18); }
       .badge-recent { color: var(--gold); border-color: rgba(255, 214, 107, 0.18); }
+      .badge-linked {
+        color: #b7d6ff;
+        border-color: rgba(120, 170, 255, 0.24);
+        background: rgba(40, 77, 134, 0.12);
+      }
+      .badge-attached {
+        color: #f2c27b;
+        border-color: rgba(242, 194, 123, 0.22);
+        background: rgba(116, 78, 22, 0.16);
+      }
       .badge-board {
         color: #f2c27b;
         border-color: rgba(242, 194, 123, 0.22);
@@ -1507,9 +2424,31 @@ function getWebviewHtml() {
         color: #d6ffee;
         background: rgba(84, 242, 176, 0.08);
       }
+      .running-card.running-live .badge-running {
+        animation: runningBadgePulse 1.45s ease-in-out infinite;
+        box-shadow: 0 0 0 1px rgba(84, 242, 176, 0.12), 0 0 14px rgba(84, 242, 176, 0.12);
+      }
       .running-card .badge-recent {
         color: #ffe6b3;
         background: rgba(255, 214, 107, 0.08);
+      }
+      .running-card .badge-linked {
+        color: #d7e6ff;
+        background: rgba(80, 110, 180, 0.14);
+      }
+      .running-card .badge-attached {
+        color: #ffe0a8;
+        background: rgba(116, 78, 22, 0.18);
+      }
+      .badge-intervention {
+        color: #ffd7dd;
+        border-color: rgba(255, 143, 159, 0.26);
+        background: rgba(122, 24, 40, 0.18);
+      }
+      @keyframes runningBadgePulse {
+        0% { opacity: 0.72; transform: scale(1); }
+        50% { opacity: 1; transform: scale(1.04); }
+        100% { opacity: 0.72; transform: scale(1); }
       }
       .badge-codex-open {
         color: var(--blue);
@@ -1684,6 +2623,31 @@ function getWebviewHtml() {
         background: rgba(7, 14, 26, 0.42);
         padding: 20px;
       }
+      .empty-state.cute {
+        padding: 22px 20px 18px;
+      }
+      .empty-state-inner {
+        display: grid;
+        justify-items: center;
+        gap: 10px;
+        max-width: 280px;
+      }
+      .empty-state-art {
+        width: 68px;
+        height: 68px;
+        object-fit: contain;
+        filter: drop-shadow(0 10px 18px rgba(0, 0, 0, 0.3));
+      }
+      .empty-state-title {
+        color: var(--text-strong);
+        font-size: 13px;
+        font-weight: 700;
+      }
+      .empty-state-copy {
+        color: var(--muted);
+        font-size: 12px;
+        line-height: 1.5;
+      }
       .section-note {
         color: var(--muted);
         font-size: 12px;
@@ -1820,47 +2784,246 @@ function getWebviewHtml() {
         border: 1px solid rgba(255,255,255,0.08);
         color: #fff;
       }
+      .board-icon img {
+        width: 24px;
+        height: 24px;
+        object-fit: contain;
+        filter: drop-shadow(0 4px 10px rgba(0, 0, 0, 0.22));
+      }
       .running-board-copy {
         color: var(--muted);
         font-size: 12px;
         line-height: 1.45;
       }
+      .intervention-dock {
+        display: none;
+        gap: 10px;
+        padding: 10px;
+        border-radius: 18px;
+        border: 1px solid rgba(255, 143, 159, 0.16);
+        background: linear-gradient(180deg, rgba(122, 24, 40, 0.12), rgba(255,255,255,0.02));
+        min-height: 160px;
+        max-height: 44vh;
+        overflow: auto;
+        resize: vertical;
+      }
+      .intervention-dock.visible {
+        display: grid;
+      }
+      .intervention-dock.collapsed {
+        resize: none;
+        min-height: 0;
+        max-height: none;
+        overflow: hidden;
+      }
+      .intervention-dock.collapsed .intervention-dock-note,
+      .intervention-dock.collapsed .intervention-dock-grid {
+        display: none;
+      }
+      .intervention-dock-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+        gap: 10px;
+        align-content: start;
+        min-height: 0;
+      }
+      .intervention-dock-note {
+        color: #ffd7dd;
+        font-size: 12px;
+      }
+      .intervention-head {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 10px;
+        flex-wrap: wrap;
+      }
+      .intervention-title {
+        display: inline-flex;
+        align-items: center;
+        gap: 10px;
+      }
+      .intervention-actions {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        flex-wrap: wrap;
+      }
+      .intervention-art {
+        width: 28px;
+        height: 28px;
+        object-fit: contain;
+        filter: drop-shadow(0 4px 12px rgba(255, 143, 159, 0.12));
+        animation: chickBreathe 3.6s ease-in-out infinite;
+      }
+      @keyframes chickBreathe {
+        0% { transform: translateY(0) scale(1); }
+        50% { transform: translateY(-1px) scale(1.04); }
+        100% { transform: translateY(0) scale(1); }
+      }
+      .mini-thread.with-art {
+        position: relative;
+        padding-left: 72px;
+        min-height: 72px;
+      }
+      .mini-thread-art {
+        position: absolute;
+        left: 16px;
+        top: 12px;
+        width: 42px;
+        height: 42px;
+        object-fit: contain;
+        filter: drop-shadow(0 8px 16px rgba(0, 0, 0, 0.26));
+      }
       .board-view-shell {
         display: grid;
         gap: 12px;
+      }
+      .board-surface {
+        position: relative;
       }
       .board-stage {
         min-height: 560px;
       }
       .board-stage .running-board-grid {
         min-height: 520px;
+        max-height: calc(100vh - 220px);
       }
       .running-board-grid {
         display: grid;
         grid-template-columns: repeat(15, minmax(0, 1fr));
-        grid-auto-flow: dense;
+        grid-auto-flow: row dense;
+        grid-auto-rows: 18px;
         gap: 12px;
         min-height: 120px;
+        max-height: 56vh;
+        overflow: auto;
         padding: 4px;
+        padding-right: 10px;
         border-radius: 22px;
         transition: border-color 140ms ease, background 140ms ease, box-shadow 140ms ease;
         position: relative;
+        align-content: start;
       }
       .running-board-grid.drag-over {
         border: 1px dashed rgba(141, 216, 255, 0.28);
         background: rgba(255,255,255,0.02);
         box-shadow: inset 0 0 0 1px rgba(141, 216, 255, 0.08);
       }
-      .running-board-grid.drag-end::after {
-        content: "";
+      .motion-reduced .ascii-title,
+      .motion-reduced .completion-rail,
+      .motion-reduced .completion-card,
+      .motion-reduced .intervention-art,
+      .motion-reduced .running-card,
+      .motion-reduced .running-card::after,
+      .motion-reduced .running-card-topbar,
+      .motion-reduced .phase-art,
+      .motion-reduced .progress-bar::after,
+      .motion-reduced .badge-running,
+      .motion-reduced .workspace-pane,
+      .motion-reduced .thread-row,
+      .motion-reduced .timeline-card,
+      .motion-reduced .tool-btn,
+      .motion-reduced .chip,
+      .motion-reduced .switch-btn,
+      .motion-reduced .workspace-tab,
+      .motion-reduced .mini-thread,
+      .motion-reduced .drawer-shell {
+        animation: none !important;
+        transition: none !important;
+      }
+      .motion-reduced .running-card:hover,
+      .motion-reduced .thread-row:hover,
+      .motion-reduced .timeline-card:hover,
+      .motion-reduced .tool-btn:hover,
+      .motion-reduced .chip:hover,
+      .motion-reduced .workspace-tab:hover,
+      .motion-reduced .switch-btn:hover {
+        transform: none !important;
+        box-shadow: none !important;
+      }
+      .motion-reduced .running-card::after,
+      .motion-reduced .running-card-topbar,
+      .motion-reduced .intervention-art,
+      .motion-reduced .phase-art {
+        filter: none !important;
+      }
+      .running-board-grid.drag-active .running-card {
+        box-shadow: 0 10px 24px rgba(0,0,0,0.2);
+      }
+      .running-board-grid.drag-active .running-card::after,
+      .running-board-grid.drag-active .running-card-topbar {
+        opacity: 0.38;
+        box-shadow: none;
+      }
+      .running-board-grid.drag-active .running-card:hover {
+        transform: none;
+      }
+      .board-drop-overlay {
         position: absolute;
-        left: 16px;
-        right: 16px;
-        bottom: 6px;
-        height: 3px;
+        left: 0;
+        top: 0;
+        width: 0;
+        height: 0;
+        border-radius: 22px;
+        border: 2px solid rgba(98, 255, 166, 0.92);
+        background: linear-gradient(180deg, rgba(98,255,166,0.14), rgba(98,255,166,0.05));
+        box-shadow:
+          inset 0 0 0 1px rgba(255,255,255,0.06),
+          0 0 0 1px rgba(98,255,166,0.18),
+          0 0 28px rgba(98,255,166,0.2);
+        pointer-events: none;
+        opacity: 0;
+        transition: opacity 90ms ease;
+        will-change: transform, width, height;
+        z-index: 5;
+      }
+      .board-drop-overlay.visible {
+        opacity: 1;
+      }
+      .drag-preview-card {
+        position: fixed;
+        top: -1000px;
+        left: -1000px;
+        width: 172px;
+        min-height: 86px;
+        padding: 10px 12px;
+        border-radius: 16px;
+        border: 1px solid rgba(98,255,166,0.32);
+        background:
+          linear-gradient(180deg, rgba(12, 18, 24, 0.96), rgba(20, 26, 34, 0.94));
+        box-shadow:
+          inset 0 0 0 1px rgba(255,255,255,0.04),
+          0 12px 28px rgba(0,0,0,0.24);
+        color: var(--text-strong);
+        pointer-events: none;
+        z-index: 9999;
+      }
+      .drag-preview-head {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        margin-bottom: 8px;
+      }
+      .drag-preview-dot {
+        width: 10px;
+        height: 10px;
         border-radius: 999px;
-        background: linear-gradient(90deg, rgba(141,216,255,0.05), rgba(141,216,255,0.9), rgba(141,216,255,0.05));
-        box-shadow: 0 0 0 1px rgba(141, 216, 255, 0.08), 0 0 18px rgba(141,216,255,0.18);
+        background: linear-gradient(180deg, rgba(98,255,166,0.98), rgba(98,255,166,0.74));
+        box-shadow: 0 0 16px rgba(98,255,166,0.18);
+        flex: 0 0 auto;
+      }
+      .drag-preview-label {
+        font-size: 10px;
+        letter-spacing: 0.12em;
+        text-transform: uppercase;
+        color: var(--muted-soft);
+      }
+      .drag-preview-title {
+        font-size: 12px;
+        line-height: 1.35;
+        font-weight: 700;
+        color: var(--text-strong);
       }
       .running-card {
         --card-band: linear-gradient(90deg, rgba(124, 157, 255, 0.92), rgba(141, 216, 255, 0.82), rgba(196, 163, 255, 0.78));
@@ -1883,6 +3046,561 @@ function getWebviewHtml() {
         cursor: pointer;
         overflow: hidden;
         position: relative;
+      }
+      .running-card.size-tiny {
+        grid-column: span 2;
+        min-height: 116px;
+        gap: 8px;
+        padding: 12px;
+      }
+      .running-card.size-tiny.fixed-tiny {
+        min-height: 116px;
+        grid-template-rows: auto 1fr auto;
+        gap: 8px;
+      }
+      .running-card.compact-card {
+        min-height: 92px;
+      }
+      .running-card.size-tiny.fixed-tiny .running-card-top {
+        align-items: start;
+        grid-template-columns: 1fr;
+        gap: 8px;
+      }
+      .running-card.size-tiny.fixed-tiny .running-card-body {
+        gap: 6px;
+      }
+      .running-card.size-tiny.fixed-tiny .running-card-subtitle,
+      .running-card.size-tiny.fixed-tiny .preview,
+      .running-card.size-tiny.fixed-tiny .phase-panel,
+      .running-card.size-tiny.fixed-tiny .progress-head,
+      .running-card.size-tiny.fixed-tiny .progress-track,
+      .running-card.size-tiny.fixed-tiny .running-card-note,
+      .running-card.size-tiny.fixed-tiny .meta-pill {
+        display: none;
+      }
+      .running-card.size-tiny.fixed-tiny .running-card-footer {
+        padding-top: 0;
+        border-top: none;
+      }
+      .running-card.size-tiny.fixed-tiny .running-card-control {
+        width: 100%;
+      }
+      .running-card.size-tiny.fixed-tiny .control-label,
+      .running-card.size-tiny.fixed-tiny .tool-id {
+        display: none;
+      }
+      .running-card.size-tiny.fixed-tiny .size-switch {
+        display: inline-flex;
+        width: 100%;
+        justify-content: space-between;
+        gap: 4px;
+        padding: 3px;
+      }
+      .running-card.size-tiny.fixed-tiny .running-action-rail {
+        width: 100%;
+        justify-content: stretch;
+        gap: 6px;
+      }
+      .running-card.size-tiny.fixed-tiny .tool-btn {
+        min-width: 0;
+        flex: 1 1 0;
+        justify-content: center;
+      }
+      .running-card.size-tiny.fixed-tiny .tool-btn span {
+        display: inline;
+      }
+      .tiny-composer {
+        display: grid;
+        gap: 6px;
+        margin-top: 6px;
+      }
+      .tiny-composer-row {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) auto auto;
+        gap: 6px;
+        align-items: center;
+      }
+      .tiny-composer .loop-input {
+        min-height: 28px;
+        font-size: 11px;
+      }
+      .tool-btn.send {
+        color: #d8e5ff;
+        border-color: rgba(124, 157, 255, 0.22);
+        background: rgba(124, 157, 255, 0.16);
+      }
+      .running-card.size-tiny .running-card-title {
+        font-size: 13px;
+        line-height: 1.34;
+      }
+      .running-card.size-tiny .running-card-subtitle,
+      .running-card.size-tiny .running-card-note,
+      .running-card.size-tiny .preview {
+        font-size: 11px;
+      }
+      .running-card.size-tiny .tool-btn {
+        min-height: 28px;
+        padding: 0 10px;
+        font-size: 11px;
+      }
+      .running-card.size-tiny .tool-btn span {
+        display: none;
+      }
+      .running-card.size-tiny .control-label {
+        font-size: 9px;
+      }
+      .running-card.size-tiny.fixed-tiny .running-card-badges {
+        gap: 4px;
+      }
+      .running-card.size-tiny.fixed-tiny .badge {
+        min-height: 19px;
+        padding: 0 8px;
+        font-size: 10px;
+      }
+      .running-card.size-tiny.fixed-tiny .running-card-title {
+        font-size: 13px;
+        line-height: 1.35;
+        display: -webkit-box;
+        -webkit-line-clamp: 2;
+        -webkit-box-orient: vertical;
+        overflow: hidden;
+      }
+      .running-card.size-tiny.fixed-tiny .tool-btn {
+        min-height: 28px;
+        padding: 0 10px;
+        border-radius: 10px;
+        font-size: 11px;
+      }
+      .running-card.size-tiny.fixed-tiny .tool-btn .tool-icon {
+        width: 12px;
+        height: 12px;
+      }
+      .running-card.size-tiny.fixed-tiny .tool-btn.codex-link {
+        border-color: rgba(173, 143, 255, 0.28);
+        background: rgba(173, 143, 255, 0.12);
+        color: #e7dcff;
+      }
+      .running-card.size-tiny.fixed-tiny .size-chip {
+        min-width: 0;
+        flex: 1 1 0;
+        min-height: 24px;
+        padding: 0 4px;
+        border-radius: 9px;
+        font-size: 10px;
+      }
+      .running-card.compact-card .size-switch,
+      .running-card.compact-card .control-label,
+      .running-card.compact-card .tool-id {
+        display: none;
+      }
+      .resize-handle {
+        position: absolute;
+        width: 14px;
+        height: 14px;
+        border-radius: 999px;
+        border: 1px solid rgba(141, 216, 255, 0.32);
+        background: rgba(9, 13, 20, 0.88);
+        box-shadow: 0 0 0 1px rgba(255,255,255,0.03), 0 8px 18px rgba(0,0,0,0.28);
+        opacity: 0;
+        transition: opacity 120ms ease, transform 120ms ease;
+        z-index: 4;
+      }
+      .resize-handle.nw { top: 6px; left: 6px; cursor: nwse-resize; }
+      .resize-handle.ne { top: 6px; right: 6px; cursor: nesw-resize; }
+      .resize-handle.sw { bottom: 6px; left: 6px; cursor: nesw-resize; }
+      .resize-handle.se { bottom: 6px; right: 6px; cursor: nwse-resize; }
+      .resize-handle.e,
+      .resize-handle.w {
+        top: 50%;
+        transform: translateY(-50%);
+        width: 12px;
+        height: 34px;
+        border-radius: 999px;
+        cursor: ew-resize;
+      }
+      .resize-handle.e { right: 4px; }
+      .resize-handle.w { left: 4px; }
+      .resize-handle.n,
+      .resize-handle.s {
+        left: 50%;
+        transform: translateX(-50%);
+        width: 34px;
+        height: 12px;
+        border-radius: 999px;
+        cursor: ns-resize;
+      }
+      .resize-handle.n { top: 4px; }
+      .resize-handle.s { bottom: 4px; }
+      .running-card:hover .resize-handle,
+      .running-card.resizing .resize-handle {
+        opacity: 1;
+      }
+      .running-card.size-tiny.fixed-tiny .resize-handle {
+        width: 12px;
+        height: 12px;
+      }
+      .running-card.size-s {
+        grid-column: span 4;
+        min-height: 214px;
+      }
+      .running-card.size-s .running-card-title {
+        font-size: 18px;
+        line-height: 1.28;
+        display: -webkit-box;
+        -webkit-line-clamp: 2;
+        -webkit-box-orient: vertical;
+        overflow: hidden;
+      }
+      .running-card.size-s .running-card-subtitle {
+        font-size: 12px;
+      }
+      .running-card.size-s .preview {
+        font-size: 12px;
+        line-height: 1.45;
+        display: -webkit-box;
+        -webkit-line-clamp: 3;
+        -webkit-box-orient: vertical;
+        overflow: hidden;
+      }
+      .running-card.size-s .progress-head,
+      .running-card.size-s .progress-track,
+      .running-card.size-s .running-card-note,
+      .running-card.size-s .phase-panel {
+        display: none;
+      }
+      .running-card.size-m { grid-column: span 7; min-height: 242px; }
+      .running-card.size-m .running-card-title {
+        font-size: 22px;
+        line-height: 1.2;
+        display: -webkit-box;
+        -webkit-line-clamp: 2;
+        -webkit-box-orient: vertical;
+        overflow: hidden;
+      }
+      .running-card.size-m .preview {
+        font-size: 13px;
+        line-height: 1.5;
+        display: -webkit-box;
+        -webkit-line-clamp: 4;
+        -webkit-box-orient: vertical;
+        overflow: hidden;
+      }
+      .running-card.size-l {
+        grid-column: 1 / -1;
+        min-height: 282px;
+        grid-template-columns: minmax(0, 1.15fr) minmax(260px, 0.85fr);
+        grid-template-rows: auto 1fr auto;
+        gap: 14px 18px;
+      }
+      .running-card.size-l .running-card-top,
+      .running-card.size-l .running-card-footer {
+        grid-column: 1 / -1;
+      }
+      .running-card.size-l .running-card-body {
+        display: grid;
+        grid-template-columns: minmax(0, 1.1fr) minmax(260px, 0.9fr);
+        gap: 14px 18px;
+        align-content: start;
+      }
+      .running-card.size-l .running-card-copy {
+        display: grid;
+        gap: 10px;
+        min-width: 0;
+      }
+      .running-card.size-l .running-card-side {
+        display: grid;
+        gap: 10px;
+        align-content: start;
+        min-width: 0;
+      }
+      .running-card.size-l .running-card-title {
+        font-size: 28px;
+        line-height: 1.12;
+        display: -webkit-box;
+        -webkit-line-clamp: 2;
+        -webkit-box-orient: vertical;
+        overflow: hidden;
+      }
+      .running-card.size-l .running-card-subtitle {
+        font-size: 13px;
+      }
+      .running-card.size-l .preview {
+        font-size: 14px;
+        line-height: 1.56;
+        display: -webkit-box;
+        -webkit-line-clamp: 5;
+        -webkit-box-orient: vertical;
+        overflow: hidden;
+      }
+      .running-card.size-l .phase-panel,
+      .running-card.size-l .progress-head,
+      .running-card.size-l .progress-track,
+      .running-card.size-l .running-card-note {
+        margin-top: 0;
+      }
+      .phase-panel {
+        --phase-border: rgba(255,255,255,0.06);
+        --phase-bg: rgba(255,255,255,0.025);
+        --phase-glow: rgba(255,255,255,0.04);
+        display: grid;
+        gap: 6px;
+        margin-top: 2px;
+        padding: 10px;
+        border-radius: 14px;
+        border: 1px solid var(--phase-border);
+        background:
+          linear-gradient(180deg, var(--phase-bg), rgba(255,255,255,0.01));
+        box-shadow: inset 0 0 0 1px rgba(255,255,255,0.02), 0 0 0 1px rgba(0,0,0,0.04);
+      }
+      .phase-head {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 8px;
+      }
+      .phase-title {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        min-width: 0;
+      }
+      .phase-art {
+        width: 22px;
+        height: 22px;
+        object-fit: contain;
+        flex: 0 0 auto;
+        filter: drop-shadow(0 4px 10px rgba(0, 0, 0, 0.22));
+      }
+      .phase-label {
+        font-size: 11px;
+        font-weight: 700;
+        color: var(--text-strong);
+      }
+      .phase-copy {
+        color: var(--muted);
+        font-size: 11px;
+        line-height: 1.45;
+      }
+      .running-card.phase-planning .phase-panel {
+        --phase-border: rgba(126, 231, 255, 0.14);
+        --phase-bg: rgba(36, 89, 122, 0.16);
+      }
+      .running-card.phase-tooling .phase-panel {
+        --phase-border: rgba(255, 214, 107, 0.14);
+        --phase-bg: rgba(120, 76, 9, 0.14);
+      }
+      .running-card.phase-editing .phase-panel {
+        --phase-border: rgba(84, 242, 176, 0.14);
+        --phase-bg: rgba(18, 73, 53, 0.15);
+      }
+      .running-card.phase-testing .phase-panel {
+        --phase-border: rgba(196, 163, 255, 0.16);
+        --phase-bg: rgba(66, 43, 109, 0.16);
+      }
+      .running-card.phase-waiting .phase-panel {
+        --phase-border: rgba(173, 181, 197, 0.14);
+        --phase-bg: rgba(58, 66, 80, 0.14);
+      }
+      .running-card.phase-planning {
+        box-shadow: 0 18px 40px rgba(0,0,0,0.26), 0 0 0 1px rgba(126, 231, 255, 0.04);
+      }
+      .running-card.phase-tooling {
+        box-shadow: 0 18px 40px rgba(0,0,0,0.26), 0 0 0 1px rgba(255, 214, 107, 0.04);
+      }
+      .running-card.phase-editing {
+        box-shadow: 0 18px 40px rgba(0,0,0,0.26), 0 0 0 1px rgba(84, 242, 176, 0.04);
+      }
+      .running-card.phase-testing {
+        box-shadow: 0 18px 40px rgba(0,0,0,0.26), 0 0 0 1px rgba(196, 163, 255, 0.04);
+      }
+      .running-card.phase-waiting {
+        box-shadow: 0 18px 40px rgba(0,0,0,0.26), 0 0 0 1px rgba(173, 181, 197, 0.04);
+      }
+      .phase-panel.phase-planning {
+        --phase-border: rgba(126, 231, 255, 0.14);
+        --phase-bg: rgba(36, 89, 122, 0.16);
+      }
+      .phase-panel.phase-tooling {
+        --phase-border: rgba(255, 214, 107, 0.14);
+        --phase-bg: rgba(120, 76, 9, 0.14);
+      }
+      .phase-panel.phase-editing {
+        --phase-border: rgba(84, 242, 176, 0.14);
+        --phase-bg: rgba(18, 73, 53, 0.15);
+      }
+      .phase-panel.phase-testing {
+        --phase-border: rgba(196, 163, 255, 0.16);
+        --phase-bg: rgba(66, 43, 109, 0.16);
+      }
+      .phase-panel.phase-waiting {
+        --phase-border: rgba(173, 181, 197, 0.14);
+        --phase-bg: rgba(58, 66, 80, 0.14);
+      }
+      @keyframes focusFloat {
+        0% { transform: translateY(0); }
+        50% { transform: translateY(-2px); }
+        100% { transform: translateY(0); }
+      }
+      .loop-panel {
+        display: grid;
+        gap: 8px;
+        margin-top: 8px;
+        padding: 10px;
+        border-radius: 14px;
+        border: 1px solid rgba(255,255,255,0.07);
+        background: rgba(255,255,255,0.028);
+      }
+      .loop-status-card {
+        display: grid;
+        gap: 8px;
+        margin-top: 8px;
+        padding: 10px 12px;
+        border-radius: 14px;
+        border: 1px solid rgba(255,255,255,0.07);
+        background: rgba(255,255,255,0.026);
+      }
+      .loop-status-head {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 8px;
+        flex-wrap: wrap;
+      }
+      .loop-status-title {
+        font-size: 11px;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+        color: var(--muted-soft);
+      }
+      .loop-status-badge {
+        display: inline-flex;
+        align-items: center;
+        min-height: 22px;
+        padding: 0 9px;
+        border-radius: 999px;
+        border: 1px solid rgba(255,255,255,0.08);
+        background: rgba(255,255,255,0.04);
+        font-size: 11px;
+        font-weight: 700;
+      }
+      .loop-status-badge.queued {
+        border-color: rgba(84, 242, 176, 0.2);
+        background: rgba(18, 73, 53, 0.2);
+        color: #b8ffde;
+      }
+      .loop-status-badge.armed {
+        border-color: rgba(124, 157, 255, 0.18);
+        background: rgba(38, 58, 98, 0.18);
+        color: #cfe0ff;
+      }
+      .loop-status-badge.failed {
+        border-color: rgba(255, 124, 136, 0.2);
+        background: rgba(122, 24, 40, 0.18);
+        color: #ffd9dd;
+      }
+      .loop-status-badge.running {
+        border-color: rgba(84, 242, 176, 0.2);
+        background: rgba(16, 58, 45, 0.24);
+        color: #b8ffde;
+      }
+      .loop-status-badge.success {
+        border-color: rgba(126, 231, 255, 0.2);
+        background: rgba(26, 73, 98, 0.22);
+        color: #d7f8ff;
+      }
+      .loop-status-grid {
+        display: grid;
+        gap: 6px;
+      }
+      .loop-status-actions {
+        display: flex;
+        gap: 8px;
+        flex-wrap: wrap;
+      }
+      .loop-status-actions .chip {
+        min-height: 28px;
+      }
+      .loop-status-row {
+        display: flex;
+        gap: 8px;
+        align-items: flex-start;
+      }
+      .loop-status-label {
+        width: 108px;
+        flex: 0 0 108px;
+        color: var(--muted);
+        font-size: 11px;
+        text-transform: uppercase;
+        letter-spacing: 0.06em;
+      }
+      .loop-status-value {
+        min-width: 0;
+        color: var(--text);
+        font-size: 12px;
+        line-height: 1.45;
+      }
+      .loop-status-value.mono {
+        font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+        font-size: 11px;
+        word-break: break-all;
+      }
+      .loop-status-result {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+      }
+      .loop-result-dot {
+        width: 8px;
+        height: 8px;
+        border-radius: 999px;
+        background: rgba(124, 157, 255, 0.72);
+        box-shadow: 0 0 0 1px rgba(255,255,255,0.06), 0 0 14px rgba(124, 157, 255, 0.18);
+        flex: 0 0 auto;
+      }
+      .loop-result-dot.running,
+      .loop-result-dot.queued {
+        background: rgba(84, 242, 176, 0.9);
+        box-shadow: 0 0 0 1px rgba(255,255,255,0.06), 0 0 14px rgba(84, 242, 176, 0.2);
+      }
+      .loop-result-dot.success {
+        background: rgba(126, 231, 255, 0.92);
+        box-shadow: 0 0 0 1px rgba(255,255,255,0.06), 0 0 14px rgba(126, 231, 255, 0.22);
+      }
+      .loop-result-dot.failed {
+        background: rgba(255, 124, 136, 0.92);
+        box-shadow: 0 0 0 1px rgba(255,255,255,0.06), 0 0 14px rgba(255, 124, 136, 0.22);
+      }
+      .loop-tail {
+        padding: 8px 10px;
+        border-radius: 10px;
+        border: 1px solid rgba(255,255,255,0.06);
+        background: rgba(255,255,255,0.02);
+        color: var(--muted);
+        font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+        font-size: 11px;
+        line-height: 1.45;
+        word-break: break-word;
+      }
+      .loop-presets {
+        display: flex;
+        gap: 6px;
+        flex-wrap: wrap;
+      }
+      .loop-mini-inputs {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) 90px auto;
+        gap: 8px;
+        align-items: center;
+      }
+      .loop-input {
+        width: 100%;
+        min-height: 30px;
+        border-radius: 12px;
+        border: 1px solid rgba(255,255,255,0.08);
+        background: rgba(255,255,255,0.03);
+        color: var(--text);
+        padding: 0 10px;
+        outline: none;
       }
       .running-card::after {
         content: "";
@@ -1917,8 +3635,8 @@ function getWebviewHtml() {
         bottom: 16px;
         width: 3px;
         border-radius: 999px;
-        background: linear-gradient(180deg, rgba(141,216,255,0.08), rgba(141,216,255,0.95), rgba(141,216,255,0.08));
-        box-shadow: 0 0 0 1px rgba(141,216,255,0.08), 0 0 18px rgba(141,216,255,0.2);
+        background: linear-gradient(180deg, rgba(98,255,166,0.08), rgba(98,255,166,0.95), rgba(98,255,166,0.08));
+        box-shadow: 0 0 0 1px rgba(98,255,166,0.08), 0 0 18px rgba(98,255,166,0.22);
         z-index: 2;
       }
       .running-card.drop-before::before {
@@ -1929,30 +3647,40 @@ function getWebviewHtml() {
       }
       .drop-slot {
         position: absolute;
-        top: 14px;
-        bottom: 14px;
-        width: 56px;
-        border-radius: 18px;
-        border: 1px dashed rgba(141, 216, 255, 0.28);
-        background: linear-gradient(180deg, rgba(141,216,255,0.14), rgba(141,216,255,0.05));
-        box-shadow: inset 0 0 0 1px rgba(141, 216, 255, 0.06);
+        top: 50%;
+        width: var(--drop-preview-width, 118px);
+        height: var(--drop-preview-height, 132px);
+        border-radius: 20px;
+        border: 2px solid rgba(98, 255, 166, 0.9);
+        background: linear-gradient(180deg, rgba(98,255,166,0.14), rgba(98,255,166,0.05));
+        box-shadow:
+          inset 0 0 0 1px rgba(255,255,255,0.05),
+          0 0 0 1px rgba(98,255,166,0.18),
+          0 0 24px rgba(98,255,166,0.16);
         opacity: 0;
         pointer-events: none;
-        transition: opacity 120ms ease, transform 120ms ease;
+        transition: opacity 120ms ease, transform 120ms ease, box-shadow 120ms ease;
         z-index: 1;
       }
       .drop-slot.left {
-        left: -18px;
-        transform: translateX(-4px);
+        left: calc(var(--drop-preview-width, 118px) * -0.28);
+        transform: translate(-8%, -50%);
       }
       .drop-slot.right {
-        right: -18px;
-        transform: translateX(4px);
+        right: calc(var(--drop-preview-width, 118px) * -0.28);
+        transform: translate(8%, -50%);
       }
       .running-card.drop-before .drop-slot.left,
       .running-card.drop-after .drop-slot.right {
         opacity: 1;
-        transform: translateX(0);
+        transform: translate(0, -50%);
+      }
+      .running-card.drop-target {
+        border-color: rgba(98,255,166,0.34);
+        box-shadow:
+          inset 0 0 0 1px rgba(98,255,166,0.12),
+          0 18px 42px rgba(0,0,0,0.26),
+          0 0 32px rgba(98,255,166,0.08);
       }
       .running-card-bottom-line {
         position: absolute;
@@ -1979,32 +3707,31 @@ function getWebviewHtml() {
       }
       .running-card.dragging {
         opacity: 1;
-        transform: scale(0.985);
+        transform: none;
         border-style: dashed;
-        border-color: rgba(141, 216, 255, 0.22);
-        background:
-          linear-gradient(180deg, rgba(141,216,255,0.06), rgba(141,216,255,0.02)),
-          rgba(255,255,255,0.012);
-        box-shadow: inset 0 0 0 1px rgba(141, 216, 255, 0.06);
+        border-color: rgba(141, 216, 255, 0.24);
+        background: transparent;
+        box-shadow: inset 0 0 0 1px rgba(141, 216, 255, 0.08);
       }
       .running-card.dragging > * {
         opacity: 0;
       }
-      .running-card.dragging::before {
-        content: "";
-        position: absolute;
-        inset: 0;
-        border-radius: inherit;
-        background: linear-gradient(180deg, rgba(141,216,255,0.04), rgba(141,216,255,0.01));
-        z-index: 3;
-        opacity: 1;
+      .running-card.dragging::after {
+        opacity: 0;
       }
       .running-card.drag-over {
         border-color: rgba(141, 216, 255, 0.32);
         box-shadow: inset 0 0 0 1px rgba(141, 216, 255, 0.16);
       }
-      .running-card.size-m { grid-column: span 5; min-height: 228px; }
-      .running-card.size-l { grid-column: span 6; min-height: 248px; }
+      .running-card.resizing {
+        transition: none;
+        user-select: none;
+      }
+      .running-card.resizing::after,
+      .running-card.resizing .running-card-topbar {
+        opacity: 0.44;
+        box-shadow: none;
+      }
       .running-card.board-attached {
         background:
           radial-gradient(circle at top right, rgba(242, 194, 123, 0.12), transparent 34%),
@@ -2044,6 +3771,26 @@ function getWebviewHtml() {
       }
       .running-card.codex-card-focused .running-card-topbar {
         animation: focusedPulse 2.6s ease-in-out infinite;
+      }
+      .running-card.codex-card-focused .phase-art,
+      .running-card.intervention-card .phase-art {
+        animation: focusFloat 2.8s ease-in-out infinite;
+      }
+      .running-card.intervention-card {
+        --card-band: linear-gradient(90deg, rgba(255, 143, 159, 0.92), rgba(255, 184, 156, 0.82), rgba(255, 221, 177, 0.72));
+        --card-band-glow: rgba(255, 143, 159, 0.2);
+        --card-accent-border: rgba(255, 143, 159, 0.28);
+        --card-active-glow: rgba(255, 143, 159, 0.11);
+        animation: interventionCardPulse 1.9s ease-in-out infinite;
+        box-shadow:
+          inset 0 0 0 1px rgba(255, 143, 159, 0.14),
+          0 22px 42px rgba(0,0,0,0.34),
+          0 0 28px rgba(255, 143, 159, 0.08);
+      }
+      @keyframes interventionCardPulse {
+        0% { transform: translateY(0) scale(1); box-shadow: inset 0 0 0 1px rgba(255, 143, 159, 0.12), 0 18px 36px rgba(0,0,0,0.3), 0 0 20px rgba(255, 143, 159, 0.04); }
+        50% { transform: translateY(-1px) scale(1.006); box-shadow: inset 0 0 0 1px rgba(255, 143, 159, 0.18), 0 24px 44px rgba(0,0,0,0.34), 0 0 36px rgba(255, 143, 159, 0.12); }
+        100% { transform: translateY(0) scale(1); box-shadow: inset 0 0 0 1px rgba(255, 143, 159, 0.12), 0 18px 36px rgba(0,0,0,0.3), 0 0 20px rgba(255, 143, 159, 0.04); }
       }
       @keyframes focusedPulse {
         0% { opacity: 0.7; transform: scaleX(1); }
@@ -2214,6 +3961,53 @@ function getWebviewHtml() {
         gap: 8px;
         flex-wrap: wrap;
         margin-top: 6px;
+      }
+      .phase-chip {
+        --phase-chip-border: rgba(255,255,255,0.08);
+        --phase-chip-bg: rgba(255,255,255,0.03);
+        --phase-chip-text: var(--text);
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        min-height: 26px;
+        padding: 0 10px 0 8px;
+        border-radius: 999px;
+        border: 1px solid var(--phase-chip-border);
+        background: var(--phase-chip-bg);
+        color: var(--phase-chip-text);
+        font-size: 11px;
+        font-weight: 600;
+      }
+      .phase-chip-art {
+        width: 16px;
+        height: 16px;
+        object-fit: contain;
+        filter: drop-shadow(0 2px 6px rgba(0, 0, 0, 0.2));
+      }
+      .phase-chip.phase-planning {
+        --phase-chip-border: rgba(126, 231, 255, 0.16);
+        --phase-chip-bg: rgba(36, 89, 122, 0.16);
+        --phase-chip-text: #d7f2ff;
+      }
+      .phase-chip.phase-tooling {
+        --phase-chip-border: rgba(255, 214, 107, 0.18);
+        --phase-chip-bg: rgba(120, 76, 9, 0.16);
+        --phase-chip-text: #ffeab0;
+      }
+      .phase-chip.phase-editing {
+        --phase-chip-border: rgba(84, 242, 176, 0.18);
+        --phase-chip-bg: rgba(18, 73, 53, 0.16);
+        --phase-chip-text: #caffea;
+      }
+      .phase-chip.phase-testing {
+        --phase-chip-border: rgba(196, 163, 255, 0.18);
+        --phase-chip-bg: rgba(66, 43, 109, 0.16);
+        --phase-chip-text: #eadcff;
+      }
+      .phase-chip.phase-waiting {
+        --phase-chip-border: rgba(173, 181, 197, 0.16);
+        --phase-chip-bg: rgba(58, 66, 80, 0.16);
+        --phase-chip-text: #d9dee8;
       }
       .meta-pill {
         border: 1px solid rgba(255,255,255,0.08);
@@ -2563,10 +4357,25 @@ function getWebviewHtml() {
         .topbar-nav {
           align-items: flex-start;
         }
+        .ascii-shell {
+          display: none;
+        }
+        .title-stack {
+          display: grid;
+        }
+        .title {
+          font-size: 18px;
+        }
+        .title-strip {
+          font-size: 9px;
+          letter-spacing: 0.12em;
+        }
         .running-board-grid {
           grid-template-columns: repeat(6, minmax(0, 1fr));
         }
         .running-card,
+        .running-card.size-s,
+        .running-card.size-tiny,
         .running-card.size-m,
         .running-card.size-l {
           grid-column: span 3;
@@ -2578,6 +4387,8 @@ function getWebviewHtml() {
           grid-template-columns: 1fr;
         }
         .running-card,
+        .running-card.size-s,
+        .running-card.size-tiny,
         .running-card.size-m,
         .running-card.size-l {
           grid-column: span 1;
@@ -2593,17 +4404,37 @@ function getWebviewHtml() {
             <div class="brand-cluster">
               <div class="brand-line">
                 <div class="hero-kicker">Agent Control Surface</div>
-                <div class="title">Codex-Managed-Agent</div>
+                <div class="title-banner">
+                  <div class="ascii-shell">
+                    <pre class="ascii-title">  ____          _             __  __                                                   _                    _     _                      
+ / ___|___   __| | _____  __ |  \\/  | __ _ _ __   __ _  __ _  ___  __| |       /\\      __ _  ___ _ __ | |_  | |   ___   __ _ _ __  
+| |   / _ \\ / _\` |/ _ \\ \\/ / | |\\/| |/ _\` | '_ \\ / _\` |/ _\` |/ _ \\/ _\` |      /  \\    / _\` |/ _ \\ '_ \\| __| | |  / _ \\ / _\` | '_ \\ 
+| |__| (_) | (_| |  __/>  <  | |  | | (_| | | | | (_| | (_| |  __/ (_| |     / /\\ \\  | (_| |  __/ | | | |_  | | | (_) | (_| | |_) |
+ \\____\\___/ \\__,_|\\___/_/\\_\\ |_|  |_|\\__,_|_| |_|\\__,_|\\__, |\\___|\\__,_|    /_/  \\_\\  \\__, |\\___|_| |_|\\__| |_|  \\___/ \\__,_| .__/ 
+                                                       |___/                            |___/                               |_|    </pre>
+                  </div>
+                  <div class="title-stack">
+                    <div class="title">
+                      <span class="title-seg codex">Codex</span>
+                      <span class="title-hyphen">-</span>
+                      <span class="title-seg managed">Managed</span>
+                      <span class="title-hyphen">-</span>
+                      <span class="title-seg agent">Agent</span>
+                    </div>
+                    <div class="title-strip">Control Surface Signature</div>
+                  </div>
+                </div>
                 <span class="hero-pill mono" id="serviceMeta">Service: -</span>
                 <span class="hero-pill mono" id="surfaceLabel">Position: -</span>
               </div>
               <div class="sub" id="heroSummary">Code thread workspace inside VS Code.</div>
               <div class="hero-stage">
-                <span class="mascot-chip"><span class="mascot-face">◕</span><strong>Night Ops</strong> calmer layout and softer chrome</span>
-                <span class="mascot-chip"><span class="mascot-face">▣</span><strong>Board View</strong> attach important agents to a card wall</span>
+                <span class="mascot-chip"><img class="mascot-art hero-art-vivid theme-is-optional" src="${media.hero}" alt="" /><span class="theme-bar hero-art-clean variant-hero phase-planning" aria-hidden="true"></span><strong>Night Ops</strong> calmer layout and softer chrome</span>
+                <span class="mascot-chip"><img class="mascot-art hero-art-vivid theme-is-optional" src="${media.board}" alt="" /><span class="theme-bar hero-art-clean variant-hero phase-tooling" aria-hidden="true"></span><strong>Board View</strong> attach important agents to a card wall</span>
               </div>
             </div>
             <div class="actions">
+              <button id="toggleHeaderCollapse" class="collapse-btn" type="button">Collapse</button>
               <button id="reload" type="button">Reload</button>
               <button id="startServer" type="button">Start 8787</button>
               <button id="restartServer" class="service-restart" type="button" hidden>Restart 8787</button>
@@ -2619,6 +4450,8 @@ function getWebviewHtml() {
                 <button class="workspace-tab" data-view="live" type="button">Live</button>
                 <button class="workspace-tab" data-view="inspector" type="button">Inspector</button>
               </div>
+              <button class="chip" id="themeToggle" type="button">Theme</button>
+              <button class="chip" id="motionToggle" type="button">Motion</button>
               <button class="chip" id="soundToggle" type="button">Alert Sound</button>
             </div>
             <div class="topbar-nav-right">
@@ -2648,6 +4481,34 @@ function getWebviewHtml() {
             <div class="digest-rail" id="overviewRail"></div>
           </div>
         </section>
+        <section class="overview-digest">
+          <div class="panel">
+            <div class="section-title">Usage Report</div>
+            <div class="section-note">A persisted local reading of your thread habits, pacing, and workflow style.</div>
+            <div class="summary-deck" id="usageSummary"></div>
+            <div class="insight-chip-list" id="usageKeywords"></div>
+          </div>
+          <div class="panel">
+            <div class="section-title">Vibe Advice</div>
+            <div class="section-note">Suggestions grounded in simple stack, plan-first, stepwise verification, and modular context control.</div>
+            <div class="insight-list" id="vibeAdvice"></div>
+            <div class="insight-list" id="analysisViews"></div>
+          </div>
+        </section>
+        <section class="overview-digest">
+          <div class="panel">
+            <div class="section-title">Topic Map</div>
+            <div class="section-note">A compact visual mind map built from recurring themes, dominant working styles, and top threads.</div>
+            <div id="topicMap" class="topic-map"></div>
+          </div>
+          <div class="panel">
+            <div class="section-title">This Week Shift</div>
+            <div class="section-note">See whether this week leans more toward planning, automation, execution, or UI vibing than the previous week.</div>
+            <div id="weeklyShift" class="insight-list"></div>
+            <div class="section-title compact-title">Word Cloud</div>
+            <div id="wordCloud" class="word-cloud"></div>
+          </div>
+        </section>
         <section class="meta-grid" id="metrics"></section>
         <section class="overview-grid">
           <div class="stack">
@@ -2665,6 +4526,7 @@ function getWebviewHtml() {
                   <button class="chip" data-filter="running" type="button">Running</button>
                   <button class="chip" data-filter="recent" type="button">Recent</button>
                   <button class="chip" data-filter="idle" type="button">Idle</button>
+                  <button class="chip" data-filter="needs_human" type="button">Needs Human</button>
                   <button class="chip" data-filter="archived" type="button">Archived</button>
                   <button class="chip" data-filter="soft_deleted" type="button">Deleted</button>
                   <button class="chip" data-toggle="pinned" type="button">Pinned</button>
@@ -2719,22 +4581,31 @@ function getWebviewHtml() {
       <section class="workspace-pane" data-workspace-pane="threads">
         <section class="single-grid">
           <div class="panel">
-            <div class="running-board-shell">
+            <div class="running-board-shell board-summary-shell">
               <div class="running-board-toolbar">
                 <div class="running-board-title">
-                  <div class="board-icon">◌</div>
+                  <div class="board-icon"><img class="board-icon-vivid theme-is-optional" src="${media.board}" alt="" /><span class="theme-bar board-icon-clean variant-hero phase-tooling" aria-hidden="true"></span></div>
                   <div>
-                    <div class="section-title">Running Agent Board</div>
-                    <div class="running-board-copy" id="runningBoardMeta">Resizable live cards with dense auto-flow layout.</div>
+                    <div class="section-title">Board Summary</div>
+                    <div class="running-board-copy" id="runningBoardMeta">Open the dedicated Board workspace for drag, resize, and card layout.</div>
                   </div>
                 </div>
                 <div class="chip-row">
                   <button class="chip" data-open-board-view="true" type="button">Open Board</button>
-                  <button class="chip" id="toggleLayoutLock" type="button">Lock Layout</button>
-                  <button class="chip" id="resetRunningLayout" type="button">Reset Layout</button>
                 </div>
               </div>
-              <div id="runningBoardMirror" class="running-board-grid"></div>
+              <div class="overview-grid">
+                <div class="panel">
+                  <div class="section-title">Board Status</div>
+                  <div class="section-note" id="boardSummaryHeadline">No cards yet.</div>
+                  <div id="boardSummaryStats" class="drawer-summary"></div>
+                </div>
+                <div class="panel">
+                  <div class="section-title">Needs Human</div>
+                  <div class="section-note" id="boardSummaryNeedsHuman">No urgent cards right now.</div>
+                  <div id="boardSummaryQueue" class="digest-rail"></div>
+                </div>
+              </div>
             </div>
           </div>
           <div class="panel">
@@ -2747,6 +4618,7 @@ function getWebviewHtml() {
                 <button class="chip" data-filter-mirror="running" type="button">Running</button>
                 <button class="chip" data-filter-mirror="recent" type="button">Recent</button>
                 <button class="chip" data-filter-mirror="idle" type="button">Idle</button>
+                <button class="chip" data-filter-mirror="needs_human" type="button">Needs Human</button>
                 <button class="chip" data-filter-mirror="archived" type="button">Archived</button>
                 <button class="chip" data-filter-mirror="soft_deleted" type="button">Deleted</button>
                 <button class="chip" data-toggle-mirror="pinned" type="button">Pinned</button>
@@ -2765,19 +4637,23 @@ function getWebviewHtml() {
             <div class="board-view-shell">
               <div class="running-board-toolbar">
                 <div class="running-board-title">
-                  <div class="board-icon">✦</div>
+                  <div class="board-icon"><img class="board-icon-vivid theme-is-optional" src="${media.board}" alt="" /><span class="theme-bar board-icon-clean variant-hero phase-tooling" aria-hidden="true"></span></div>
                   <div>
                     <div class="section-title">Running Agent Board</div>
                     <div class="running-board-copy" id="runningBoardMetaPrimary">Pinned and attached agents stay here even when they stop running.</div>
                   </div>
                 </div>
-                <div class="chip-row">
+              <div class="chip-row">
                   <button class="chip" data-view="threads" type="button">Back to Threads</button>
                   <button class="chip" id="toggleLayoutLockPrimary" type="button">Lock Layout</button>
                   <button class="chip" id="resetRunningLayoutPrimary" type="button">Reset Layout</button>
                 </div>
               </div>
-              <div id="runningBoardPrimary" class="running-board-grid"></div>
+              <div id="interventionDockPrimary" class="intervention-dock"></div>
+              <div class="board-surface">
+                <div id="runningBoardPrimary" class="running-board-grid"></div>
+                <div id="boardDropOverlayPrimary" class="board-drop-overlay"></div>
+              </div>
             </div>
           </div>
         </section>
@@ -2824,27 +4700,45 @@ function getWebviewHtml() {
     </div>
     <script nonce="${nonce}">
       const vscode = acquireVsCodeApi();
+      let bootRetryTimer;
+      let bootRetryCount = 0;
+      const MEDIA = ${JSON.stringify(media)};
       const persisted = vscode.getState() || {};
       const state = {
         selectedThreadId: undefined,
         payload: undefined,
         currentSurface: "editor",
         lastAutoScrolledFocusedThreadId: undefined,
+        pendingScrollThreadId: undefined,
         draggedRunningThreadId: undefined,
+        activeBoardId: undefined,
+        dragPreviewEl: undefined,
+        resizingRunningCard: undefined,
         runningDropIndicator: undefined,
+        pendingDragIndicator: undefined,
+        dragRaf: 0,
+        resizeRaf: 0,
+        pendingResizeEvent: undefined,
         seenCompletionIds: persisted.seenCompletionIds || {},
         ui: {
           currentView: persisted.currentView || "overview",
+          headerMode: persisted.headerMode || (persisted.headerCollapsed ? "collapsed" : "expanded"),
+          themeMode: persisted.themeMode || "vivid",
           search: persisted.search || "",
+          topicFocus: persisted.topicFocus || null,
           filter: persisted.filter || "all",
           sort: persisted.sort || "updated",
           pinnedOnly: Boolean(persisted.pinnedOnly),
           soundEnabled: persisted.soundEnabled !== false,
+          motionEnabled: persisted.motionEnabled === true,
           pinned: persisted.pinned || {},
           boardAttached: persisted.boardAttached || {},
           runningCardSizes: persisted.runningCardSizes || {},
+          runningCardLayout: persisted.runningCardLayout || {},
+          runningCardPositions: persisted.runningCardPositions || {},
           runningCardOrder: Array.isArray(persisted.runningCardOrder) ? persisted.runningCardOrder : [],
           layoutLocked: Boolean(persisted.layoutLocked),
+          interventionCollapsed: Boolean(persisted.interventionCollapsed),
           selected: persisted.selected || {},
           pendingBatch: undefined,
           pendingDrawerAction: undefined,
@@ -2853,12 +4747,18 @@ function getWebviewHtml() {
           rightPaneTab: persisted.rightPaneTab || "console",
           drawerOpen: persisted.drawerOpen !== false,
           groups: Object.assign({
+            needs_human: true,
             running: true,
             recent: true,
             idle: false,
             archived: false,
             soft_deleted: false
-          }, persisted.groups || {})
+          }, persisted.groups || {}),
+          loopPanelThreadId: undefined,
+          loopDraftPrompt: "continue",
+          loopDraftCount: "10",
+          quickComposerThreadId: undefined,
+          quickComposerDrafts: {}
         }
       };
 
@@ -2866,21 +4766,52 @@ function getWebviewHtml() {
         vscode.setState({
           seenCompletionIds: state.seenCompletionIds,
           currentView: state.ui.currentView,
+          headerMode: state.ui.headerMode,
+          themeMode: state.ui.themeMode,
           search: state.ui.search,
+          topicFocus: state.ui.topicFocus,
           filter: state.ui.filter,
           sort: state.ui.sort,
           pinnedOnly: state.ui.pinnedOnly,
           soundEnabled: state.ui.soundEnabled,
+          motionEnabled: state.ui.motionEnabled,
           pinned: state.ui.pinned,
           boardAttached: state.ui.boardAttached,
           runningCardSizes: state.ui.runningCardSizes,
+          runningCardLayout: state.ui.runningCardLayout,
+          runningCardPositions: state.ui.runningCardPositions,
           runningCardOrder: state.ui.runningCardOrder,
           layoutLocked: state.ui.layoutLocked,
+          interventionCollapsed: state.ui.interventionCollapsed,
           selected: state.ui.selected,
           drawerOpen: state.ui.drawerOpen,
           rightPaneTab: state.ui.rightPaneTab,
           groups: state.ui.groups
         });
+      }
+
+      function notifyReady() {
+        vscode.postMessage({ type: "ready" });
+      }
+
+      function startBootRetryLoop() {
+        stopBootRetryLoop();
+        bootRetryCount = 0;
+        bootRetryTimer = window.setInterval(() => {
+          if (state.payload || bootRetryCount >= 6) {
+            stopBootRetryLoop();
+            return;
+          }
+          bootRetryCount += 1;
+          notifyReady();
+        }, 900);
+      }
+
+      function stopBootRetryLoop() {
+        if (bootRetryTimer) {
+          window.clearInterval(bootRetryTimer);
+          bootRetryTimer = undefined;
+        }
       }
 
       function esc(value) {
@@ -2891,6 +4822,173 @@ function getWebviewHtml() {
           "\\"": "&quot;",
           "'": "&#39;",
         }[ch]));
+      }
+
+      function renderCuteEmpty(title, copy, art) {
+        return '<div class="empty-state cute">' +
+          '<div class="empty-state-inner">' +
+            renderThemeVisual(art || MEDIA.rest, "empty-state-art", "Waiting", "empty") +
+            '<div class="empty-state-title">' + esc(title) + '</div>' +
+            '<div class="empty-state-copy">' + esc(copy) + '</div>' +
+          '</div>' +
+        '</div>';
+      }
+
+      function phaseArtFor(label) {
+        const key = String(label || "").toLowerCase();
+        if (key === "planning") return MEDIA.planning;
+        if (key === "tooling") return MEDIA.tooling;
+        if (key === "editing") return MEDIA.editing;
+        if (key === "testing") return MEDIA.testing;
+        return MEDIA.waiting;
+      }
+
+      function phaseClassFor(label) {
+        const key = String(label || "").toLowerCase();
+        if (key === "planning") return " phase-planning";
+        if (key === "tooling") return " phase-tooling";
+        if (key === "editing") return " phase-editing";
+        if (key === "testing") return " phase-testing";
+        return " phase-waiting";
+      }
+
+      function themeMode() {
+        return state.ui.themeMode || "vivid";
+      }
+
+      function renderThemeVisual(src, imgClass, phaseLabel = "Waiting", variant = "phase") {
+        const mode = themeMode();
+        const phaseClass = phaseClassFor(phaseLabel).trim() || "phase-waiting";
+        if (mode === "pure") return "";
+        if (mode === "clean") {
+          return '<span class="theme-bar theme-is-optional variant-' + esc(variant) + ' ' + esc(phaseClass) + '" aria-hidden="true"></span>';
+        }
+        return '<img class="' + esc(imgClass) + ' theme-is-optional" src="' + esc(src || phaseArtFor(phaseLabel)) + '" alt="" />';
+      }
+
+      function renderPhaseChip(phase) {
+        const phaseClass = phaseClassFor(phase.label).trim();
+        return '<span class="phase-chip ' + esc(phaseClass) + '">' +
+          renderThemeVisual(phaseArtFor(phase.label), "phase-chip-art", phase.label, "phase-chip") +
+          '<span>' + esc(phase.label) + '</span>' +
+        '</span>';
+      }
+
+      function renderSummaryCard(label, value, copy, phaseLabel, art) {
+        const phaseClass = phaseClassFor(phaseLabel).trim();
+        return '<div class="summary-card ' + esc(phaseClass) + '">' +
+          '<div class="summary-head">' +
+            renderThemeVisual(art || phaseArtFor(phaseLabel), "summary-art", phaseLabel, "summary") +
+            '<div class="summary-head-copy">' +
+              '<div class="summary-label">' + esc(label) + '</div>' +
+              renderPhaseChip({ label: phaseLabel }) +
+            '</div>' +
+          '</div>' +
+          '<div class="summary-value">' + esc(value) + '</div>' +
+          '<div class="summary-copy">' + esc(copy) + '</div>' +
+        '</div>';
+      }
+
+      function renderInsightCard(title, copy, meta) {
+        return '<div class="insight-card">' +
+          '<div class="insight-card-head">' +
+            '<div class="insight-card-title">' + esc(title) + '</div>' +
+            (meta ? '<span class="meta-pill">' + esc(meta) + '</span>' : '') +
+          '</div>' +
+          '<div class="insight-card-copy">' + esc(copy) + '</div>' +
+        '</div>';
+      }
+
+      function renderKeywordChip(item) {
+        return '<span class="keyword-chip"><span>' + esc(item.keyword || '') + '</span><span class="count">×' + esc(String(item.count || 0)) + '</span></span>';
+      }
+
+      function renderWeeklyShift(insights) {
+        const report = insights && insights.weekly_report;
+        if (!report) {
+          return renderInsightCard("Weekly change pending", "Need a little more local history before we can compare this week to the previous one.", "Weekly");
+        }
+        const highlights = Array.isArray(report.highlights) ? report.highlights : [];
+        const shifts = Array.isArray(report.shifts) ? report.shifts : [];
+        return [
+          renderInsightCard(
+            "Week-on-week persona",
+            ((report.current_persona || ["均衡型"]).join(" · ")) + " · " + report.current_window + " / " + String(report.current_inputs || 0) + " inputs",
+            ((report.previous_persona || ["基线不足"]).join(" · ")) + " · " + report.previous_window
+          ),
+          highlights.map((line, index) => renderInsightCard("Shift " + (index + 1), line, "Delta")).join(""),
+          shifts.length ? '<div class="shift-chip-row">' + shifts.slice(0, 5).map((item) => {
+            const deltaPct = Math.round(Math.abs(Number(item.delta || 0)) * 100);
+            return '<span class="shift-chip ' + esc(item.direction || "flat") + '">' +
+              '<strong>' + esc(item.label || "") + '</strong>' +
+              '<span>' + (item.direction === "up" ? "↑" : item.direction === "down" ? "↓" : "•") + ' ' + esc(String(deltaPct)) + '%</span>' +
+            '</span>';
+          }).join("") + '</div>' : ""
+        ].join("");
+      }
+
+      function renderWordCloud(items) {
+        if (!Array.isArray(items) || !items.length) {
+          return '<div class="sub">暂无关键词数据</div>';
+        }
+        const maxCount = Math.max(...items.map((item) => Number(item.count || 0)), 1);
+        return items.slice(0, 18).map((item) => {
+          const ratio = Number(item.count || 0) / maxCount;
+          const bucket = ratio >= 0.85 ? 5 : ratio >= 0.65 ? 4 : ratio >= 0.45 ? 3 : ratio >= 0.25 ? 2 : 1;
+          return '<span class="word-cloud-token weight-' + bucket + '">' + esc(item.keyword || "") + '</span>';
+        }).join("");
+      }
+
+      function renderTopicMap(map) {
+        if (!map || !Array.isArray(map.nodes) || !map.nodes.length) {
+          return renderCuteEmpty("Topic map pending", "As more threads and prompts accumulate, we will connect your hot topics here.", MEDIA.board);
+        }
+        const center = map.nodes.find((node) => node.id === "center") || { id: "center", label: "Codex Workbench", group: "center" };
+        const styles = map.nodes.filter((node) => node.group === "style");
+        const keywords = map.nodes.filter((node) => node.group === "keyword");
+        const threads = map.nodes.filter((node) => node.group === "thread");
+        const positions = {};
+        positions[center.id] = { x: 310, y: 160, w: 136, h: 40 };
+        const placeRing = (items, radius, startAngle, key) => {
+          items.forEach((item, index) => {
+            const angle = startAngle + (Math.PI * 2 * index) / Math.max(items.length, 1);
+            positions[item.id] = {
+              x: 310 + Math.cos(angle) * radius,
+              y: 160 + Math.sin(angle) * radius,
+              w: key === "thread" ? 150 : 108,
+              h: 34,
+            };
+          });
+        };
+        placeRing(styles, 92, -Math.PI / 2, "style");
+        placeRing(keywords, 176, -Math.PI / 3, "keyword");
+        placeRing(threads, 236, Math.PI / 5, "thread");
+
+        const edges = (map.edges || []).map((edge) => {
+          const from = positions[edge.from];
+          const to = positions[edge.to];
+          if (!from || !to) return "";
+          return '<line class="topic-edge" x1="' + from.x + '" y1="' + from.y + '" x2="' + to.x + '" y2="' + to.y + '"></line>';
+        }).join("");
+        const nodes = map.nodes.map((node) => {
+          const pos = positions[node.id];
+          if (!pos) return "";
+          const x = pos.x - pos.w / 2;
+          const y = pos.y - pos.h / 2;
+          const attrs = [
+            'class="topic-node interactive ' + esc(node.group || "keyword") + '"',
+            'data-topic-node="true"',
+            'data-topic-group="' + esc(node.group || "") + '"',
+            'data-topic-label="' + esc(node.label || "") + '"',
+            node.thread_id ? 'data-topic-thread="' + esc(node.thread_id) + '"' : '',
+            node.focus_value ? 'data-topic-focus="' + esc(node.focus_value) + '"' : '',
+          ].filter(Boolean).join(" ");
+          return '<g ' + attrs + '>' +
+            '<rect x="' + x + '" y="' + y + '" rx="12" ry="12" width="' + pos.w + '" height="' + pos.h + '"></rect>' +
+            '<text x="' + pos.x + '" y="' + (pos.y + 4) + '" text-anchor="middle">' + esc(short(String(node.label || ""), node.group === "thread" ? 22 : 16)) + '</text>' +
+          '</g>';
+        }).join("");
+        return '<svg viewBox="0 0 620 320" role="img" aria-label="topic map">' + edges + nodes + '</svg>';
       }
 
       function renderToolIcon(name, filled = false) {
@@ -2922,6 +5020,21 @@ function getWebviewHtml() {
         return '<span class="badge badge-' + esc(status) + '">' + esc(status) + '</span>';
       }
 
+      function effectiveRunningIdSet(payload = state.payload) {
+        return new Set((payload && payload.effectiveRunningThreadIds) || []);
+      }
+
+      function effectiveThreadStatus(thread, payload = state.payload) {
+        if (!thread) return "idle";
+        const rawStatus = normalize(thread.status) || "idle";
+        if (rawStatus !== "running") return rawStatus;
+        if (effectiveRunningIdSet(payload).has(thread.id)) return "running";
+        const link = codexLinkMeta(thread.id, payload);
+        if (link.isFocused || link.isOpen || link.pending) return "linked";
+        if ((thread.board_source || "") === "attached") return "attached";
+        return "recent";
+      }
+
       function prunePendingCodexLinks() {
         const now = Date.now();
         Object.keys(state.ui.pendingCodexLink).forEach((threadId) => {
@@ -2935,6 +5048,9 @@ function getWebviewHtml() {
       function setSelectedThread(threadId, options = {}) {
         if (!threadId) return;
         state.selectedThreadId = threadId;
+        if (options.scrollIntoView) {
+          state.pendingScrollThreadId = threadId;
+        }
         if (options.openDrawer) {
           state.ui.drawerOpen = true;
         }
@@ -2984,6 +5100,23 @@ function getWebviewHtml() {
               node.scrollIntoView({ behavior: "smooth", block: "nearest", inline: "nearest" });
             }
           });
+        });
+      }
+
+      function scrollPendingThreadIntoView() {
+        const threadId = state.pendingScrollThreadId;
+        if (!threadId) return;
+        window.requestAnimationFrame(() => {
+          const targets = Array.from(document.querySelectorAll("[data-thread-id]"))
+            .filter((node) => node.dataset.threadId === threadId);
+          const preferred = targets.find((node) => {
+            const pane = node.closest(".workspace-pane");
+            return !pane || pane.classList.contains("active");
+          }) || targets[0];
+          if (preferred) {
+            preferred.scrollIntoView({ behavior: "smooth", block: "center", inline: "nearest" });
+          }
+          state.pendingScrollThreadId = undefined;
         });
       }
 
@@ -3059,6 +5192,69 @@ function getWebviewHtml() {
         render(state.payload);
       }
 
+      function toggleThemeMode() {
+        const order = ["pure", "clean", "vivid"];
+        const current = themeMode();
+        const next = order[(order.indexOf(current) + 1) % order.length];
+        state.ui.themeMode = next;
+        persistUi();
+        render(state.payload);
+      }
+
+      function toggleHeaderCollapsed() {
+        const current = state.ui.headerMode || "expanded";
+        state.ui.headerMode = current === "expanded"
+          ? "collapsed"
+          : current === "collapsed"
+            ? "ultra"
+            : "expanded";
+        persistUi();
+        render(state.payload);
+      }
+
+      function openLoopPanel(threadId, currentPrompt = "continue", currentCount = "10") {
+        state.ui.loopPanelThreadId = threadId;
+        state.ui.loopDraftPrompt = String(currentPrompt || "continue");
+        state.ui.loopDraftCount = String(currentCount || "10");
+        render(state.payload);
+      }
+
+      function closeLoopPanel() {
+        state.ui.loopPanelThreadId = undefined;
+        state.ui.loopDraftPrompt = "continue";
+        state.ui.loopDraftCount = "10";
+        render(state.payload);
+      }
+
+      function openQuickComposer(threadId, currentPrompt = "continue") {
+        if (!threadId) return;
+        state.ui.quickComposerThreadId = threadId;
+        if (!state.ui.quickComposerDrafts[threadId]) {
+          state.ui.quickComposerDrafts[threadId] = String(currentPrompt || "continue");
+        }
+        render(state.payload);
+      }
+
+      function closeQuickComposer(threadId) {
+        if (!threadId || state.ui.quickComposerThreadId === threadId) {
+          state.ui.quickComposerThreadId = undefined;
+        }
+        render(state.payload);
+      }
+
+      function setQuickComposerDraft(threadId, value) {
+        if (!threadId) return;
+        state.ui.quickComposerDrafts[threadId] = String(value || "");
+      }
+
+      function setLoopDraftCount(value) {
+        state.ui.loopDraftCount = String(value || "");
+      }
+
+      function setLoopDraftPrompt(value) {
+        state.ui.loopDraftPrompt = String(value || "");
+      }
+
       function toggleSound() {
         state.ui.soundEnabled = !state.ui.soundEnabled;
         persistUi();
@@ -3129,11 +5325,13 @@ function getWebviewHtml() {
         render(state.payload);
       }
 
-      function getBoardThreads(dashboard) {
+      function getBoardThreads(dashboard, payload = state.payload) {
         const threadMap = new Map(((dashboard && dashboard.threads) || []).map((thread) => [thread.id, thread]));
         const boardMap = new Map();
+        const effectiveRunning = effectiveRunningIdSet(payload);
         ((dashboard && dashboard.runningThreads) || []).forEach((thread) => {
-          boardMap.set(thread.id, Object.assign({}, threadMap.get(thread.id) || {}, thread, { board_source: "running" }));
+          const source = effectiveRunning.has(thread.id) ? "running" : "linked";
+          boardMap.set(thread.id, Object.assign({}, threadMap.get(thread.id) || {}, thread, { board_source: source }));
         });
         Object.keys(state.ui.boardAttached).forEach((threadId) => {
           if (!state.ui.boardAttached[threadId]) return;
@@ -3149,16 +5347,53 @@ function getWebviewHtml() {
 
       function getRunningCardSize(threadId) {
         const size = state.ui.runningCardSizes[threadId];
-        return size === "m" || size === "l" ? size : "s";
+        return size === "tiny" || size === "m" || size === "l" ? size : "s";
+      }
+
+      function getRunningCardLayout(threadId, size = getRunningCardSize(threadId)) {
+        const saved = state.ui.runningCardLayout[threadId] || {};
+        const defaultCols = size === "tiny" ? 2 : size === "s" ? 4 : size === "m" ? 7 : 15;
+        const defaultHeight = size === "tiny" ? 116 : size === "s" ? 214 : size === "m" ? 242 : 282;
+        return {
+          cols: Math.max(1, Math.min(15, Number(saved.cols) || defaultCols)),
+          height: Math.max(88, Math.min(520, Number(saved.height) || defaultHeight)),
+        };
+      }
+
+      function getRunningCardPosition(threadId) {
+        const saved = state.ui.runningCardPositions[threadId] || {};
+        const col = Math.round(Number(saved.col) || 0);
+        const row = Math.round(Number(saved.row) || 0);
+        if (col < 1 || row < 1) return undefined;
+        return { col, row };
       }
 
       function setRunningCardSize(threadId, size) {
         if (state.ui.layoutLocked) return;
         if (!threadId) return;
-        const nextSize = size === "m" || size === "l" ? size : "s";
+        const nextSize = size === "tiny" || size === "m" || size === "l" ? size : "s";
         state.ui.runningCardSizes[threadId] = nextSize;
+        delete state.ui.runningCardLayout[threadId];
         persistUi();
         render(state.payload);
+      }
+
+      function setRunningCardLayout(threadId, cols, height) {
+        if (state.ui.layoutLocked || !threadId) return;
+        state.ui.runningCardLayout[threadId] = {
+          cols: Math.max(1, Math.min(15, Math.round(Number(cols) || 1))),
+          height: Math.max(88, Math.min(520, Math.round(Number(height) || 120))),
+        };
+        persistUi();
+      }
+
+      function setRunningCardPosition(threadId, col, row) {
+        if (state.ui.layoutLocked || !threadId) return;
+        state.ui.runningCardPositions[threadId] = {
+          col: Math.max(1, Math.min(15, Math.round(Number(col) || 1))),
+          row: Math.max(1, Math.min(999, Math.round(Number(row) || 1))),
+        };
+        persistUi();
       }
 
       function pruneRunningCardState(boardThreads) {
@@ -3167,6 +5402,16 @@ function getWebviewHtml() {
         Object.keys(state.ui.runningCardSizes).forEach((threadId) => {
           if (!activeIds.has(threadId)) {
             delete state.ui.runningCardSizes[threadId];
+          }
+        });
+        Object.keys(state.ui.runningCardLayout).forEach((threadId) => {
+          if (!activeIds.has(threadId)) {
+            delete state.ui.runningCardLayout[threadId];
+          }
+        });
+        Object.keys(state.ui.runningCardPositions).forEach((threadId) => {
+          if (!activeIds.has(threadId)) {
+            delete state.ui.runningCardPositions[threadId];
           }
         });
         Object.keys(state.ui.boardAttached).forEach((threadId) => {
@@ -3205,8 +5450,311 @@ function getWebviewHtml() {
         render(state.payload);
       }
 
-      function setRunningDropIndicator(threadId, position) {
-        state.runningDropIndicator = threadId && position ? { threadId, position } : undefined;
+      function boardGridMetrics(board) {
+        if (!board) {
+          return { columns: 15, gap: 12, width: 72, rowHeight: 18, paddingLeft: 4, paddingTop: 4 };
+        }
+        const styles = getComputedStyle(board);
+        const columns = 15;
+        const gap = parseFloat(styles.columnGap || styles.gap || "12") || 12;
+        const rowHeight = parseFloat(styles.gridAutoRows || "18") || 18;
+        const paddingLeft = parseFloat(styles.paddingLeft || "0") || 0;
+        const paddingRight = parseFloat(styles.paddingRight || "0") || 0;
+        const paddingTop = parseFloat(styles.paddingTop || "0") || 0;
+        const innerWidth = Math.max(1, board.clientWidth - paddingLeft - paddingRight - gap * (columns - 1));
+        return {
+          columns,
+          gap,
+          width: innerWidth / columns,
+          rowHeight,
+          paddingLeft,
+          paddingTop,
+        };
+      }
+
+      function layoutHeightToRows(height, metrics) {
+        const gap = metrics && metrics.gap ? metrics.gap : 12;
+        const rowHeight = metrics && metrics.rowHeight ? metrics.rowHeight : 18;
+        return Math.max(4, Math.ceil((Math.max(88, height) + gap) / (rowHeight + gap)));
+      }
+
+      function buildBoardPlacements(boardThreads, options = {}) {
+        const ordered = orderRunningThreads(boardThreads);
+        if (options.compact) {
+          return { ordered, placements: new Map(), maxRow: 1 };
+        }
+        const columns = 15;
+        const placements = new Map();
+        const occupancy = new Map();
+        function isBlocked(col, row) {
+          return occupancy.get(String(row) + ":" + String(col)) === true;
+        }
+        function markOccupied(col, row, cols, rows) {
+          for (let rowOffset = 0; rowOffset < rows; rowOffset += 1) {
+            for (let colOffset = 0; colOffset < cols; colOffset += 1) {
+              occupancy.set(String(row + rowOffset) + ":" + String(col + colOffset), true);
+            }
+          }
+        }
+        function canFit(col, row, cols, rows) {
+          if (col < 1 || row < 1 || col + cols - 1 > columns) return false;
+          for (let rowOffset = 0; rowOffset < rows; rowOffset += 1) {
+            for (let colOffset = 0; colOffset < cols; colOffset += 1) {
+              if (isBlocked(col + colOffset, row + rowOffset)) return false;
+            }
+          }
+          return true;
+        }
+        function placeThread(thread, preferred) {
+          const layout = getRunningCardLayout(thread.id, getRunningCardSize(thread.id));
+          const rows = layoutHeightToRows(layout.height, { gap: 12, rowHeight: 18 });
+          const cols = layout.cols;
+          let col = preferred && preferred.col ? Math.max(1, Math.min(columns - cols + 1, preferred.col)) : 1;
+          let row = preferred && preferred.row ? Math.max(1, preferred.row) : 1;
+          let placed = false;
+          for (let searchRow = row; searchRow < row + 180 && !placed; searchRow += 1) {
+            for (let searchCol = searchRow === row ? col : 1; searchCol <= columns - cols + 1; searchCol += 1) {
+              if (!canFit(searchCol, searchRow, cols, rows)) continue;
+              col = searchCol;
+              row = searchRow;
+              placed = true;
+              break;
+            }
+          }
+          if (!placed) {
+            let searchRow = 1;
+            while (!placed && searchRow < 400) {
+              for (let searchCol = 1; searchCol <= columns - cols + 1; searchCol += 1) {
+                if (!canFit(searchCol, searchRow, cols, rows)) continue;
+                col = searchCol;
+                row = searchRow;
+                placed = true;
+                break;
+              }
+              searchRow += 1;
+            }
+          }
+          markOccupied(col, row, cols, rows);
+          placements.set(thread.id, { col, row, cols, rows, height: layout.height });
+        }
+        ordered.forEach((thread) => {
+          const preferred = getRunningCardPosition(thread.id);
+          if (preferred) placeThread(thread, preferred);
+        });
+        ordered.forEach((thread) => {
+          if (!placements.has(thread.id)) placeThread(thread);
+        });
+        let maxRow = 1;
+        placements.forEach((placement) => {
+          maxRow = Math.max(maxRow, placement.row + placement.rows - 1);
+        });
+        return { ordered, placements, maxRow };
+      }
+
+      function pointerToBoardCell(board, clientX, clientY, draggedId) {
+        const metrics = boardGridMetrics(board);
+        const rect = board.getBoundingClientRect();
+        const layout = getRunningCardLayout(draggedId, getRunningCardSize(draggedId));
+        const rows = layoutHeightToRows(layout.height, metrics);
+        const fullCellWidth = metrics.width + metrics.gap;
+        const fullCellHeight = metrics.rowHeight + metrics.gap;
+        const localX = clientX - rect.left - metrics.paddingLeft;
+        const localY = clientY - rect.top - metrics.paddingTop;
+        const col = Math.max(1, Math.min(metrics.columns - layout.cols + 1, Math.round(localX / fullCellWidth) + 1));
+        const row = Math.max(1, Math.round(localY / fullCellHeight) + 1);
+        return { col, row, cols: layout.cols, rows, height: layout.height };
+      }
+
+      function cleanupDragPreview() {
+        if (state.dragPreviewEl && state.dragPreviewEl.parentNode) {
+          state.dragPreviewEl.parentNode.removeChild(state.dragPreviewEl);
+        }
+        state.dragPreviewEl = undefined;
+      }
+
+      function createDragPreview(card, threadId) {
+        cleanupDragPreview();
+        const preview = document.createElement("div");
+        preview.className = "drag-preview-card";
+        const title = short(
+          card.querySelector(".running-card-title")?.textContent || threadId || "Agent",
+          48,
+        );
+        preview.innerHTML =
+          '<div class="drag-preview-head"><span class="drag-preview-dot"></span><span class="drag-preview-label">Board Move</span></div>' +
+          '<div class="drag-preview-title">' + esc(title) + '</div>';
+        document.body.appendChild(preview);
+        state.dragPreviewEl = preview;
+        return preview;
+      }
+
+      function dragBoards() {
+        if (state.activeBoardId) {
+          const active = document.getElementById(state.activeBoardId);
+          return active ? [active] : [];
+        }
+        return Array.from(document.querySelectorAll(".running-board-grid"));
+      }
+
+      function syncDragBoardState() {
+        document.querySelectorAll(".running-board-grid").forEach((board) => {
+          const active = !state.activeBoardId || board.id === state.activeBoardId;
+          board.classList.toggle("drag-active", Boolean(state.draggedRunningThreadId && active));
+        });
+      }
+
+      function scheduleDragIndicator(indicator, boardId) {
+        state.pendingDragIndicator = indicator;
+        state.activeBoardId = boardId || state.activeBoardId;
+        if (state.dragRaf) return;
+        state.dragRaf = window.requestAnimationFrame(() => {
+          state.dragRaf = 0;
+          state.runningDropIndicator = state.pendingDragIndicator;
+          syncDragBoardState();
+          syncRunningDropIndicatorDom();
+        });
+      }
+
+      function cancelScheduledDragIndicator() {
+        if (state.dragRaf) {
+          window.cancelAnimationFrame(state.dragRaf);
+          state.dragRaf = 0;
+        }
+        state.pendingDragIndicator = undefined;
+      }
+
+      function scheduleResizeUpdate(event) {
+        state.pendingResizeEvent = {
+          clientX: event.clientX,
+          clientY: event.clientY,
+        };
+        if (state.resizeRaf) return;
+        state.resizeRaf = window.requestAnimationFrame(() => {
+          state.resizeRaf = 0;
+          const nextEvent = state.pendingResizeEvent;
+          state.pendingResizeEvent = undefined;
+          if (nextEvent) updateRunningCardResize(nextEvent);
+        });
+      }
+
+      function dropPreviewMetrics(board, draggedId = state.draggedRunningThreadId) {
+        if (!draggedId) {
+          return { width: 120, height: 132 };
+        }
+        const size = getRunningCardSize(draggedId);
+        const layout = getRunningCardLayout(draggedId, size);
+        const metrics = boardGridMetrics(board);
+        return {
+          width: Math.round(Math.max(96, layout.cols * metrics.width + Math.max(0, layout.cols - 1) * metrics.gap)),
+          height: Math.max(92, layout.height),
+        };
+      }
+
+      function nearestRunningDropTarget(board, draggedId, clientX, clientY, fallbackCard) {
+        if (!board || !draggedId) return undefined;
+        const cards = Array.from(board.querySelectorAll("[data-running-card]")).filter((card) => card.dataset.runningCard !== draggedId);
+        const directCard = fallbackCard && fallbackCard.dataset && fallbackCard.dataset.runningCard !== draggedId ? fallbackCard : undefined;
+        if (directCard) {
+          const rect = directCard.getBoundingClientRect();
+          return {
+            threadId: directCard.dataset.runningCard,
+            position: clientX > rect.left + (rect.width / 2) ? "after" : "before",
+          };
+        }
+        let best = undefined;
+        cards.forEach((card) => {
+          const rect = card.getBoundingClientRect();
+          const centerX = rect.left + rect.width / 2;
+          const centerY = rect.top + rect.height / 2;
+          const distance = Math.hypot(clientX - centerX, clientY - centerY);
+          if (!best || distance < best.distance) {
+            best = { card, rect, distance };
+          }
+        });
+        if (!best) return undefined;
+        const threshold = Math.max(140, Math.min(320, Math.max(best.rect.width, best.rect.height) * 0.9));
+        if (best.distance > threshold) return undefined;
+        return {
+          threadId: best.card.dataset.runningCard,
+          position: clientX > best.rect.left + (best.rect.width / 2) ? "after" : "before",
+        };
+      }
+
+      function beginRunningCardResize(threadId, corner, event) {
+        if (state.ui.layoutLocked || !threadId) return;
+        const card = event.currentTarget && event.currentTarget.closest("[data-running-card]");
+        if (!card) return;
+        const size = getRunningCardSize(threadId);
+        const layout = getRunningCardLayout(threadId, size);
+        const placement = getRunningCardPosition(threadId) || {
+          col: Math.max(1, Number(card.dataset.gridCol) || 1),
+          row: Math.max(1, Number(card.dataset.gridRow) || 1),
+        };
+        state.resizingRunningCard = {
+          threadId,
+          corner,
+          startX: event.clientX,
+          startY: event.clientY,
+          startCols: layout.cols,
+          startHeight: layout.height,
+          startCol: placement.col,
+          startRow: placement.row,
+        };
+        card.classList.add("resizing");
+        event.preventDefault();
+        event.stopPropagation();
+      }
+
+      function updateRunningCardResize(event) {
+        const session = state.resizingRunningCard;
+        if (!session) return;
+        const card = document.querySelector('[data-running-card="' + CSS.escape(session.threadId) + '"]');
+        if (!card) return;
+        const board = card.closest(".running-board-grid");
+        const metrics = boardGridMetrics(board);
+        const dx = event.clientX - session.startX;
+        const dy = event.clientY - session.startY;
+        const horizontalDirection = session.corner.includes("w") ? -1 : (session.corner.includes("e") ? 1 : 0);
+        const verticalDirection = session.corner.includes("n") ? -1 : (session.corner.includes("s") ? 1 : 0);
+        const colStep = Math.max(48, Math.round(metrics.width * 0.82));
+        const horizontalDelta = horizontalDirection === 0 ? 0 : Math.round((dx * horizontalDirection) / colStep);
+        const verticalDelta = verticalDirection === 0 ? 0 : Math.round((dy * verticalDirection) / 18);
+        const nextCols = Math.max(1, Math.min(15, session.startCols + horizontalDelta));
+        const nextHeight = Math.max(88, Math.min(520, session.startHeight + verticalDelta * 18));
+        const nextRows = layoutHeightToRows(nextHeight, metrics);
+        card.style.gridColumn = String(session.startCol) + " / span " + nextCols;
+        card.style.gridRow = String(session.startRow) + " / span " + nextRows;
+        card.style.minHeight = nextHeight + "px";
+        card.style.height = nextHeight + "px";
+      }
+
+      function finishRunningCardResize(event) {
+        const session = state.resizingRunningCard;
+        if (!session) return;
+        if (state.resizeRaf) {
+          window.cancelAnimationFrame(state.resizeRaf);
+          state.resizeRaf = 0;
+        }
+        const card = document.querySelector('[data-running-card="' + CSS.escape(session.threadId) + '"]');
+        if (card) {
+          const spanMatch = /span\s+(\d+)/.exec(card.style.gridColumn || "");
+          const cols = spanMatch ? Number(spanMatch[1]) : session.startCols;
+          const height = Number.parseInt(card.style.height || "", 10) || session.startHeight;
+          card.classList.remove("resizing");
+          setRunningCardLayout(session.threadId, cols, height);
+          setRunningCardPosition(session.threadId, session.startCol, session.startRow);
+        }
+        state.resizingRunningCard = undefined;
+        state.pendingResizeEvent = undefined;
+        render(state.payload);
+      }
+
+      function setRunningDropIndicator(indicatorOrThreadId, position) {
+        if (typeof indicatorOrThreadId === "object" && indicatorOrThreadId) {
+          state.runningDropIndicator = indicatorOrThreadId;
+          return;
+        }
+        state.runningDropIndicator = indicatorOrThreadId && position ? { threadId: indicatorOrThreadId, position } : undefined;
       }
 
       function clearRunningDropIndicator() {
@@ -3214,11 +5762,25 @@ function getWebviewHtml() {
       }
 
       function syncRunningDropIndicatorDom() {
-        document.querySelectorAll("[data-running-card]").forEach((card) => {
-          const isTarget = state.runningDropIndicator && state.runningDropIndicator.threadId === card.dataset.runningCard;
-          card.classList.toggle("drop-before", Boolean(isTarget && state.runningDropIndicator.position === "before"));
-          card.classList.toggle("drop-after", Boolean(isTarget && state.runningDropIndicator.position === "after"));
-        });
+        const board = document.getElementById(state.activeBoardId || "runningBoardPrimary");
+        const overlay = document.getElementById("boardDropOverlayPrimary");
+        if (!board || !overlay) return;
+        if (board.id !== "runningBoardPrimary") {
+          overlay.classList.remove("visible");
+          return;
+        }
+        if (state.runningDropIndicator && state.runningDropIndicator.col && state.runningDropIndicator.row) {
+          const metrics = boardGridMetrics(board);
+          const preview = dropPreviewMetrics(board);
+          const left = metrics.paddingLeft + (state.runningDropIndicator.col - 1) * (metrics.width + metrics.gap);
+          const top = metrics.paddingTop + (state.runningDropIndicator.row - 1) * (metrics.rowHeight + metrics.gap);
+          overlay.style.transform = "translate(" + String(left) + "px, " + String(top) + "px)";
+          overlay.style.width = String(preview.width) + "px";
+          overlay.style.height = String(preview.height) + "px";
+          overlay.classList.add("visible");
+        } else {
+          overlay.classList.remove("visible");
+        }
       }
 
       function toggleLayoutLock() {
@@ -3227,9 +5789,17 @@ function getWebviewHtml() {
         render(state.payload);
       }
 
+      function toggleMotion() {
+        state.ui.motionEnabled = !state.ui.motionEnabled;
+        persistUi();
+        render(state.payload);
+      }
+
       function resetRunningLayout() {
         state.ui.runningCardOrder = [];
         state.ui.runningCardSizes = {};
+        state.ui.runningCardLayout = {};
+        state.ui.runningCardPositions = {};
         state.ui.layoutLocked = false;
         persistUi();
         render(state.payload);
@@ -3257,6 +5827,49 @@ function getWebviewHtml() {
         render(state.payload);
       }
 
+      function topicFocusMatches(thread, focus) {
+        if (!focus || !thread) return true;
+        const title = normalize(thread.title);
+        const cwd = normalize(thread.cwd);
+        const haystack = [title, cwd, normalize(thread.id), normalize(thread.updated_at_iso)].join(" ");
+        if (focus.group === "keyword") {
+          return haystack.includes(normalize(focus.value));
+        }
+        if (focus.group === "thread") {
+          return thread.id === focus.threadId;
+        }
+        if (focus.group === "style") {
+          const styleMap = {
+            "规划型": ["计划", "规划", "plan", "roadmap", "方案", "设计"],
+            "执行型": ["fix", "实现", "run", "deploy", "build", "改", "修"],
+            "探索型": ["分析", "analyze", "compare", "search", "inspect", "review"],
+            "自动化型": ["loop", "auto", "daemon", "tmux", "nohup", "监控", "自动"],
+            "界面型": ["ui", "theme", "layout", "board", "card", "界面", "布局", "主题"],
+          };
+          const tokens = styleMap[focus.value] || [focus.value];
+          return tokens.some((token) => haystack.includes(normalize(token)));
+        }
+        return true;
+      }
+
+      function applyTopicFocus(focus) {
+        state.ui.topicFocus = focus || null;
+        state.ui.currentView = "threads";
+        if (focus && focus.group === "keyword") {
+          state.ui.search = focus.value || "";
+          state.ui.filter = "all";
+        } else if (focus && focus.group === "thread") {
+          state.ui.search = "";
+          state.ui.filter = "all";
+          setSelectedThread(focus.threadId, { view: "threads", openDrawer: true, scrollIntoView: true });
+        } else if (focus && focus.group === "style") {
+          state.ui.search = "";
+          state.ui.filter = "all";
+        }
+        persistUi();
+        render(state.payload);
+      }
+
       function threadMatches(thread) {
         const query = normalize(state.ui.search).trim();
         const haystack = [
@@ -3266,23 +5879,26 @@ function getWebviewHtml() {
           thread.updated_at_iso
         ].map(normalize).join(" ");
 
-        const status = normalize(thread.status);
+        const status = effectiveThreadStatus(thread);
         const archived = Boolean(thread.archived) || status === "archived";
         const softDeleted = Boolean(thread.soft_deleted);
         const running = status === "running";
         const recent = status === "recent";
+        const linked = status === "linked";
         const idle = !running && !recent && !archived && !softDeleted;
 
         const matchesQuery = !query || haystack.includes(query);
+        const matchesTopic = topicFocusMatches(thread, state.ui.topicFocus);
         const matchesFilter =
           state.ui.filter === "all" ||
           (state.ui.filter === "running" && running) ||
-          (state.ui.filter === "recent" && recent) ||
+          (state.ui.filter === "recent" && (recent || linked)) ||
           (state.ui.filter === "idle" && idle) ||
+          (state.ui.filter === "needs_human" && needsHumanIntervention(thread)) ||
           (state.ui.filter === "archived" && archived) ||
           (state.ui.filter === "soft_deleted" && softDeleted);
         const matchesPinned = !state.ui.pinnedOnly || isPinned(thread.id);
-        return matchesQuery && matchesFilter && matchesPinned;
+        return matchesQuery && matchesTopic && matchesFilter && matchesPinned;
       }
 
       function sortThreads(threads) {
@@ -3307,15 +5923,17 @@ function getWebviewHtml() {
         const groups = {
           running: [],
           recent: [],
+          needs_human: [],
           idle: [],
           archived: [],
           soft_deleted: []
         };
         for (const thread of sortThreads(threads)) {
-          const status = normalize(thread.status);
+          const status = effectiveThreadStatus(thread);
           const archived = Boolean(thread.archived) || status === "archived";
           if (thread.soft_deleted) groups.soft_deleted.push(thread);
           else if (archived) groups.archived.push(thread);
+          else if (needsHumanIntervention(thread)) groups.needs_human.push(thread);
           else if (status === "running") groups.running.push(thread);
           else if (status === "recent") groups.recent.push(thread);
           else groups.idle.push(thread);
@@ -3357,10 +5975,87 @@ function getWebviewHtml() {
       }
 
       function boardBadge(thread) {
-        if ((thread.board_source || "") === "attached" && normalize(thread.status) !== "running") {
+        if ((thread.board_source || "") === "attached" && effectiveThreadStatus(thread) !== "running") {
           return '<span class="badge badge-board">Attached</span>';
         }
+        if ((thread.board_source || "") === "linked") {
+          return '<span class="badge badge-linked">Linked</span>';
+        }
         return "";
+      }
+
+      function needsHumanIntervention(thread) {
+        const logMessages = (thread.preview_logs || []).map((item) => item.message || item.target || "").filter(Boolean);
+        const historyTexts = (thread.history || []).map((item) => item.text || "").filter(Boolean);
+        const corpus = [...logMessages, ...historyTexts].join(" \\n").toLowerCase();
+        return /need your|need you|your input|user input|human|manual|approval|approve|confirm|please provide|please choose|upload|login|sign in|token|pat|credential|blocked|waiting for user|intervention/.test(corpus);
+      }
+
+      function inferCodexPhase(thread) {
+        const logMessages = (thread.preview_logs || []).map((item) => item.message || item.target || "").filter(Boolean);
+        const historyTexts = (thread.history || []).map((item) => item.text || "").filter(Boolean);
+        const corpus = [...logMessages, ...historyTexts].join(" \\n").toLowerCase();
+        const latest = logMessages[0] || historyTexts[0] || "";
+        const status = normalize(thread.status);
+        if (!corpus && status !== "running") {
+          return {
+            label: "Waiting",
+            copy: "Pinned on the board and ready to reopen when you need it.",
+          };
+        }
+
+        const planningRe = /plan|planning|todo|next step|roadmap|slice|outline|proposal|strategy|break down|decompose|milestone|task list/;
+        const toolingRe = /tool call|spawn|agent|terminal|shell|command|uvicorn|server|process|session|attach|resume|fork|openexternal|webview|panel|workspace|rg /;
+        const editingRe = /patch|update file|write file|apply_patch|rename|create file|delete file|move to|refactor|implement|edit|change code|modify/;
+        const testingRe = /pytest|npm run|package|build|compile|check|validate|test|lint|verify|vsce|py_compile|node --check/;
+        const waitingRe = /waiting|idle|standby|queued|sleep|no live process|no explicit progress marker|ready to reopen|ready for inspection/;
+
+        if (planningRe.test(corpus)) {
+          return {
+            label: "Planning",
+            copy: short(latest || "The agent is likely outlining tasks or deciding the next step.", 120),
+          };
+        }
+        if (toolingRe.test(corpus)) {
+          return {
+            label: "Tooling",
+            copy: short(latest || "The agent is orchestrating tools, terminals, sessions, or environment setup.", 120),
+          };
+        }
+        if (editingRe.test(corpus)) {
+          return {
+            label: "Editing",
+            copy: short(latest || "The agent appears to be modifying files right now.", 120),
+          };
+        }
+        if (testingRe.test(corpus)) {
+          return {
+            label: "Testing",
+            copy: short(latest || "The agent is validating code or packaging output.", 120),
+          };
+        }
+        if (/search|open|read|inspect|analy|trace|grep|find /.test(corpus)) {
+          return {
+            label: "Tooling",
+            copy: short(latest || "The agent is reading project context and exploring state.", 120),
+          };
+        }
+        if (waitingRe.test(corpus) || status === "recent") {
+          return {
+            label: "Waiting",
+            copy: short(latest || "The agent has paused and is waiting for the next steer or follow-up.", 120),
+          };
+        }
+        if (status === "running") {
+          return {
+            label: "Tooling",
+            copy: short(latest || "The agent is active, but the current phase is inferred from limited logs.", 120),
+          };
+        }
+        return {
+          label: "Waiting",
+          copy: short(latest || "Recent activity is available, but no stronger phase signal was found.", 120),
+        };
       }
 
       function codexLinkMeta(threadId, payload = state.payload) {
@@ -3425,13 +6120,15 @@ function getWebviewHtml() {
         const active = state.selectedThreadId === thread.id ? " active" : "";
         const selectedClass = isSelected(thread.id) ? " selected" : "";
         const pinnedClass = isPinned(thread.id) ? " pinned" : "";
+        const phase = inferCodexPhase(thread);
+        const status = effectiveThreadStatus(thread);
         const linkMeta = codexLinkMeta(thread.id);
         const linkBadge = codexLinkBadge(thread.id);
         const codexClass = linkMeta.isFocused ? " codex-focused" : (linkMeta.isOpen ? " codex-open" : "");
         return '<div class="thread-row' + active + selectedClass + codexClass + '" data-thread-id="' + esc(thread.id) + '">' +
           '<div class="thread-topline">' +
             '<button class="select-btn' + (isSelected(thread.id) ? ' selected' : '') + '" data-select-thread="' + esc(thread.id) + '" type="button">' + (isSelected(thread.id) ? '✓' : '') + '</button>' +
-            statusBadge(thread.status) +
+            statusBadge(status) +
             '<span class="mono muted">' + esc(thread.updated_at_iso || "") + '</span>' +
             '<button class="mini-action-btn" data-rename-thread="' + esc(thread.id) + '" data-current-title="' + esc(thread.title || "") + '" type="button">Rename</button>' +
             '<button class="mini-action-btn" data-board-attach="' + esc(thread.id) + '" type="button">' + (isBoardAttached(thread.id) ? 'Attached' : 'Board') + '</button>' +
@@ -3442,22 +6139,26 @@ function getWebviewHtml() {
           '<div class="thread-title">' + esc(short(thread.title || "(no title)", 110)) + '</div>' +
           '<div class="thread-meta">' +
             '<span class="meta-pill mono">' + esc(short(thread.cwd || "-", 42)) + '</span>' +
-            '<span class="meta-pill">' + esc(thread.soft_deleted ? "soft-deleted" : (thread.archived ? "archived" : (thread.status || "idle"))) + '</span>' +
+            renderPhaseChip(phase) +
+            '<span class="meta-pill">Cmd ' + esc(String(thread.user_command_count || 0)) + '</span>' +
+            '<span class="meta-pill">Cmp ' + esc(String(thread.compaction_count || 0)) + '</span>' +
+            '<span class="meta-pill">' + esc(thread.soft_deleted ? "soft-deleted" : (thread.archived ? "archived" : status)) + '</span>' +
           '</div>' +
         '</div>';
       }
 
       function renderSpotlight(thread, detail) {
         if (!thread && !(detail && detail.thread)) {
-          return '<div class="empty-state">Select a thread to show the inspector spotlight.</div>';
+          return renderCuteEmpty("Spotlight is waiting", "Select a thread to show the inspector spotlight and keep one cute helper nearby.", MEDIA.spotlight);
         }
         const merged = Object.assign({}, thread || {}, (detail && detail.thread) || {});
         const progress = extractThreadProgress(merged);
+        const status = effectiveThreadStatus(merged, state.payload);
         const linkMeta = codexLinkMeta(merged.id);
         const linkLabel = linkMeta.isFocused ? "Focused in Codex" : (linkMeta.isOpen ? "Open in Codex" : (linkMeta.pending ? "Linking to Codex" : "Not linked"));
         return '<div class="spotlight-grid">' +
           '<div>' +
-            statusBadge(merged.status || "idle") +
+            statusBadge(status) +
             codexLinkBadge(merged.id) +
             '<div class="spotlight-title">' + esc(short(merged.title || merged.id || "Selected agent", 120)) + '</div>' +
             '<div class="spotlight-copy">' + esc(short(merged.cwd || "No workspace path available.", 140)) + '</div>' +
@@ -3476,8 +6177,10 @@ function getWebviewHtml() {
           '<div class="spotlight-stat"><div class="spotlight-stat-label">Progress</div><div class="spotlight-stat-value">' + esc(progress.percent !== undefined ? (String(progress.percent) + "%") : progress.label) + '</div></div>' +
           '<div class="spotlight-stat"><div class="spotlight-stat-label">Codex Link</div><div class="spotlight-stat-value">' + esc(linkLabel) + '</div></div>' +
           '<div class="spotlight-stat"><div class="spotlight-stat-label">Process</div><div class="spotlight-stat-value">' + esc((merged.process && merged.process.summary) || "No live process") + '</div></div>' +
+          '<div class="spotlight-stat"><div class="spotlight-stat-label">Commands</div><div class="spotlight-stat-value">' + esc(String(merged.user_command_count || 0)) + '</div></div>' +
+          '<div class="spotlight-stat"><div class="spotlight-stat-label">Compactions</div><div class="spotlight-stat-value">' + esc(String(merged.compaction_count || 0)) + '</div></div>' +
         '</div>' +
-        '<div class="progress-head"><span class="progress-label">' + esc(progress.label) + '</span><span class="progress-value">' + esc(progress.percent !== undefined ? (String(progress.percent) + "%") : (merged.status || "live")) + '</span></div>' +
+        '<div class="progress-head"><span class="progress-label">' + esc(progress.label) + '</span><span class="progress-value">' + esc(progress.percent !== undefined ? (String(progress.percent) + "%") : status) + '</span></div>' +
         '<div class="progress-track"><div class="progress-bar" style="width:' + esc(String(progress.percent !== undefined ? progress.percent : 18)) + '%"></div></div>' +
         '<div class="progress-note">' + esc(progress.note) + '</div>';
       }
@@ -3495,10 +6198,13 @@ function getWebviewHtml() {
       function renderLiveTimeline(runningThreads, recentCompletions) {
         const cards = [];
         (runningThreads || []).forEach((thread) => {
+          const phase = inferCodexPhase(thread);
+          const phaseClass = phaseClassFor(phase.label).trim();
+          const status = effectiveThreadStatus(thread);
           const logs = (thread.preview_logs || []).slice(0, 4);
           cards.push(
-            '<div class="timeline-card">' +
-              '<div class="timeline-header"><div class="timeline-title">' + esc(short(thread.title || thread.id || "Running thread", 56)) + '</div>' + statusBadge(thread.status || "running") + '</div>' +
+            '<div class="timeline-card ' + esc(phaseClass) + '">' +
+              '<div class="timeline-header"><div class="timeline-title-wrap">' + renderThemeVisual(phaseArtFor(phase.label), "timeline-phase-art", phase.label, "timeline") + '<div class="timeline-title">' + esc(short(thread.title || thread.id || "Running thread", 56)) + '</div></div>' + statusBadge(status) + '</div>' +
               '<div class="timeline-events">' +
                 (logs.length
                   ? logs.map((log) => renderTimelineEvent(log.level || "Log", log.ts_iso || "", short(log.message || log.target || "log event", 140))).join("")
@@ -3517,46 +6223,141 @@ function getWebviewHtml() {
             '</div>'
           );
         }
-        return cards.join("") || '<div class="empty-state">No live timeline yet. Start a running agent to see event flow here.</div>';
+        return cards.join("") || renderCuteEmpty("Timeline is quiet", "Start a running agent and this lane will animate with fresh events.", MEDIA.timeline);
       }
 
-      function renderRunningBoard(boardThreads) {
-        const ordered = orderRunningThreads(boardThreads);
+      function renderInterventionDock(threads) {
+        if (!threads.length) return "";
+        return '<div class="intervention-head"><div class="intervention-title">' + renderThemeVisual(MEDIA.intervention, "intervention-art", "Testing", "intervention") + '<div class="phase-head"><span class="phase-label">Needs Human</span><span class="meta-pill">' + esc(String(threads.length)) + ' urgent</span></div></div><div class="intervention-actions"><button class="chip" data-toggle-intervention="true" type="button">' + esc(state.ui.interventionCollapsed ? "Expand" : "Collapse") + '</button></div></div>' +
+          '<div class="intervention-dock-note">These cards need input, approval, login, credentials, or another manual step.</div>' +
+          '<div class="intervention-dock-grid">' + renderRunningBoard(threads, { locked: true, compact: true }) + '</div>';
+      }
+
+      function renderRunningBoard(boardThreads, options = {}) {
+        const placementState = buildBoardPlacements(boardThreads, options);
+        const ordered = placementState.ordered;
         return ordered.map((thread) => {
           const progress = extractThreadProgress(thread);
+          const phase = inferCodexPhase(thread);
+          const intervention = needsHumanIntervention(thread);
           const linkMeta = codexLinkMeta(thread.id);
           const linkBadge = codexLinkBadge(thread.id);
-          const size = getRunningCardSize(thread.id);
+          const autoLoop = ((state.payload && state.payload.autoContinueConfigs) || {})[thread.id];
+          const savedSize = getRunningCardSize(thread.id);
+          const size = options.compact ? "tiny" : savedSize;
+          const isLoopPanelOpen = state.ui.loopPanelThreadId === thread.id;
+          const isTiny = !options.compact && size === "tiny";
+          const isCompactTiny = options.compact && size === "tiny";
+          const quickPrompt = state.ui.quickComposerDrafts[thread.id] || "continue";
+          const isQuickComposerOpen = state.ui.quickComposerThreadId === thread.id;
+          const status = effectiveThreadStatus(thread);
+          const lastResult = autoLoop && autoLoop.lastResult ? autoLoop.lastResult : undefined;
+          const loopStatusCard = autoLoop && (size === "m" || size === "l")
+            ? (
+                '<div class="loop-status-card">' +
+                  '<div class="loop-status-head">' +
+                    '<span class="loop-status-title">Background Continue</span>' +
+                    '<span class="loop-status-badge ' + esc((lastResult && lastResult.state) || autoLoop.lastLaunchStatus || "armed") + '">' + esc((lastResult && lastResult.label) || (autoLoop.lastLaunchStatus === "queued" ? "Queued" : autoLoop.lastLaunchStatus === "failed" ? "Failed" : "Armed")) + '</span>' +
+                  '</div>' +
+                  '<div class="loop-status-grid">' +
+                    '<div class="loop-status-row"><span class="loop-status-label">Last Run</span><span class="loop-status-value">' + esc(autoLoop.lastTriggeredAt ? formatTimestamp(autoLoop.lastTriggeredAt) : "Waiting for first trigger") + '</span></div>' +
+                    '<div class="loop-status-row"><span class="loop-status-label">Prompt</span><span class="loop-status-value mono">' + esc(short(autoLoop.lastPrompt || autoLoop.prompt || "continue", size === "l" ? 72 : 40)) + '</span></div>' +
+                    '<div class="loop-status-row"><span class="loop-status-label">Log</span><span class="loop-status-value mono">' + esc(short(autoLoop.lastLogPath || "No background log yet", size === "l" ? 108 : 68)) + '</span></div>' +
+                    '<div class="loop-status-row"><span class="loop-status-label">Last Result</span><span class="loop-status-value"><span class="loop-status-result"><span class="loop-result-dot ' + esc((lastResult && lastResult.state) || "armed") + '"></span><span>' + esc((lastResult && lastResult.label) || "Armed") + '</span></span> · ' + esc((lastResult && lastResult.detail) || (autoLoop.lastError || "Auto loop is armed and waiting for a real stop signal.")) + '</span></div>' +
+                    ((lastResult && lastResult.tailLine)
+                      ? '<div class="loop-status-row"><span class="loop-status-label">Log Tail</span><span class="loop-status-value"><div class="loop-tail">' + esc(short(lastResult.tailLine, size === "l" ? 180 : 110)) + '</div></span></div>'
+                      : '') +
+                    (autoLoop.lastError && (!lastResult || lastResult.state !== "failed")
+                      ? '<div class="loop-status-row"><span class="loop-status-label">Error</span><span class="loop-status-value">' + esc(short(autoLoop.lastError, size === "l" ? 100 : 60)) + '</span></div>'
+                      : '') +
+                    (autoLoop.lastLogPath
+                      ? '<div class="loop-status-actions"><button class="chip" data-open-log="' + esc(autoLoop.lastLogPath) + '" type="button">Open Log</button></div>'
+                      : '') +
+                  '</div>' +
+                '</div>'
+              )
+            : "";
           const codexClass = linkMeta.isFocused ? " codex-card-focused" : "";
+          const interventionClass = intervention ? " intervention-card" : "";
           const pinnedClass = isPinned(thread.id) ? " pinned-card" : "";
-          const runningClass = normalize(thread.status) === "running" ? " running-live" : "";
-          const attachedClass = thread.board_source === "attached" && !runningClass ? " board-attached" : "";
+          const runningClass = status === "running" ? " running-live" : "";
+          const attachedClass = (thread.board_source === "attached" || thread.board_source === "linked" || status === "attached" || status === "linked") && !runningClass ? " board-attached" : "";
+          const phaseClass = phaseClassFor(phase.label);
           const dropClass = state.runningDropIndicator && state.runningDropIndicator.threadId === thread.id
             ? (state.runningDropIndicator.position === "after" ? " drop-after" : " drop-before")
             : "";
-          const subtitle = thread.board_source === "attached" && normalize(thread.status) !== "running"
-            ? short((thread.updated_at_iso || "Attached to board") + " · " + (thread.cwd || "-"), size === "l" ? 96 : 72)
-            : short(thread.cwd || "-", size === "l" ? 82 : 56);
-          const preview = thread.board_source === "attached" && normalize(thread.status) !== "running"
-            ? short((thread.preview || thread.db_title || "Attached thread ready for quick access from the board."), size === "l" ? 140 : 96)
-            : short((thread.process && thread.process.summary) || "No live process detected", size === "l" ? 140 : 96);
-          return '<article class="running-card size-' + esc(size) + runningClass + codexClass + pinnedClass + attachedClass + dropClass + '" data-running-card="' + esc(thread.id) + '" draggable="' + esc(state.ui.layoutLocked ? "false" : "true") + '">' +
+          const draggable = options.locked || options.compact || state.ui.layoutLocked ? "false" : "true";
+          const placement = options.compact ? undefined : placementState.placements.get(thread.id);
+          const layout = options.compact ? { cols: 1, height: 92 } : getRunningCardLayout(thread.id, size);
+          const cardStyle = options.compact
+            ? ' style="grid-column: span ' + esc(String(layout.cols)) + '; min-height:' + esc(String(layout.height)) + 'px; height:' + esc(String(layout.height)) + 'px;"'
+            : ' style="grid-column: ' + esc(String((placement && placement.col) || 1)) + ' / span ' + esc(String((placement && placement.cols) || layout.cols)) + '; grid-row: ' + esc(String((placement && placement.row) || 1)) + ' / span ' + esc(String((placement && placement.rows) || layoutHeightToRows(layout.height, { gap: 12, rowHeight: 18 }))) + '; min-height:' + esc(String((placement && placement.height) || layout.height)) + 'px; height:' + esc(String((placement && placement.height) || layout.height)) + 'px;"';
+          const subtitle = (thread.board_source === "attached" || thread.board_source === "linked" || status === "attached" || status === "linked")
+            ? short((thread.updated_at_iso || "Attached to board") + " · " + (thread.cwd || "-"), size === "l" ? 120 : size === "m" ? 88 : size === "s" ? 70 : 44)
+            : short(thread.cwd || "-", size === "l" ? 108 : size === "m" ? 72 : size === "s" ? 56 : 40);
+          const preview = (thread.board_source === "attached" || status === "attached")
+            ? short((thread.preview || thread.db_title || "Attached thread ready for quick access from the board."), size === "l" ? 180 : size === "m" ? 128 : size === "s" ? 92 : 52)
+            : (thread.board_source === "linked" || status === "linked")
+              ? short("This thread is open in Codex and linked on the board, but it is not currently treated as an actively running agent.", size === "l" ? 180 : size === "m" ? 128 : size === "s" ? 92 : 52)
+            : short((thread.process && thread.process.summary) || "No live process detected", size === "l" ? 180 : size === "m" ? 128 : size === "s" ? 92 : 52);
+          const titleMax = size === "l" ? 120 : size === "m" ? 88 : size === "s" ? 58 : 34;
+          const showRichPhase = size === "m" || size === "l";
+          const showProgress = size !== "tiny";
+          const showPreview = size !== "tiny";
+          const conversationStats = (size === "m" || size === "l")
+            ? '<div class="running-card-note">Commands ' + esc(String(thread.user_command_count || 0)) + ' · Compactions ' + esc(String(thread.compaction_count || 0)) + '</div>'
+            : '';
+          const bodyInner = size === "l"
+            ? (
+                '<div class="running-card-copy">' +
+                  '<div class="running-card-title">' + esc(short(thread.title || thread.id || "Running agent", titleMax)) + '</div>' +
+                  '<div class="running-card-subtitle">' + esc(subtitle) + '</div>' +
+                  '<div class="preview">' + esc(preview) + '</div>' +
+                  conversationStats +
+                  loopStatusCard +
+                '</div>' +
+                '<div class="running-card-side">' +
+                  '<div class="phase-panel"><div class="phase-head"><span class="phase-title">' + renderThemeVisual(phaseArtFor(phase.label), "phase-art", phase.label, "phase") + '<span class="phase-label">' + esc(phase.label) + '</span></span><span class="meta-pill">' + esc(linkMeta.isFocused ? "Focused" : (linkMeta.isOpen ? "Linked" : "Inferred")) + '</span></div><div class="phase-copy">' + esc(phase.copy) + '</div></div>' +
+                  '<div class="progress-head"><span class="progress-label">' + esc(progress.label) + '</span><span class="progress-value">' + esc(progress.percent !== undefined ? (String(progress.percent) + "%") : status) + '</span></div>' +
+                  '<div class="progress-track"><div class="progress-bar" style="width:' + esc(String(progress.percent !== undefined ? progress.percent : 18)) + '%"></div></div>' +
+                  '<div class="running-card-note">' + esc(progress.note) + '</div>' +
+                '</div>'
+              )
+            : (
+                '<div class="running-card-title">' + esc(short(thread.title || thread.id || "Running agent", titleMax)) + '</div>' +
+                '<div class="running-card-subtitle">' + esc(subtitle) + '</div>' +
+                (showPreview ? '<div class="preview">' + esc(preview) + '</div>' : '') +
+                conversationStats +
+                (showRichPhase
+                  ? '<div class="phase-panel"><div class="phase-head"><span class="phase-title">' + renderThemeVisual(phaseArtFor(phase.label), "phase-art", phase.label, "phase") + '<span class="phase-label">' + esc(phase.label) + '</span></span><span class="meta-pill">' + esc(linkMeta.isFocused ? "Focused" : (linkMeta.isOpen ? "Linked" : "Inferred")) + '</span></div><div class="phase-copy">' + esc(phase.copy) + '</div></div>'
+                  : '') +
+                loopStatusCard +
+                (showProgress
+                  ? '<div class="progress-head"><span class="progress-label">' + esc(progress.label) + '</span><span class="progress-value">' + esc(progress.percent !== undefined ? (String(progress.percent) + "%") : status) + '</span></div>' +
+                    '<div class="progress-track"><div class="progress-bar" style="width:' + esc(String(progress.percent !== undefined ? progress.percent : 18)) + '%"></div></div>' +
+                    '<div class="running-card-note">' + esc(progress.note) + '</div>'
+                  : '')
+              );
+          return '<article class="running-card size-' + esc(size) + (size === "tiny" ? ' fixed-tiny' : '') + (options.compact ? ' compact-card' : '') + runningClass + codexClass + interventionClass + pinnedClass + attachedClass + phaseClass + dropClass + '" data-running-card="' + esc(thread.id) + '" data-grid-col="' + esc(String((placement && placement.col) || 1)) + '" data-grid-row="' + esc(String((placement && placement.row) || 1)) + '" draggable="' + esc(draggable) + '"' + cardStyle + '>' +
             '<div class="running-card-topbar"></div>' +
             '<div class="running-card-bottom-line"></div>' +
             '<div class="drop-slot left"></div>' +
             '<div class="drop-slot right"></div>' +
+            (!options.compact ? '<div class="resize-handle nw" data-resize-card="' + esc(thread.id) + '" data-resize-corner="nw"></div><div class="resize-handle ne" data-resize-card="' + esc(thread.id) + '" data-resize-corner="ne"></div><div class="resize-handle sw" data-resize-card="' + esc(thread.id) + '" data-resize-corner="sw"></div><div class="resize-handle se" data-resize-card="' + esc(thread.id) + '" data-resize-corner="se"></div><div class="resize-handle e" data-resize-card="' + esc(thread.id) + '" data-resize-corner="e"></div><div class="resize-handle w" data-resize-card="' + esc(thread.id) + '" data-resize-corner="w"></div><div class="resize-handle n" data-resize-card="' + esc(thread.id) + '" data-resize-corner="n"></div><div class="resize-handle s" data-resize-card="' + esc(thread.id) + '" data-resize-corner="s"></div>' : '') +
             '<div class="running-card-top">' +
               '<div class="running-card-control">' +
                 '<div class="control-label left">Status</div>' +
                 '<div class="running-card-badges">' +
-                  statusBadge(thread.status || "running") +
+                  statusBadge(status) +
                   boardBadge(thread) +
+                  (intervention ? '<span class="badge badge-intervention">Needs Input</span>' : '') +
                   linkBadge +
                 '</div>' +
               '</div>' +
               '<div class="running-card-control">' +
                 '<div class="control-label">Card Size</div>' +
                 '<div class="size-switch">' +
+                  '<button class="size-chip' + (size === "tiny" ? ' active' : '') + '" data-card-size="' + esc(thread.id) + '" data-card-size-value="tiny" type="button"' + (state.ui.layoutLocked ? ' disabled' : '') + '>T</button>' +
                   '<button class="size-chip' + (size === "s" ? ' active' : '') + '" data-card-size="' + esc(thread.id) + '" data-card-size-value="s" type="button"' + (state.ui.layoutLocked ? ' disabled' : '') + '>S</button>' +
                   '<button class="size-chip' + (size === "m" ? ' active' : '') + '" data-card-size="' + esc(thread.id) + '" data-card-size-value="m" type="button"' + (state.ui.layoutLocked ? ' disabled' : '') + '>M</button>' +
                   '<button class="size-chip' + (size === "l" ? ' active' : '') + '" data-card-size="' + esc(thread.id) + '" data-card-size-value="l" type="button"' + (state.ui.layoutLocked ? ' disabled' : '') + '>L</button>' +
@@ -3564,31 +6365,69 @@ function getWebviewHtml() {
               '</div>' +
             '</div>' +
             '<div class="running-card-body">' +
-              '<div class="running-card-title">' + esc(short(thread.title || thread.id || "Running agent", size === "l" ? 96 : 64)) + '</div>' +
-              '<div class="running-card-subtitle">' + esc(subtitle) + '</div>' +
-              '<div class="preview">' + esc(preview) + '</div>' +
-              '<div class="progress-head"><span class="progress-label">' + esc(progress.label) + '</span><span class="progress-value">' + esc(progress.percent !== undefined ? (String(progress.percent) + "%") : (thread.status || "live")) + '</span></div>' +
-              '<div class="progress-track"><div class="progress-bar" style="width:' + esc(String(progress.percent !== undefined ? progress.percent : 18)) + '%"></div></div>' +
-              '<div class="running-card-note">' + esc(progress.note) + '</div>' +
+              bodyInner +
+              ((isTiny || isCompactTiny) && isQuickComposerOpen
+                ? '<div class="tiny-composer">' +
+                    '<div class="tiny-composer-row">' +
+                      '<input class="loop-input" data-compose-prompt-input="' + esc(thread.id) + '" value="' + esc(quickPrompt) + '" placeholder="Prompt" />' +
+                      '<button class="chip" data-send-thread-prompt="' + esc(thread.id) + '" type="button">Send</button>' +
+                      '<button class="chip" data-close-composer="' + esc(thread.id) + '" type="button">×</button>' +
+                    '</div>' +
+                  '</div>'
+                : '') +
+              (autoLoop
+                ? '<div class="meta-pill">Auto ' + esc(String(autoLoop.remaining)) + '/' + esc(String(autoLoop.total || autoLoop.remaining)) + ' · ' + esc(short(autoLoop.prompt || "continue", 18)) + '</div>'
+                : '') +
+              (isLoopPanelOpen
+                ? '<div class="loop-panel">' +
+                    '<div class="phase-head"><span class="phase-label">Auto loop</span><span class="meta-pill">Resume when stopped</span></div>' +
+                    '<div class="loop-presets">' +
+                      '<button class="chip" data-loop-preset="10" type="button">10</button>' +
+                      '<button class="chip" data-loop-preset="50" type="button">50</button>' +
+                      '<button class="chip" data-loop-preset="100" type="button">100</button>' +
+                      '<button class="chip" data-loop-prompt-preset="continue" type="button">continue</button>' +
+                      '<button class="chip" data-loop-prompt-preset="go on" type="button">go on</button>' +
+                    '</div>' +
+                    '<div class="loop-mini-inputs">' +
+                      '<input class="loop-input" data-loop-prompt-input="' + esc(thread.id) + '" value="' + esc(state.ui.loopDraftPrompt || "continue") + '" placeholder="Prompt" />' +
+                      '<input class="loop-input" data-loop-count-input="' + esc(thread.id) + '" value="' + esc(state.ui.loopDraftCount || "10") + '" placeholder="Count" />' +
+                      '<button class="chip" data-loop-apply="' + esc(thread.id) + '" type="button">Apply</button>' +
+                    '</div>' +
+                    '<div class="loop-presets">' +
+                      '<button class="chip" data-loop-close="' + esc(thread.id) + '" type="button">Close</button>' +
+                      (autoLoop ? '<button class="chip danger-chip" data-clear-auto-loop="' + esc(thread.id) + '" type="button">Stop current</button>' : '') +
+                    '</div>' +
+                  '</div>'
+                : '') +
             '</div>' +
             '<div class="running-card-footer">' +
               '<div class="running-card-control">' +
                 '<div class="control-label left">Actions</div>' +
                 '<div class="running-action-rail">' +
-                  '<button class="tool-btn" data-rename-thread="' + esc(thread.id) + '" data-current-title="' + esc(thread.title || "") + '" type="button">' + renderToolIcon('rename') + '<span>Rename</span></button>' +
-                  '<button class="tool-btn primary" data-open-codex-editor="' + esc(thread.id) + '" type="button">' + renderToolIcon('open') + '<span>Open</span></button>' +
-                  '<button class="tool-btn" data-codex-thread="' + esc(thread.id) + '" type="button">' + renderToolIcon('codex') + '<span>Codex</span></button>' +
-                  '<button class="tool-btn board' + (isBoardAttached(thread.id) ? ' attached' : '') + '" data-board-attach="' + esc(thread.id) + '" type="button">' + renderToolIcon('board') + '<span>' + (isBoardAttached(thread.id) ? 'Attached' : 'Board') + '</span></button>' +
-                  '<button class="tool-btn pin' + (isPinned(thread.id) ? ' pinned' : '') + '" data-pin-thread="' + esc(thread.id) + '" type="button">' + renderToolIcon('pin', isPinned(thread.id)) + '<span>' + (isPinned(thread.id) ? 'Pinned' : 'Pin') + '</span></button>' +
+                  ((isTiny || isCompactTiny)
+                    ? (
+                        '<button class="tool-btn codex-link primary" data-codex-thread="' + esc(thread.id) + '" type="button">' + renderToolIcon('codex') + '<span>Codex</span></button>'
+                      )
+                    : (
+                        '<button class="tool-btn" data-rename-thread="' + esc(thread.id) + '" data-current-title="' + esc(thread.title || "") + '" type="button">' + renderToolIcon('rename') + '<span>Rename</span></button>' +
+                        '<button class="tool-btn primary" data-open-codex-editor="' + esc(thread.id) + '" type="button">' + renderToolIcon('open') + '<span>Open</span></button>' +
+                        '<button class="tool-btn" data-codex-thread="' + esc(thread.id) + '" type="button">' + renderToolIcon('codex') + '<span>Codex</span></button>' +
+                        '<button class="tool-btn board' + (isBoardAttached(thread.id) ? ' attached' : '') + '" data-board-attach="' + esc(thread.id) + '" type="button">' + renderToolIcon('board') + '<span>' + (isBoardAttached(thread.id) ? 'Attached' : 'Board') + '</span></button>' +
+                        '<button class="tool-btn' + (autoLoop ? ' primary' : '') + '" data-auto-loop="' + esc(thread.id) + '" data-auto-prompt="' + esc((autoLoop && autoLoop.prompt) || "continue") + '" data-auto-count="' + esc(String((autoLoop && autoLoop.remaining) || 10)) + '" type="button">' + renderToolIcon('codex') + '<span>' + (autoLoop ? ('Loop ' + autoLoop.remaining) : 'Loop') + '</span></button>' +
+                        '<button class="tool-btn pin' + (isPinned(thread.id) ? ' pinned' : '') + '" data-pin-thread="' + esc(thread.id) + '" type="button">' + renderToolIcon('pin', isPinned(thread.id)) + '<span>' + (isPinned(thread.id) ? 'Pinned' : 'Pin') + '</span></button>' +
+                        (autoLoop ? '<button class="tool-btn" data-clear-auto-loop="' + esc(thread.id) + '" type="button">Stop Loop</button>' : '')
+                      )) +
                 '</div>' +
               '</div>' +
-              '<div class="running-card-control">' +
-                '<div class="control-label">Thread Id</div>' +
-                '<span class="tool-id mono">' + esc(short(thread.id, 24)) + '</span>' +
-              '</div>' +
+              ((isTiny || isCompactTiny) ? '' : (
+                '<div class="running-card-control">' +
+                  '<div class="control-label">Thread Id</div>' +
+                  '<span class="tool-id mono">' + esc(short(thread.id, 24)) + '</span>' +
+                '</div>'
+              )) +
             '</div>' +
           '</article>';
-        }).join("") || '<div class="empty-state">No cards on the board yet. Attach threads from the explorer below, or wait for a running agent to appear automatically.</div>';
+        }).join("") || renderCuteEmpty("Board is empty", "Attach threads from the explorer below, or wait for a running agent to appear automatically.", MEDIA.board);
       }
 
       function renderDetail(payload) {
@@ -3624,6 +6463,8 @@ function getWebviewHtml() {
         const processText = summary.process && summary.process.summary ? summary.process.summary : "No live process";
         const linkMeta = codexLinkMeta(thread.id, payload);
         const linkLabel = linkMeta.isFocused ? "Focused in Codex" : (linkMeta.isOpen ? "Open in Codex" : (linkMeta.pending ? "Linking to Codex" : "Not linked"));
+        const phase = inferCodexPhase(Object.assign({}, summary, thread));
+        const phaseClass = phaseClassFor(phase.label).trim();
         const pendingDrawerAction = state.ui.pendingDrawerAction && state.ui.pendingDrawerAction.threadId === (thread.id || "")
           ? state.ui.pendingDrawerAction
           : undefined;
@@ -3636,6 +6477,7 @@ function getWebviewHtml() {
         title.textContent = thread.title || thread.id || "Thread detail";
         meta.innerHTML = [
           statusBadge(summary.status || thread.status || "idle"),
+          renderPhaseChip(phase),
           codexLinkBadge(thread.id, payload),
           '<span class="meta-pill mono">' + esc(thread.id || "") + '</span>',
           (thread.model || summary.model) ? '<span class="meta-pill">' + esc(thread.model || summary.model) + '</span>' : '',
@@ -3644,8 +6486,11 @@ function getWebviewHtml() {
         summaryNode.innerHTML = [
           drawerStat("Updated", summary.updated_age || thread.updated_at_iso || "-"),
           drawerStat("Last Log", summary.log_age || (logs[0] && logs[0].age) || "-"),
+          drawerStat("Phase", phase.label),
           drawerStat("Codex Link", linkLabel),
-          drawerStat("Process", processText)
+          drawerStat("Process", processText),
+          drawerStat("Commands", String(thread.user_command_count || summary.user_command_count || 0)),
+          drawerStat("Compactions", String(thread.compaction_count || summary.compaction_count || 0))
         ].join("");
         actionsNode.className = "action-rail" + (pendingDrawerAction ? " confirm" + (confirmMeta.tone === "danger" ? " danger" : "") : "");
         actionsNode.innerHTML = pendingDrawerAction
@@ -3680,12 +6525,21 @@ function getWebviewHtml() {
         const forkCommand = (detail.hint_commands && detail.hint_commands.fork) || "";
         body.innerHTML = [
           '<div class="drawer-section">' +
+            renderSectionHeading("Phase", "PH") +
+            '<div class="phase-panel ' + esc(phaseClass) + '">' +
+              '<div class="phase-head"><span class="phase-title">' + renderThemeVisual(phaseArtFor(phase.label), "phase-art", phase.label, "phase") + '<span class="phase-label">' + esc(phase.label) + '</span></span><span class="meta-pill">' + esc(summary.status || thread.status || "idle") + '</span></div>' +
+              '<div class="phase-copy">' + esc(phase.copy) + '</div>' +
+            '</div>' +
+          '</div>',
+          '<div class="drawer-section">' +
             renderSectionHeading("Overview", "OV") +
             '<div class="kv-grid">' +
               kv("Workspace", thread.cwd || summary.cwd || "-") +
               kv("Created", thread.created_at_iso || "-") +
               kv("Updated", thread.updated_at_iso || "-") +
               kv("Last Log", summary.last_log_iso || (logs[0] && logs[0].ts_iso) || "-") +
+              kv("Commands", String(thread.user_command_count || summary.user_command_count || 0)) +
+              kv("Compactions", String(thread.compaction_count || summary.compaction_count || 0)) +
               kv("Provider", thread.model_provider || summary.model_provider || "-") +
               kv("CLI", thread.cli_version || summary.cli_version || "-") +
               kv("Tokens", String(summary.tokens_used || thread.tokens_used || 0)) +
@@ -3847,10 +6701,17 @@ function getWebviewHtml() {
         state.payload = payload;
         const service = payload.service || {};
         const dashboard = payload.dashboard || { threads: [], runningThreads: [], threadsMeta: { counts: {} } };
+        const insights = dashboard.insights || null;
         state.selectedThreadId = payload.selectedThreadId;
         state.currentSurface = payload.currentSurface || "editor";
+        document.body.classList.toggle("motion-reduced", !state.ui.motionEnabled);
+        document.body.classList.remove("theme-mode-pure", "theme-mode-clean", "theme-mode-vivid");
+        document.body.classList.add("theme-mode-" + themeMode());
 
         document.getElementById("baseUrl").textContent = "Base URL: " + (service.baseUrl || "-");
+        const topbar = document.querySelector(".topbar");
+        topbar.classList.remove("mode-expanded", "mode-collapsed", "mode-ultra");
+        topbar.classList.add("mode-" + (state.ui.headerMode || "expanded"));
         document.getElementById("surfaceLabel").textContent = "Position: " + ({
           left: "Left",
           bottom: "Bottom",
@@ -3861,9 +6722,12 @@ function getWebviewHtml() {
           "Service: " + (!service.ok ? "Degraded" : (service.autoStarted ? "Auto-started" : "Connected")) +
           " · Last refresh: " + formatTimestamp(payload.lastSuccessfulRefreshAt);
         const threadCount = (dashboard.threads || []).length;
-        const runningCount = (dashboard.runningThreads || []).length;
-        const boardThreads = getBoardThreads(dashboard);
-        const attachedOnlyCount = boardThreads.filter((thread) => (thread.board_source || "") === "attached" && normalize(thread.status) !== "running").length;
+        const effectiveRunningThreads = (dashboard.runningThreads || []).filter((thread) => effectiveThreadStatus(thread, payload) === "running");
+        const runningCount = effectiveRunningThreads.length;
+        const boardThreads = getBoardThreads(dashboard, payload);
+        const interventionThreads = boardThreads.filter((thread) => needsHumanIntervention(thread));
+        const regularBoardThreads = boardThreads.filter((thread) => !needsHumanIntervention(thread));
+        const attachedOnlyCount = boardThreads.filter((thread) => ["attached", "linked"].includes(thread.board_source || "") && effectiveThreadStatus(thread, payload) !== "running").length;
         const serviceBanner = document.getElementById("serviceBanner");
         const restartButton = document.getElementById("restartServer");
         document.getElementById("heroSummary").textContent =
@@ -3896,6 +6760,22 @@ function getWebviewHtml() {
         const soundToggle = document.getElementById("soundToggle");
         soundToggle.classList.toggle("active", state.ui.soundEnabled);
         soundToggle.textContent = state.ui.soundEnabled ? "Alert Sound On" : "Alert Sound Off";
+        const themeToggle = document.getElementById("themeToggle");
+        themeToggle.classList.add("active");
+        themeToggle.textContent = "Theme: " + ({
+          pure: "Pure",
+          clean: "Clean",
+          vivid: "Vivid"
+        }[themeMode()] || "Vivid");
+        const motionToggle = document.getElementById("motionToggle");
+        motionToggle.classList.toggle("active", state.ui.motionEnabled);
+        motionToggle.textContent = state.ui.motionEnabled ? "Motion On" : "Motion Off";
+        document.getElementById("toggleHeaderCollapse").textContent =
+          state.ui.headerMode === "expanded"
+            ? "Compact"
+            : state.ui.headerMode === "collapsed"
+              ? "Ultra"
+              : "Expand";
 
         const searchInput = document.getElementById("threadSearch");
         if (searchInput.value !== state.ui.search) searchInput.value = state.ui.search;
@@ -3951,26 +6831,82 @@ function getWebviewHtml() {
           clearPendingBatch();
         }
 
-        document.getElementById("metrics").innerHTML = [
-          metric("Visible", visibleCount),
-          metric("Running", counts.running || 0),
-          metric("Archived", counts.archived || 0),
-          metric("Soft Deleted", (dashboard.threadsMeta && dashboard.threadsMeta.soft_deleted_total) || 0)
-        ].join("");
         const pinnedThreads = filteredThreads.filter((thread) => isPinned(thread.id)).slice(0, 3);
+        const topicFocus = state.ui.topicFocus;
         const freshestThread = filteredThreads[0];
-        document.getElementById("overviewDigest").innerHTML = [
-          '<div class="summary-card"><div class="summary-label">Newest Activity</div><div class="summary-value">' + esc(short((freshestThread && freshestThread.title) || "No visible thread", 48)) + '</div><div class="summary-copy">' + esc((freshestThread && freshestThread.updated_at_iso) || "Waiting for thread activity") + '</div></div>',
-          '<div class="summary-card"><div class="summary-label">Board Focus</div><div class="summary-value">' + esc(String(boardThreads.length || 0)) + '</div><div class="summary-copy">' + esc(boardThreads.length ? (attachedOnlyCount ? attachedOnlyCount + " attached · " : "") + runningCount + " live cards on the board." : "Attach important agents to keep them visible.") + '</div></div>',
-          '<div class="summary-card"><div class="summary-label">Live Health</div><div class="summary-value">' + esc(runningCount ? (String(runningCount) + " active") : "Quiet") + '</div><div class="summary-copy">' + esc(runningCount ? "Live pane tracks progress, timeline, and completion alerts." : "No active agents right now.") + '</div></div>'
+        document.getElementById("metrics").innerHTML = [
+          metric("Visible", visibleCount, freshestThread ? inferCodexPhase(freshestThread).label : "Waiting", freshestThread ? phaseArtFor(inferCodexPhase(freshestThread).label) : MEDIA.hero),
+          metric("Running", runningCount || 0, runningCount ? "Editing" : "Waiting", runningCount ? MEDIA.timeline : MEDIA.rest),
+          metric("Archived", counts.archived || 0, "Tooling", MEDIA.board),
+          metric("Soft Deleted", (dashboard.threadsMeta && dashboard.threadsMeta.soft_deleted_total) || 0, "Waiting", MEDIA.rest)
         ].join("");
-        document.getElementById("overviewRail").innerHTML = (pinnedThreads.length ? pinnedThreads : (dashboard.runningThreads || []).slice(0, 2)).map((thread) => {
-          return '<div class="mini-thread">' +
-            statusBadge(thread.status || "idle") +
+        document.getElementById("overviewDigest").innerHTML = [
+          renderSummaryCard(
+            "Newest Activity",
+            short((freshestThread && freshestThread.title) || "No visible thread", 48),
+            (freshestThread && freshestThread.updated_at_iso) || "Waiting for thread activity",
+            freshestThread ? inferCodexPhase(freshestThread).label : "Waiting",
+            freshestThread ? phaseArtFor(inferCodexPhase(freshestThread).label) : MEDIA.rest
+          ),
+          renderSummaryCard(
+            "Board Focus",
+            String(boardThreads.length || 0),
+            boardThreads.length ? (attachedOnlyCount ? attachedOnlyCount + " attached · " : "") + runningCount + " live cards on the board." : "Attach important agents to keep them visible.",
+            "Planning",
+            MEDIA.board
+          ),
+          renderSummaryCard(
+            "Live Health",
+            runningCount ? (String(runningCount) + " active") : "Quiet",
+            runningCount ? "Live pane tracks progress, timeline, and completion alerts." : "No active agents right now.",
+            runningCount ? "Tooling" : "Waiting",
+            runningCount ? MEDIA.timeline : MEDIA.rest
+          )
+        ].join("");
+        document.getElementById("usageSummary").innerHTML = insights ? [
+          renderSummaryCard(
+            "Usage Persona",
+            ((insights.guidance && insights.guidance.usage_persona) || ["均衡型"]).join(" · "),
+            "基于历史输入的工作风格归纳，更偏使用画像，不做武断的人格结论。",
+            "Planning",
+            MEDIA.hero
+          ),
+          renderSummaryCard(
+            "Prompt Rhythm",
+            String((insights.summary && insights.summary.total_inputs) || 0),
+            "平均长度 " + String((insights.summary && insights.summary.avg_prompt_length) || 0) + " · 短提示占比 " + Math.round(Number(((insights.summary && insights.summary.short_prompt_ratio) || 0)) * 100) + "%",
+            "Editing",
+            MEDIA.timeline
+          ),
+          renderSummaryCard(
+            "Context Pressure",
+            String((insights.summary && insights.summary.total_compactions) || 0),
+            ((insights.summary && insights.summary.last_compacted_at) || "暂无压缩记录"),
+            ((insights.summary && insights.summary.total_compactions) || 0) ? "Tooling" : "Waiting",
+            MEDIA.board
+          )
+        ].join("") : renderCuteEmpty("Usage report unavailable", "The dashboard can still work without the persisted report, but the summary will appear after the insights endpoint responds.", MEDIA.rest);
+        document.getElementById("usageKeywords").innerHTML = insights && Array.isArray(insights.keywords) && insights.keywords.length
+          ? insights.keywords.slice(0, 8).map((item) => renderKeywordChip(item)).join("")
+          : '<span class="sub">暂无高频关键词</span>';
+        document.getElementById("vibeAdvice").innerHTML = insights && insights.guidance && Array.isArray(insights.guidance.vibe_coding_suggestions)
+          ? insights.guidance.vibe_coding_suggestions.map((item, index) => renderInsightCard("Advice " + (index + 1), item, "Vibe Coding")).join("")
+          : renderInsightCard("Advice", "还没有生成个性化建议，等本地报告生成后这里会显示。", "Pending");
+        document.getElementById("analysisViews").innerHTML = insights && Array.isArray(insights.analysis_views)
+          ? insights.analysis_views.slice(0, 4).map((item) => renderInsightCard(item.title || "Analysis", item.description || "", item.signal || "")).join("")
+          : "";
+        document.getElementById("weeklyShift").innerHTML = renderWeeklyShift(insights);
+        document.getElementById("wordCloud").innerHTML = renderWordCloud(insights && insights.word_cloud);
+        document.getElementById("topicMap").innerHTML = renderTopicMap(insights && insights.topic_map);
+        document.getElementById("overviewRail").innerHTML = (pinnedThreads.length ? pinnedThreads : effectiveRunningThreads.slice(0, 2)).map((thread) => {
+          const status = effectiveThreadStatus(thread, payload);
+          return '<div class="mini-thread with-art">' +
+            renderThemeVisual(MEDIA.hero, "mini-thread-art", "Planning", "mini") +
+            statusBadge(status) +
             '<div class="mini-thread-title">' + esc(short(thread.title || thread.id || "Thread", 56)) + '</div>' +
             '<div class="mini-thread-meta">' + esc(short(thread.cwd || "-", 64)) + '</div>' +
           '</div>';
-        }).join("") || '<div class="empty-state">No pinned or running agent to spotlight yet.</div>';
+        }).join("") || renderCuteEmpty("No spotlight yet", "Pin a thread or let one start running and it will show up here.", MEDIA.hero);
         const completionRail = document.getElementById("completionRail");
         completionRail.className = "completion-rail" + (recentCompletions.length ? " visible" : "");
         completionRail.innerHTML = recentCompletions.map((item) => {
@@ -3984,26 +6920,49 @@ function getWebviewHtml() {
           '</div>';
         }).join("");
         document.getElementById("runningSummary").textContent =
-          (dashboard.runningThreads || []).length
-            ? ((dashboard.runningThreads || []).length + " active thread" + ((dashboard.runningThreads || []).length > 1 ? "s" : ""))
+          effectiveRunningThreads.length
+            ? (effectiveRunningThreads.length + " active thread" + (effectiveRunningThreads.length > 1 ? "s" : ""))
             : "No live agents currently running.";
         document.getElementById("runningSummaryMirror").textContent = document.getElementById("runningSummary").textContent;
         const boardMetaText = boardThreads.length
-          ? ("Auto-flow board · " + boardThreads.length + " card" + (boardThreads.length > 1 ? "s" : "") + " · " + runningCount + " running · " + attachedOnlyCount + " attached · drag to reorder, resize with S/M/L" + (state.ui.layoutLocked ? " · layout locked" : ""))
+          ? ("Dedicated board · " + boardThreads.length + " card" + (boardThreads.length > 1 ? "s" : "") + " · " + runningCount + " running · " + attachedOnlyCount + " attached · " + interventionThreads.length + " needs human" + (state.ui.layoutLocked ? " · layout locked" : ""))
           : "No cards yet. Attach threads from the explorer, or wait for a running agent to appear automatically.";
         document.getElementById("runningBoardMeta").textContent = boardMetaText;
         document.getElementById("runningBoardMetaPrimary").textContent = boardMetaText;
-        const lockButton = document.getElementById("toggleLayoutLock");
-        lockButton.classList.toggle("active", state.ui.layoutLocked);
-        lockButton.textContent = state.ui.layoutLocked ? "Unlock Layout" : "Lock Layout";
         const lockButtonPrimary = document.getElementById("toggleLayoutLockPrimary");
         lockButtonPrimary.classList.toggle("active", state.ui.layoutLocked);
         lockButtonPrimary.textContent = state.ui.layoutLocked ? "Unlock Layout" : "Lock Layout";
+        document.getElementById("boardSummaryHeadline").textContent = boardThreads.length
+          ? (boardThreads.length + " cards live on the dedicated board")
+          : "No cards on the board yet.";
+        document.getElementById("boardSummaryStats").innerHTML = [
+          drawerStat("Cards", String(boardThreads.length || 0)),
+          drawerStat("Running", String(runningCount || 0)),
+          drawerStat("Attached", String(attachedOnlyCount || 0)),
+          drawerStat("Needs Human", String(interventionThreads.length || 0)),
+          drawerStat("Layout", state.ui.layoutLocked ? "Locked" : "Editable")
+        ].join("");
+        document.getElementById("boardSummaryNeedsHuman").textContent = interventionThreads.length
+          ? (interventionThreads.length + " urgent card" + (interventionThreads.length > 1 ? "s need" : " needs") + " attention.")
+          : "No urgent cards right now.";
+        document.getElementById("boardSummaryQueue").innerHTML = interventionThreads.slice(0, 4).map((thread) => {
+          return '<div class="mini-thread with-art">' +
+            renderThemeVisual(MEDIA.intervention, "mini-thread-art", "Testing", "mini") +
+            statusBadge(effectiveThreadStatus(thread, payload)) +
+            '<div class="mini-thread-title">' + esc(short(thread.title || thread.id || "Thread", 44)) + '</div>' +
+            '<div class="mini-thread-meta">' + esc(short(thread.cwd || "-", 52)) + '</div>' +
+          '</div>';
+        }).join("") || renderCuteEmpty("No urgent cards", "Needs Human threads will surface here while layout stays focused in the Board workspace.", MEDIA.rest);
         document.getElementById("threadSummary").textContent =
           visibleCount
-            ? ("Showing " + visibleCount + " of " + (dashboard.threads || []).length + " loaded threads · sorted by " + state.ui.sort)
+            ? (
+                topicFocus
+                  ? ("Showing " + visibleCount + " linked threads from topic map · " + (topicFocus.group === "thread" ? "focused thread" : (topicFocus.value || topicFocus.group)))
+                  : ("Showing " + visibleCount + " of " + (dashboard.threads || []).length + " loaded threads · sorted by " + state.ui.sort)
+              )
             : "No threads match the current search/filter.";
         document.getElementById("threadSummaryMirror").textContent = document.getElementById("threadSummary").textContent;
+        scrollPendingThreadIntoView();
         const batchBar = document.getElementById("batchBar");
         const pendingMeta = pendingBatch ? getBatchActionMeta(pendingBatch.action) : undefined;
         const batchToneClass = pendingMeta && pendingMeta.tone === "danger" ? " danger" : "";
@@ -4038,32 +6997,37 @@ function getWebviewHtml() {
         document.getElementById("batchBarMirror").className = batchBar.className;
         document.getElementById("batchBarMirror").innerHTML = batchMarkup;
 
-        const runningMarkup = (dashboard.runningThreads || []).map((thread) => {
+        const runningMarkup = effectiveRunningThreads.map((thread) => {
           const progress = extractThreadProgress(thread);
           const linkMeta = codexLinkMeta(thread.id);
           const linkBadge = codexLinkBadge(thread.id);
+          const status = effectiveThreadStatus(thread, payload);
           const codexClass = linkMeta.isFocused ? " codex-focused" : (linkMeta.isOpen ? " codex-open" : "");
           return '<div class="running-row' + codexClass + '">' +
             '<div class="row-head">' +
-              '<span>' + statusBadge(thread.status) + '</span>' +
+              '<span>' + statusBadge(status) + '</span>' +
               '<span style="display:flex; gap:8px; align-items:center;"><button class="mini-action-btn" data-rename-thread="' + esc(thread.id) + '" data-current-title="' + esc(thread.title || "") + '" type="button">Rename</button><button class="mini-action-btn" data-codex-thread="' + esc(thread.id) + '" type="button">Codex</button>' + linkBadge + '<span class="mono muted">' + esc(thread.id) + '</span></span>' +
             '</div>' +
             '<div class="thread-title">' + esc(short(thread.title || "(no title)", 100)) + '</div>' +
             '<div class="preview">' + esc(short((thread.process && thread.process.summary) || "no live pid", 120)) + '</div>' +
-            '<div class="progress-head"><span class="progress-label">' + esc(progress.label) + '</span><span class="progress-value">' + esc(progress.percent !== undefined ? (String(progress.percent) + "%") : (thread.status || "live")) + '</span></div>' +
+            '<div class="progress-head"><span class="progress-label">' + esc(progress.label) + '</span><span class="progress-value">' + esc(progress.percent !== undefined ? (String(progress.percent) + "%") : status) + '</span></div>' +
             '<div class="progress-track"><div class="progress-bar" style="width:' + esc(String(progress.percent !== undefined ? progress.percent : 18)) + '%"></div></div>' +
             '<div class="progress-note">' + esc(progress.note) + '</div>' +
           '</div>';
         }).join("") || '<div class="empty">No running agents right now.</div>';
         document.getElementById("runningList").innerHTML = runningMarkup;
         document.getElementById("runningListMirror").innerHTML = runningMarkup;
-        const runningBoardHtml = renderRunningBoard(boardThreads);
-        document.getElementById("runningBoardMirror").innerHTML = runningBoardHtml;
+        const runningBoardHtml = renderRunningBoard(regularBoardThreads);
+        const interventionHtml = renderInterventionDock(interventionThreads);
         document.getElementById("runningBoardPrimary").innerHTML = runningBoardHtml;
+        document.getElementById("interventionDockPrimary").classList.toggle("visible", Boolean(interventionThreads.length));
+        document.getElementById("interventionDockPrimary").classList.toggle("collapsed", Boolean(state.ui.interventionCollapsed));
+        document.getElementById("interventionDockPrimary").innerHTML = interventionHtml;
         syncRunningDropIndicatorDom();
-        document.getElementById("liveTimeline").innerHTML = renderLiveTimeline(dashboard.runningThreads || [], recentCompletions);
+        document.getElementById("liveTimeline").innerHTML = renderLiveTimeline(effectiveRunningThreads, recentCompletions);
 
         const threadMarkup = [
+          renderGroup("needs_human", "Needs Human", groups.needs_human),
           renderGroup("running", "Running", groups.running),
           renderGroup("recent", "Recent", groups.recent),
           renderGroup("idle", "Idle", groups.idle),
@@ -4098,10 +7062,132 @@ function getWebviewHtml() {
             toggleBoardAttach(node.dataset.boardAttach);
           });
         });
+        document.querySelectorAll("[data-auto-loop]").forEach((node) => {
+          node.addEventListener("click", (event) => {
+            event.stopPropagation();
+            openLoopPanel(node.dataset.autoLoop, node.dataset.autoPrompt || "continue", node.dataset.autoCount || "10");
+          });
+        });
+        document.querySelectorAll("[data-open-composer]").forEach((node) => {
+          node.addEventListener("click", (event) => {
+            event.stopPropagation();
+            openQuickComposer(node.dataset.openComposer, node.dataset.currentPrompt || "continue");
+          });
+        });
+        document.querySelectorAll("[data-close-composer]").forEach((node) => {
+          node.addEventListener("click", (event) => {
+            event.stopPropagation();
+            closeQuickComposer(node.dataset.closeComposer);
+          });
+        });
+        document.querySelectorAll("[data-compose-prompt-input]").forEach((node) => {
+          node.addEventListener("input", (event) => {
+            setQuickComposerDraft(node.dataset.composePromptInput, event.target.value || "");
+          });
+          node.addEventListener("keydown", (event) => {
+            if (event.key !== "Enter" || event.shiftKey) return;
+            event.preventDefault();
+            event.stopPropagation();
+            const threadId = node.dataset.composePromptInput;
+            const prompt = state.ui.quickComposerDrafts[threadId] || node.value || "continue";
+            vscode.postMessage({
+              type: "sendPromptToThread",
+              threadId,
+              prompt,
+            });
+            closeQuickComposer(threadId);
+          });
+        });
+        document.querySelectorAll("[data-send-thread-prompt]").forEach((node) => {
+          node.addEventListener("click", (event) => {
+            event.stopPropagation();
+            const threadId = node.dataset.sendThreadPrompt;
+            const prompt = state.ui.quickComposerDrafts[threadId] || "continue";
+            vscode.postMessage({
+              type: "sendPromptToThread",
+              threadId,
+              prompt,
+            });
+            closeQuickComposer(threadId);
+          });
+        });
+        document.querySelectorAll("[data-open-log]").forEach((node) => {
+          node.addEventListener("click", (event) => {
+            event.stopPropagation();
+            vscode.postMessage({
+              type: "openLogFile",
+              path: node.dataset.openLog || "",
+            });
+          });
+        });
+        document.querySelectorAll("[data-toggle-intervention]").forEach((node) => {
+          node.addEventListener("click", (event) => {
+            event.stopPropagation();
+            state.ui.interventionCollapsed = !state.ui.interventionCollapsed;
+            persistUi();
+            render(state.payload);
+          });
+        });
+        document.querySelectorAll("[data-clear-auto-loop]").forEach((node) => {
+          node.addEventListener("click", (event) => {
+            event.stopPropagation();
+            vscode.postMessage({
+              type: "clearAutoContinue",
+              threadId: node.dataset.clearAutoLoop,
+            });
+          });
+        });
+        document.querySelectorAll("[data-loop-preset]").forEach((node) => {
+          node.addEventListener("click", (event) => {
+            event.stopPropagation();
+            setLoopDraftCount(node.dataset.loopPreset || "10");
+            render(state.payload);
+          });
+        });
+        document.querySelectorAll("[data-loop-prompt-preset]").forEach((node) => {
+          node.addEventListener("click", (event) => {
+            event.stopPropagation();
+            setLoopDraftPrompt(node.dataset.loopPromptPreset || "continue");
+            render(state.payload);
+          });
+        });
+        document.querySelectorAll("[data-loop-prompt-input]").forEach((node) => {
+          node.addEventListener("input", (event) => {
+            setLoopDraftPrompt(event.target.value || "");
+          });
+        });
+        document.querySelectorAll("[data-loop-count-input]").forEach((node) => {
+          node.addEventListener("input", (event) => {
+            setLoopDraftCount(event.target.value || "");
+          });
+        });
+        document.querySelectorAll("[data-loop-close]").forEach((node) => {
+          node.addEventListener("click", (event) => {
+            event.stopPropagation();
+            closeLoopPanel();
+          });
+        });
+        document.querySelectorAll("[data-loop-apply]").forEach((node) => {
+          node.addEventListener("click", (event) => {
+            event.stopPropagation();
+            vscode.postMessage({
+              type: "setAutoContinue",
+              threadId: node.dataset.loopApply,
+              prompt: state.ui.loopDraftPrompt,
+              count: Number(state.ui.loopDraftCount),
+            });
+            closeLoopPanel();
+          });
+        });
         document.querySelectorAll("[data-card-size]").forEach((node) => {
           node.addEventListener("click", (event) => {
             event.stopPropagation();
             setRunningCardSize(node.dataset.cardSize, node.dataset.cardSizeValue);
+          });
+        });
+        document.querySelectorAll("[data-resize-card]").forEach((node) => {
+          node.addEventListener("pointerdown", (event) => {
+            beginRunningCardResize(node.dataset.resizeCard, node.dataset.resizeCorner || "se", event);
           });
         });
         document.querySelectorAll("[data-running-card]").forEach((node) => {
@@ -4111,26 +7197,28 @@ function getWebviewHtml() {
               return;
             }
             state.draggedRunningThreadId = node.dataset.runningCard;
+            state.activeBoardId = node.closest(".running-board-grid")?.id;
             node.classList.add("dragging");
             if (event.dataTransfer) {
               event.dataTransfer.effectAllowed = "move";
               event.dataTransfer.setData("text/plain", state.draggedRunningThreadId || "");
+              const preview = createDragPreview(node, state.draggedRunningThreadId);
+              event.dataTransfer.setDragImage(preview, 18, 18);
             }
+            scheduleDragIndicator(undefined, state.activeBoardId);
           });
           node.addEventListener("dragover", (event) => {
             event.preventDefault();
             if (!state.draggedRunningThreadId || state.draggedRunningThreadId === node.dataset.runningCard) return;
-            const rect = node.getBoundingClientRect();
-            const position = event.clientX > rect.left + (rect.width / 2) ? "after" : "before";
-            setRunningDropIndicator(node.dataset.runningCard, position);
-            document.querySelectorAll(".running-board-grid").forEach((board) => board.classList.remove("drag-end"));
-            syncRunningDropIndicatorDom();
+            const board = node.closest(".running-board-grid");
+            const target = pointerToBoardCell(board, event.clientX, event.clientY, state.draggedRunningThreadId);
+            scheduleDragIndicator(target, board?.id);
             if (event.dataTransfer) event.dataTransfer.dropEffect = "move";
           });
           node.addEventListener("dragleave", () => {
             if (state.runningDropIndicator && state.runningDropIndicator.threadId === node.dataset.runningCard) {
               clearRunningDropIndicator();
-              syncRunningDropIndicatorDom();
+              scheduleDragIndicator(undefined, state.activeBoardId);
             }
           });
           node.addEventListener("drop", (event) => {
@@ -4138,20 +7226,26 @@ function getWebviewHtml() {
             event.stopPropagation();
             const draggedId = state.draggedRunningThreadId || (event.dataTransfer && event.dataTransfer.getData("text/plain")) || "";
             if (!draggedId) return;
-            const position = state.runningDropIndicator && state.runningDropIndicator.threadId === node.dataset.runningCard
-              ? state.runningDropIndicator.position
-              : "before";
+            const target = state.runningDropIndicator || pointerToBoardCell(node.closest(".running-board-grid"), event.clientX, event.clientY, draggedId);
+            cancelScheduledDragIndicator();
             clearRunningDropIndicator();
-            moveRunningCard(draggedId, node.dataset.runningCard, position);
             state.draggedRunningThreadId = undefined;
+            state.activeBoardId = undefined;
+            if (target && target.col && target.row) {
+              setRunningCardPosition(draggedId, target.col, target.row);
+              render(state.payload);
+            }
           });
           node.addEventListener("dragend", () => {
+            cancelScheduledDragIndicator();
+            cleanupDragPreview();
             state.draggedRunningThreadId = undefined;
+            state.activeBoardId = undefined;
             clearRunningDropIndicator();
             document.querySelectorAll("[data-running-card]").forEach((card) => {
               card.classList.remove("dragging");
             });
-            document.querySelectorAll(".running-board-grid").forEach((board) => board.classList.remove("drag-over", "drag-end"));
+            document.querySelectorAll(".running-board-grid").forEach((board) => board.classList.remove("drag-over", "drag-end", "drag-active"));
             syncRunningDropIndicatorDom();
           });
         });
@@ -4159,32 +7253,41 @@ function getWebviewHtml() {
           runningBoard.addEventListener("dragover", (event) => {
             if (state.ui.layoutLocked) return;
             event.preventDefault();
-            const targetCard = event.target.closest("[data-running-card]");
-            if (!targetCard) {
-              clearRunningDropIndicator();
-              document.querySelectorAll(".running-board-grid").forEach((board) => board.classList.add("drag-over", "drag-end"));
-              syncRunningDropIndicatorDom();
-              if (event.dataTransfer) event.dataTransfer.dropEffect = "move";
-            }
+            const draggedId = state.draggedRunningThreadId || (event.dataTransfer && event.dataTransfer.getData("text/plain")) || "";
+            if (!draggedId) return;
+            runningBoard.classList.add("drag-over");
+            const target = pointerToBoardCell(runningBoard, event.clientX, event.clientY, draggedId);
+            scheduleDragIndicator(target, runningBoard.id);
+            document.querySelectorAll(".running-board-grid").forEach((board) => {
+              if (board !== runningBoard) board.classList.remove("drag-over");
+            });
+            if (event.dataTransfer) event.dataTransfer.dropEffect = "move";
           });
           runningBoard.addEventListener("dragleave", (event) => {
             if (!runningBoard.contains(event.relatedTarget)) {
               runningBoard.classList.remove("drag-over", "drag-end");
               clearRunningDropIndicator();
-              syncRunningDropIndicatorDom();
+              scheduleDragIndicator(undefined, runningBoard.id);
             }
           });
           runningBoard.addEventListener("drop", (event) => {
             if (state.ui.layoutLocked) return;
             event.preventDefault();
-            const targetCard = event.target.closest("[data-running-card]");
-            document.querySelectorAll(".running-board-grid").forEach((board) => board.classList.remove("drag-over", "drag-end"));
-            if (targetCard) return;
             const draggedId = state.draggedRunningThreadId || (event.dataTransfer && event.dataTransfer.getData("text/plain")) || "";
+            const target = state.runningDropIndicator || pointerToBoardCell(runningBoard, event.clientX, event.clientY, draggedId);
+            cancelScheduledDragIndicator();
+            cleanupDragPreview();
+            document.querySelectorAll(".running-board-grid").forEach((board) => board.classList.remove("drag-over", "drag-end", "drag-active"));
             if (!draggedId) return;
             clearRunningDropIndicator();
-            moveRunningCard(draggedId);
             state.draggedRunningThreadId = undefined;
+            state.activeBoardId = undefined;
+            if (target && target.col && target.row) {
+              setRunningCardPosition(draggedId, target.col, target.row);
+              render(state.payload);
+              return;
+            }
+            moveRunningCard(draggedId);
           });
         });
         document.querySelectorAll("[data-rename-thread]").forEach((node) => {
@@ -4270,7 +7373,7 @@ function getWebviewHtml() {
           });
         });
 
-        const runningThreads = dashboard.runningThreads || [];
+        const runningThreads = effectiveRunningThreads;
         document.querySelectorAll("[data-subtab]").forEach((node) => {
           node.classList.toggle("active", node.dataset.subtab === state.ui.rightPaneTab);
         });
@@ -4329,41 +7432,144 @@ function getWebviewHtml() {
         renderDetail(payload);
       }
 
-      function metric(label, value) {
-        return '<div class="metric compact"><div class="metric-label">' + esc(label) + '</div><div class="metric-value">' + esc(String(value)) + '</div></div>';
+      function metric(label, value, phaseLabel = "Waiting", art) {
+        const phaseClass = phaseClassFor(phaseLabel).trim();
+        return '<div class="metric compact ' + esc(phaseClass) + '">' +
+          '<div class="metric-head">' +
+            renderThemeVisual(art || phaseArtFor(phaseLabel), "metric-art", phaseLabel, "metric") +
+            '<div class="metric-head-copy">' +
+              '<div class="metric-label">' + esc(label) + '</div>' +
+              renderPhaseChip({ label: phaseLabel }) +
+            '</div>' +
+          '</div>' +
+          '<div class="metric-value">' + esc(String(value)) + '</div>' +
+        '</div>';
       }
 
+      function bindChromeDelegation() {
+        document.addEventListener("click", (event) => {
+          const target = event.target.closest("button, [data-view], [data-subtab], [data-topic-node]");
+          if (!target) return;
+
+          if (target.id === "reload") {
+            vscode.postMessage({ type: "reload" });
+            return;
+          }
+          if (target.id === "soundToggle") {
+            toggleSound();
+            return;
+          }
+          if (target.id === "themeToggle") {
+            toggleThemeMode();
+            return;
+          }
+          if (target.id === "motionToggle") {
+            toggleMotion();
+            return;
+          }
+          if (target.id === "startServer") {
+            vscode.postMessage({ type: "startServer" });
+            return;
+          }
+          if (target.id === "restartServer") {
+            vscode.postMessage({ type: "restartServer" });
+            return;
+          }
+          if (target.id === "external") {
+            vscode.postMessage({ type: "openExternal" });
+            return;
+          }
+          if (target.id === "toggleHeaderCollapse") {
+            toggleHeaderCollapsed();
+            return;
+          }
+          if (target.id === "posLeft") {
+            vscode.postMessage({ type: "showSidebar" });
+            return;
+          }
+          if (target.id === "posBottom") {
+            vscode.postMessage({ type: "showBottomPanel" });
+            return;
+          }
+          if (target.id === "posEditor") {
+            vscode.postMessage({ type: "openPanel" });
+            return;
+          }
+          if (target.id === "posFullscreen") {
+            vscode.postMessage({ type: "maximizeDashboard" });
+            return;
+          }
+          if (target.dataset.view) {
+            setWorkspaceView(target.dataset.view);
+            return;
+          }
+          if (target.dataset.topicNode) {
+            const group = target.dataset.topicGroup || "keyword";
+            if (group === "thread") {
+              applyTopicFocus({
+                group,
+                threadId: target.dataset.topicThread || "",
+                value: target.dataset.topicLabel || "",
+              });
+            } else {
+              applyTopicFocus({
+                group,
+                value: target.dataset.topicFocus || target.dataset.topicLabel || "",
+              });
+            }
+            return;
+          }
+          if (target.dataset.subtab) {
+            setRightPaneTab(target.dataset.subtab);
+          }
+        });
+      }
+
+      bindChromeDelegation();
+      document.addEventListener("pointermove", (event) => {
+        scheduleResizeUpdate(event);
+      });
+      document.addEventListener("pointerup", (event) => {
+        finishRunningCardResize(event);
+      });
+      document.addEventListener("pointercancel", (event) => {
+        finishRunningCardResize(event);
+      });
+      notifyReady();
+      startBootRetryLoop();
       window.addEventListener("message", (event) => {
         if (event.data && event.data.type === "state") {
+          stopBootRetryLoop();
           render(event.data);
         }
       });
 
-      document.getElementById("reload").addEventListener("click", () => {
-        vscode.postMessage({ type: "reload" });
+      window.addEventListener("error", (event) => {
+        vscode.postMessage({
+          type: "bootError",
+          error: event && event.message ? event.message : "Unknown runtime error",
+        });
       });
+      window.addEventListener("unhandledrejection", (event) => {
+        const reason = event && event.reason;
+        const detail = reason instanceof Error ? reason.message : String(reason || "Unknown promise rejection");
+        vscode.postMessage({
+          type: "bootError",
+          error: detail,
+        });
+      });
+
       document.getElementById("threadSearch").addEventListener("input", (event) => {
         state.ui.search = event.target.value || "";
+        state.ui.topicFocus = null;
         persistUi();
         render(state.payload);
       });
       document.getElementById("threadSearchMirror").addEventListener("input", (event) => {
         state.ui.search = event.target.value || "";
+        state.ui.topicFocus = null;
         persistUi();
         render(state.payload);
-      });
-      document.querySelectorAll("[data-view]").forEach((node) => {
-        node.addEventListener("click", () => {
-          setWorkspaceView(node.dataset.view);
-        });
-      });
-      document.getElementById("soundToggle").addEventListener("click", () => {
-        toggleSound();
-      });
-      document.querySelectorAll("[data-subtab]").forEach((node) => {
-        node.addEventListener("click", () => {
-          setRightPaneTab(node.dataset.subtab);
-        });
       });
       document.querySelectorAll("[data-filter]").forEach((node) => {
         node.addEventListener("click", () => {
@@ -4400,29 +7606,8 @@ function getWebviewHtml() {
           render(state.payload);
         });
       });
-      document.getElementById("posLeft").addEventListener("click", () => {
-        vscode.postMessage({ type: "showSidebar" });
-      });
-      document.getElementById("posBottom").addEventListener("click", () => {
-        vscode.postMessage({ type: "showBottomPanel" });
-      });
-      document.getElementById("posEditor").addEventListener("click", () => {
-        vscode.postMessage({ type: "openPanel" });
-      });
-      document.getElementById("posFullscreen").addEventListener("click", () => {
-        vscode.postMessage({ type: "maximizeDashboard" });
-      });
-      document.getElementById("startServer").addEventListener("click", () => {
-        vscode.postMessage({ type: "startServer" });
-      });
-      document.getElementById("toggleLayoutLock").addEventListener("click", () => {
-        toggleLayoutLock();
-      });
       document.getElementById("toggleLayoutLockPrimary").addEventListener("click", () => {
         toggleLayoutLock();
-      });
-      document.getElementById("resetRunningLayout").addEventListener("click", () => {
-        resetRunningLayout();
       });
       document.getElementById("resetRunningLayoutPrimary").addEventListener("click", () => {
         resetRunningLayout();
@@ -4431,12 +7616,6 @@ function getWebviewHtml() {
         node.addEventListener("click", () => {
           setWorkspaceView("board");
         });
-      });
-      document.getElementById("restartServer").addEventListener("click", () => {
-        vscode.postMessage({ type: "restartServer" });
-      });
-      document.getElementById("external").addEventListener("click", () => {
-        vscode.postMessage({ type: "openExternal" });
       });
       document.getElementById("drawerClose").addEventListener("click", () => {
         clearPendingDrawerAction();
@@ -4456,7 +7635,7 @@ function getWebviewHtml() {
 }
 
 function activate(context) {
-  const provider = new CodexAgentPanel(context.extensionUri);
+  const provider = new CodexAgentPanel(context.extensionUri, context.workspaceState);
 
   context.subscriptions.push(provider);
 
