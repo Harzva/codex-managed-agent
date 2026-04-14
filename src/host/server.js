@@ -28,7 +28,17 @@ function readPersistedInsightsReport() {
   try {
     const reportPath = path.join(os.homedir(), ".codex", "codex_managed_agent_usage_report.json");
     if (!fs.existsSync(reportPath)) return null;
-    return JSON.parse(fs.readFileSync(reportPath, "utf8"));
+    const reportStats = fs.statSync(reportPath);
+    const report = JSON.parse(fs.readFileSync(reportPath, "utf8"));
+    if (report && typeof report === "object") {
+      if (!report.report_source) {
+        report.report_source = "persisted";
+      }
+      if (!report.report_persisted_at) {
+        report.report_persisted_at = reportStats.mtimeMs;
+      }
+    }
+    return report;
   } catch {
     return null;
   }

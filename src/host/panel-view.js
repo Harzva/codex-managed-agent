@@ -83,6 +83,9 @@ function attachWebview(panel, webview) {
     if (message.type === "renameThread") {
       await panel.renameThread(message.threadId, message.currentTitle);
     }
+    if (message.type === "showThreadInCodex") {
+      await panel.showThreadInCodex(message.threadId, message.preferredTitle || "");
+    }
     if (message.type === "openInCodexEditor") {
       await panel.openInCodexEditor(message.threadId);
     }

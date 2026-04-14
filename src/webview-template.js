@@ -628,6 +628,9 @@ function getWebviewHtml(webview, extensionUri) {
       .service-banner.visible {
         display: block;
       }
+      .service-banner .chip {
+        margin-top: 8px;
+      }
       .service-restart {
         border-color: rgba(255, 124, 136, 0.26);
         background: rgba(122, 24, 40, 0.2);
@@ -879,6 +882,15 @@ function getWebviewHtml(webview, extensionUri) {
       .topic-node.interactive:hover rect {
         stroke: rgba(100, 255, 186, 0.45);
         fill: rgba(100, 255, 186, 0.12);
+      }
+      .topic-node.active rect {
+        stroke: rgba(100, 255, 186, 0.72);
+        stroke-width: 2;
+        fill: rgba(100, 255, 186, 0.16);
+      }
+      .topic-node.active text {
+        fill: rgba(219, 255, 240, 0.98);
+        font-weight: 700;
       }
       .compact-title {
         margin-top: 14px;
@@ -1691,6 +1703,15 @@ function getWebviewHtml(webview, extensionUri) {
       .intervention-dock.collapsed .intervention-dock-grid {
         display: none;
       }
+      .intervention-dock-summary {
+        display: none;
+        color: #ffd7dd;
+        font-size: 12px;
+        line-height: 1.45;
+      }
+      .intervention-dock.collapsed .intervention-dock-summary {
+        display: block;
+      }
       .intervention-dock-grid {
         display: grid;
         grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
@@ -2379,6 +2400,12 @@ function getWebviewHtml(webview, extensionUri) {
         background: rgba(26, 73, 98, 0.22);
         color: #d7f8ff;
       }
+      .thread-row .loop-status-badge {
+        min-height: 20px;
+        padding: 0 7px;
+        font-size: 10px;
+        white-space: nowrap;
+      }
       .loop-status-grid {
         display: grid;
         gap: 6px;
@@ -2657,6 +2684,15 @@ function getWebviewHtml(webview, extensionUri) {
           inset 0 0 0 1px rgba(255, 143, 159, 0.14),
           0 22px 42px rgba(0,0,0,0.34),
           0 0 28px rgba(255, 143, 159, 0.08);
+      }
+      .intervention-dock .running-card.intervention-card {
+        animation: none;
+        box-shadow:
+          inset 0 0 0 1px rgba(255, 143, 159, 0.12),
+          0 12px 22px rgba(0,0,0,0.24);
+      }
+      .intervention-dock .running-card.intervention-card .phase-art {
+        animation: none;
       }
       @keyframes interventionCardPulse {
         0% { transform: translateY(0) scale(1); box-shadow: inset 0 0 0 1px rgba(255, 143, 159, 0.12), 0 18px 36px rgba(0,0,0,0.3), 0 0 20px rgba(255, 143, 159, 0.04); }
@@ -3523,6 +3559,10 @@ ${renderDrawerShell()}    </div>
         dragRaf: 0,
         resizeRaf: 0,
         pendingResizeEvent: undefined,
+        lastInterventionCount: 0,
+        lastInsightsSnapshot: undefined,
+        lastInsightsSource: "live",
+        lastInsightsCapturedAt: undefined,
         seenCompletionIds: persisted.seenCompletionIds || {},
         ui: {
           currentView: persisted.currentView || "overview",
@@ -3714,12 +3754,25 @@ ${renderDrawerShell()}    </div>
         }
         const highlights = Array.isArray(report.highlights) ? report.highlights : [];
         const shifts = Array.isArray(report.shifts) ? report.shifts : [];
+        const leadShift = shifts.slice().sort((left, right) => Math.abs(Number(right.delta || 0)) - Math.abs(Number(left.delta || 0)))[0];
+        const leadShiftLabel = (leadShift && leadShift.label) ? leadShift.label : "this workflow signal";
+        const leadShiftDelta = Math.round(Math.abs(Number((leadShift && leadShift.delta) || 0)) * 100);
+        const nextAction = leadShift
+          ? (
+              leadShift.direction === "up"
+                ? ("Keep leaning into " + leadShiftLabel + "; it climbed " + leadShiftDelta + "% this week.")
+                : leadShift.direction === "down"
+                  ? ("Check whether " + leadShiftLabel + " needs a rebound next week; it fell " + leadShiftDelta + "% this week.")
+                  : ("Keep " + leadShiftLabel + " steady next week while the rest of the pattern settles.")
+            )
+          : (highlights[0] || "Keep next week consistent and watch for a clearer weekly pattern.");
         return [
           renderInsightCard(
             "Week-on-week persona",
             ((report.current_persona || ["均衡型"]).join(" · ")) + " · " + report.current_window + " / " + String(report.current_inputs || 0) + " inputs",
             ((report.previous_persona || ["基线不足"]).join(" · ")) + " · " + report.previous_window
           ),
+          renderInsightCard("Next action", nextAction, "Weekly"),
           highlights.map((line, index) => renderInsightCard("Shift " + (index + 1), line, "Delta")).join(""),
           shifts.length ? '<div class="shift-chip-row">' + shifts.slice(0, 5).map((item) => {
             const deltaPct = Math.round(Math.abs(Number(item.delta || 0)) * 100);
@@ -3743,7 +3796,15 @@ ${renderDrawerShell()}    </div>
         }).join("");
       }
 
-      function renderTopicMap(map) {
+      function topicNodeMatchesFocus(node, focus) {
+        if (!node || !focus) return false;
+        if ((focus.group || "") === "thread") {
+          return node.group === "thread" && String(node.thread_id || "") === String(focus.threadId || "");
+        }
+        return node.group === focus.group && String(node.focus_value || node.label || "") === String(focus.value || "");
+      }
+
+      function renderTopicMap(map, focus) {
         if (!map || !Array.isArray(map.nodes) || !map.nodes.length) {
           return renderCuteEmpty("Topic map pending", "As more threads and prompts accumulate, we will connect your hot topics here.", MEDIA.board);
         }
@@ -3779,8 +3840,9 @@ ${renderDrawerShell()}    </div>
           if (!pos) return "";
           const x = pos.x - pos.w / 2;
           const y = pos.y - pos.h / 2;
+          const isActive = topicNodeMatchesFocus(node, focus);
           const attrs = [
-            'class="topic-node interactive ' + esc(node.group || "keyword") + '"',
+            'class="topic-node interactive ' + esc(node.group || "keyword") + (isActive ? ' active' : '') + '"',
             'data-topic-node="true"',
             'data-topic-group="' + esc(node.group || "") + '"',
             'data-topic-label="' + esc(node.label || "") + '"',
@@ -3793,6 +3855,18 @@ ${renderDrawerShell()}    </div>
           '</g>';
         }).join("");
         return '<svg viewBox="0 0 620 320" role="img" aria-label="topic map">' + edges + nodes + '</svg>';
+      }
+
+      function renderThreadSummaryMarkup(visibleCount, totalCount, topicFocus, sort) {
+        const summaryText = visibleCount
+          ? (
+              topicFocus
+                ? ("Showing " + visibleCount + " linked threads from topic map · " + (topicFocus.group === "thread" ? "focused thread" : (topicFocus.value || topicFocus.group)))
+                : ("Showing " + visibleCount + " of " + totalCount + " loaded threads · sorted by " + sort)
+            )
+          : (topicFocus ? "No threads match the current topic-map focus." : "No threads match the current search/filter.");
+        if (!topicFocus) return esc(summaryText);
+        return '<span>' + esc(summaryText) + '</span> <button class="chip" data-clear-topic-focus="true" type="button">Clear topic focus</button>';
       }
 
       function renderToolIcon(name, filled = false) {
@@ -3818,6 +3892,25 @@ ${renderDrawerShell()}    </div>
         const date = new Date(value);
         if (Number.isNaN(date.getTime())) return String(value);
         return date.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", second: "2-digit" });
+      }
+
+      function formatFreshnessTimestamp(value) {
+        if (!value) return "unknown time";
+        const date = new Date(value);
+        if (Number.isNaN(date.getTime())) return String(value);
+        return date.toLocaleString([], {
+          month: "2-digit",
+          day: "2-digit",
+          hour: "2-digit",
+          minute: "2-digit"
+        });
+      }
+
+      function isOlderThanThreshold(value, thresholdMs) {
+        if (!value) return false;
+        const time = new Date(value).getTime();
+        if (Number.isNaN(time)) return false;
+        return (Date.now() - time) > thresholdMs;
       }
 
       function statusBadge(status) {
@@ -4282,6 +4375,12 @@ ${renderDrawerShell()}    </div>
         return Math.max(4, Math.ceil((Math.max(88, height) + gap) / (rowHeight + gap)));
       }
 
+      function layoutRowsToHeight(rows, metrics) {
+        const gap = metrics && metrics.gap ? metrics.gap : 12;
+        const rowHeight = metrics && metrics.rowHeight ? metrics.rowHeight : 18;
+        return Math.max(88, rows * (rowHeight + gap) - gap);
+      }
+
       function buildBoardPlacements(boardThreads, options = {}) {
         const ordered = orderRunningThreads(boardThreads);
         if (options.compact) {
@@ -4367,6 +4466,12 @@ ${renderDrawerShell()}    </div>
         const col = Math.max(1, Math.min(metrics.columns - layout.cols + 1, Math.round(localX / fullCellWidth) + 1));
         const row = Math.max(1, Math.round(localY / fullCellHeight) + 1);
         return { col, row, cols: layout.cols, rows, height: layout.height };
+      }
+
+      function boardContainsPointer(board, clientX, clientY) {
+        if (!board) return false;
+        const rect = board.getBoundingClientRect();
+        return clientX >= rect.left && clientX <= rect.right && clientY >= rect.top && clientY <= rect.bottom;
       }
 
       function cleanupDragPreview() {
@@ -4488,6 +4593,8 @@ ${renderDrawerShell()}    </div>
         if (state.ui.layoutLocked || !threadId) return;
         const card = event.currentTarget && event.currentTarget.closest("[data-running-card]");
         if (!card) return;
+        const board = card.closest(".running-board-grid");
+        const metrics = boardGridMetrics(board);
         const size = getRunningCardSize(threadId);
         const layout = getRunningCardLayout(threadId, size);
         const placement = getRunningCardPosition(threadId) || {
@@ -4503,6 +4610,11 @@ ${renderDrawerShell()}    </div>
           startHeight: layout.height,
           startCol: placement.col,
           startRow: placement.row,
+          startRows: layoutHeightToRows(layout.height, metrics),
+          currentCols: layout.cols,
+          currentHeight: layout.height,
+          currentCol: placement.col,
+          currentRow: placement.row,
         };
         card.classList.add("resizing");
         event.preventDefault();
@@ -4523,11 +4635,37 @@ ${renderDrawerShell()}    </div>
         const colStep = Math.max(48, Math.round(metrics.width * 0.82));
         const horizontalDelta = horizontalDirection === 0 ? 0 : Math.round((dx * horizontalDirection) / colStep);
         const verticalDelta = verticalDirection === 0 ? 0 : Math.round((dy * verticalDirection) / 18);
-        const nextCols = Math.max(1, Math.min(15, session.startCols + horizontalDelta));
-        const nextHeight = Math.max(88, Math.min(520, session.startHeight + verticalDelta * 18));
-        const nextRows = layoutHeightToRows(nextHeight, metrics);
-        card.style.gridColumn = String(session.startCol) + " / span " + nextCols;
-        card.style.gridRow = String(session.startRow) + " / span " + nextRows;
+        const startRightEdge = session.startCol + session.startCols - 1;
+        const desiredCols = session.startCols + horizontalDelta;
+        let nextCols;
+        let nextCol = session.startCol;
+        if (horizontalDirection < 0) {
+          const maxCols = Math.max(1, Math.min(metrics.columns || 15, startRightEdge));
+          nextCols = Math.max(1, Math.min(maxCols, desiredCols));
+          nextCol = Math.max(1, startRightEdge - nextCols + 1);
+        } else if (horizontalDirection > 0) {
+          const maxCols = Math.max(1, (metrics.columns || 15) - session.startCol + 1);
+          nextCols = Math.max(1, Math.min(maxCols, desiredCols));
+        } else {
+          nextCols = session.startCols;
+        }
+        let nextHeight = Math.max(88, Math.min(520, session.startHeight + verticalDelta * 18));
+        let nextRows = layoutHeightToRows(nextHeight, metrics);
+        let nextRow = session.startRow;
+        if (verticalDirection < 0) {
+          const startBottomEdge = session.startRow + session.startRows - 1;
+          nextRow = Math.max(1, startBottomEdge - nextRows + 1);
+          if (nextRow === 1) {
+            nextRows = Math.max(session.startRows, startBottomEdge);
+            nextHeight = Math.min(520, layoutRowsToHeight(nextRows, metrics));
+          }
+        }
+        session.currentCols = nextCols;
+        session.currentHeight = nextHeight;
+        session.currentCol = nextCol;
+        session.currentRow = nextRow;
+        card.style.gridColumn = String(nextCol) + " / span " + nextCols;
+        card.style.gridRow = String(nextRow) + " / span " + nextRows;
         card.style.minHeight = nextHeight + "px";
         card.style.height = nextHeight + "px";
       }
@@ -4541,12 +4679,9 @@ ${renderDrawerShell()}    </div>
         }
         const card = document.querySelector('[data-running-card="' + CSS.escape(session.threadId) + '"]');
         if (card) {
-          const spanMatch = /span\s+(\d+)/.exec(card.style.gridColumn || "");
-          const cols = spanMatch ? Number(spanMatch[1]) : session.startCols;
-          const height = Number.parseInt(card.style.height || "", 10) || session.startHeight;
           card.classList.remove("resizing");
-          setRunningCardLayout(session.threadId, cols, height);
-          setRunningCardPosition(session.threadId, session.startCol, session.startRow);
+          setRunningCardLayout(session.threadId, session.currentCols || session.startCols, session.currentHeight || session.startHeight);
+          setRunningCardPosition(session.threadId, session.currentCol || session.startCol, session.currentRow || session.startRow);
         }
         state.resizingRunningCard = undefined;
         state.pendingResizeEvent = undefined;
@@ -4563,6 +4698,16 @@ ${renderDrawerShell()}    </div>
 
       function clearRunningDropIndicator() {
         state.runningDropIndicator = undefined;
+      }
+
+      function resetRunningDropIndicator(boardId) {
+        cancelScheduledDragIndicator();
+        clearRunningDropIndicator();
+        if (boardId !== undefined) {
+          state.activeBoardId = boardId;
+        }
+        syncDragBoardState();
+        syncRunningDropIndicatorDom();
       }
 
       function syncRunningDropIndicatorDom() {
@@ -4726,6 +4871,7 @@ ${renderDrawerShell()}    </div>
       function buildGroups(threads) {
         const groups = {
           running: [],
+          linked: [],
           recent: [],
           needs_human: [],
           idle: [],
@@ -4739,6 +4885,7 @@ ${renderDrawerShell()}    </div>
           else if (archived) groups.archived.push(thread);
           else if (needsHumanIntervention(thread)) groups.needs_human.push(thread);
           else if (status === "running") groups.running.push(thread);
+          else if (status === "linked") groups.linked.push(thread);
           else if (status === "recent") groups.recent.push(thread);
           else groups.idle.push(thread);
         }
@@ -4875,6 +5022,14 @@ ${renderDrawerShell()}    </div>
         return { isOpen, isFocused, pending };
       }
 
+      function codexVisibilityLabel(thread, payload = state.payload) {
+        const link = codexLinkMeta(thread && thread.id, payload);
+        if (link.isFocused) return "Focused";
+        if (link.isOpen || link.pending) return "Linked";
+        const archived = Boolean(thread && (thread.archived || thread.status === "archived"));
+        return archived ? "Hidden" : "Visible";
+      }
+
       function codexLinkBadge(threadId, payload = state.payload) {
         const link = codexLinkMeta(threadId, payload);
         if (link.isFocused) {
@@ -4920,6 +5075,33 @@ ${renderDrawerShell()}    </div>
         '</details>';
       }
 
+      function autoLoopStateMeta(threadId) {
+        const autoLoop = ((state.payload && state.payload.autoContinueConfigs) || {})[threadId];
+        if (!autoLoop) return { autoLoop: undefined, stateKey: "off", label: "Off" };
+        const lastResult = autoLoop.lastResult || {};
+        const stateKey = lastResult.state || autoLoop.lastLaunchStatus || "armed";
+        const label = lastResult.label
+          || (stateKey === "queued" ? "Queued"
+            : stateKey === "failed" ? "Failed"
+            : stateKey === "running" ? "Running"
+            : stateKey === "success" ? "Succeeded"
+            : "Armed");
+        return { autoLoop, stateKey, label };
+      }
+
+      function renderThreadAutoLoopBadge(threadId) {
+        const loopMeta = autoLoopStateMeta(threadId);
+        if (!loopMeta.autoLoop) return "";
+        const { stateKey, label } = loopMeta;
+        return '<span class="loop-status-badge ' + esc(stateKey) + '">' + esc("Loop " + label) + '</span>';
+      }
+
+      function renderThreadVisibilityPill(thread, payload = state.payload) {
+        const label = codexVisibilityLabel(thread, payload);
+        if (label === "Visible") return "";
+        return '<span class="meta-pill">Vis ' + esc(label) + '</span>';
+      }
+
       function renderThreadRow(thread) {
         const active = state.selectedThreadId === thread.id ? " active" : "";
         const selectedClass = isSelected(thread.id) ? " selected" : "";
@@ -4933,6 +5115,7 @@ ${renderDrawerShell()}    </div>
           '<div class="thread-topline">' +
             '<button class="select-btn' + (isSelected(thread.id) ? ' selected' : '') + '" data-select-thread="' + esc(thread.id) + '" type="button">' + (isSelected(thread.id) ? '✓' : '') + '</button>' +
             statusBadge(status) +
+            renderThreadAutoLoopBadge(thread.id) +
             '<span class="mono muted">' + esc(thread.updated_at_iso || "") + '</span>' +
             '<button class="mini-action-btn" data-rename-thread="' + esc(thread.id) + '" data-current-title="' + esc(thread.title || "") + '" type="button">Rename</button>' +
             '<button class="mini-action-btn" data-board-attach="' + esc(thread.id) + '" type="button">' + (isBoardAttached(thread.id) ? 'Attached' : 'Board') + '</button>' +
@@ -4944,6 +5127,7 @@ ${renderDrawerShell()}    </div>
           '<div class="thread-meta">' +
             '<span class="meta-pill mono">' + esc(short(thread.cwd || "-", 42)) + '</span>' +
             renderPhaseChip(phase) +
+            renderThreadVisibilityPill(thread) +
             '<span class="meta-pill">Cmd ' + esc(String(thread.user_command_count || 0)) + '</span>' +
             '<span class="meta-pill">Cmp ' + esc(String(thread.compaction_count || 0)) + '</span>' +
             '<span class="meta-pill">' + esc(thread.soft_deleted ? "soft-deleted" : (thread.archived ? "archived" : status)) + '</span>' +
@@ -4960,6 +5144,8 @@ ${renderDrawerShell()}    </div>
         const status = effectiveThreadStatus(merged, state.payload);
         const linkMeta = codexLinkMeta(merged.id);
         const linkLabel = linkMeta.isFocused ? "Focused in Codex" : (linkMeta.isOpen ? "Open in Codex" : (linkMeta.pending ? "Linking to Codex" : "Not linked"));
+        const loopMeta = autoLoopStateMeta(merged.id);
+        const autoLoop = loopMeta.autoLoop;
         return '<div class="spotlight-grid">' +
           '<div>' +
             statusBadge(status) +
@@ -4972,6 +5158,7 @@ ${renderDrawerShell()}    </div>
             '<button class="chip" data-rename-thread="' + esc(merged.id || "") + '" data-current-title="' + esc(merged.title || "") + '" type="button">Rename</button>' +
             '<button class="chip" data-open-codex-editor="' + esc(merged.id || "") + '" type="button">Open Codex</button>' +
             '<button class="chip" data-codex-thread="' + esc(merged.id || "") + '" type="button">Sidebar Codex</button>' +
+            (autoLoop && autoLoop.lastLogPath ? '<button class="chip" data-open-log="' + esc(autoLoop.lastLogPath) + '" type="button">Loop Log</button>' : '') +
             '<button class="chip" data-subtab-shortcut="history" type="button">History</button>' +
             '<button class="chip" data-subtab-shortcut="console" type="button">Console</button>' +
           '</div>' +
@@ -4981,6 +5168,7 @@ ${renderDrawerShell()}    </div>
           '<div class="spotlight-stat"><div class="spotlight-stat-label">Progress</div><div class="spotlight-stat-value">' + esc(progress.percent !== undefined ? (String(progress.percent) + "%") : progress.label) + '</div></div>' +
           '<div class="spotlight-stat"><div class="spotlight-stat-label">Codex Link</div><div class="spotlight-stat-value">' + esc(linkLabel) + '</div></div>' +
           '<div class="spotlight-stat"><div class="spotlight-stat-label">Process</div><div class="spotlight-stat-value">' + esc((merged.process && merged.process.summary) || "No live process") + '</div></div>' +
+          '<div class="spotlight-stat"><div class="spotlight-stat-label">Auto Loop</div><div class="spotlight-stat-value">' + esc(loopMeta.label) + '</div></div>' +
           '<div class="spotlight-stat"><div class="spotlight-stat-label">Commands</div><div class="spotlight-stat-value">' + esc(String(merged.user_command_count || 0)) + '</div></div>' +
           '<div class="spotlight-stat"><div class="spotlight-stat-label">Compactions</div><div class="spotlight-stat-value">' + esc(String(merged.compaction_count || 0)) + '</div></div>' +
         '</div>' +
@@ -5032,7 +5220,11 @@ ${renderDrawerShell()}    </div>
 
       function renderInterventionDock(threads) {
         if (!threads.length) return "";
+        const summary = threads.length === 1
+          ? "1 urgent card is waiting for input while the dock stays collapsed."
+          : (threads.length + " urgent cards are waiting for input while the dock stays collapsed.");
         return '<div class="intervention-head"><div class="intervention-title">' + renderThemeVisual(MEDIA.intervention, "intervention-art", "Testing", "intervention") + '<div class="phase-head"><span class="phase-label">Needs Human</span><span class="meta-pill">' + esc(String(threads.length)) + ' urgent</span></div></div><div class="intervention-actions"><button class="chip" data-toggle-intervention="true" type="button">' + esc(state.ui.interventionCollapsed ? "Expand" : "Collapse") + '</button></div></div>' +
+          '<div class="intervention-dock-summary">' + esc(summary) + '</div>' +
           '<div class="intervention-dock-note">These cards need input, approval, login, credentials, or another manual step.</div>' +
           '<div class="intervention-dock-grid">' + renderRunningBoard(threads, { locked: true, compact: true }) + '</div>';
       }
@@ -5107,7 +5299,7 @@ ${renderDrawerShell()}    </div>
           const titleMax = size === "l" ? 120 : size === "m" ? 88 : size === "s" ? 58 : 34;
           const showRichPhase = size === "m" || size === "l";
           const showProgress = size !== "tiny";
-          const showPreview = size !== "tiny";
+          const showPreview = size === "m" || size === "l";
           const conversationStats = (size === "m" || size === "l")
             ? '<div class="running-card-note">Commands ' + esc(String(thread.user_command_count || 0)) + ' · Compactions ' + esc(String(thread.compaction_count || 0)) + '</div>'
             : '';
@@ -5267,6 +5459,7 @@ ${renderDrawerShell()}    </div>
         const processText = summary.process && summary.process.summary ? summary.process.summary : "No live process";
         const linkMeta = codexLinkMeta(thread.id, payload);
         const linkLabel = linkMeta.isFocused ? "Focused in Codex" : (linkMeta.isOpen ? "Open in Codex" : (linkMeta.pending ? "Linking to Codex" : "Not linked"));
+        const visibilityLabel = codexVisibilityLabel(Object.assign({}, summary, thread), payload);
         const phase = inferCodexPhase(Object.assign({}, summary, thread));
         const phaseClass = phaseClassFor(phase.label).trim();
         const pendingDrawerAction = state.ui.pendingDrawerAction && state.ui.pendingDrawerAction.threadId === (thread.id || "")
@@ -5291,6 +5484,7 @@ ${renderDrawerShell()}    </div>
           drawerStat("Updated", summary.updated_age || thread.updated_at_iso || "-"),
           drawerStat("Last Log", summary.log_age || (logs[0] && logs[0].age) || "-"),
           drawerStat("Phase", phase.label),
+          drawerStat("Visibility", visibilityLabel),
           drawerStat("Codex Link", linkLabel),
           drawerStat("Process", processText),
           drawerStat("Commands", String(thread.user_command_count || summary.user_command_count || 0)),
@@ -5317,9 +5511,9 @@ ${renderDrawerShell()}    </div>
                   ]
                 : [
                     renderQuickActionButton("rename", "Rename", "secondary", thread.id || "", thread.title || ""),
-                    renderQuickActionButton("open_editor", "Open Codex", "secondary", thread.id || "", ""),
+                    renderQuickActionButton("show_in_codex", "Show in Codex", "secondary", thread.id || "", thread.title || ""),
                     renderQuickActionButton("sidebar", "Sidebar Codex", "secondary", thread.id || "", ""),
-                    renderActionButton(isArchived ? "unarchive" : "archive", isArchived ? "Unarchive" : "Archive", "secondary", isArchived ? "UA" : "AR", thread.id || ""),
+                    renderActionButton(isArchived ? "unarchive" : "archive", isArchived ? "Unarchive" : "Hide from Codex", "secondary", isArchived ? "UA" : "AR", thread.id || ""),
                     renderActionButton("soft_delete", "Soft Delete", "warn", "SD", thread.id || ""),
                     renderActionButton("hard_delete", "Hard Delete", "danger", "HD", thread.id || ""),
                     '<span class="action-status">' + esc(actionNotice || '') + '</span>'
@@ -5398,6 +5592,16 @@ ${renderDrawerShell()}    </div>
               markCodexLinking(threadId, "editor");
               render(state.payload);
               vscode.postMessage({ type: "openInCodexEditor", threadId });
+              return;
+            }
+            if (action === "show_in_codex") {
+              markCodexLinking(threadId, "editor");
+              render(state.payload);
+              vscode.postMessage({
+                type: "showThreadInCodex",
+                threadId,
+                preferredTitle: node.dataset.quickTitle || "",
+              });
               return;
             }
             if (action === "sidebar") {
@@ -5505,7 +5709,35 @@ ${renderDrawerShell()}    </div>
         state.payload = payload;
         const service = payload.service || {};
         const dashboard = payload.dashboard || { threads: [], runningThreads: [], threadsMeta: { counts: {} } };
-        const insights = dashboard.insights || null;
+        const freshInsights = dashboard.insights || null;
+        if (freshInsights) {
+          state.lastInsightsSnapshot = freshInsights;
+          state.lastInsightsSource = freshInsights.report_source === "persisted" ? "persisted" : "live";
+          state.lastInsightsCapturedAt =
+            freshInsights.report_source === "persisted"
+              ? (freshInsights.report_persisted_at || payload.lastSuccessfulRefreshAt || Date.now())
+              : (payload.lastSuccessfulRefreshAt || Date.now());
+        }
+        const insights = freshInsights || state.lastInsightsSnapshot || null;
+        const insightsSource = freshInsights
+          ? (freshInsights.report_source === "persisted" ? "persisted" : "live")
+          : (state.lastInsightsSnapshot ? "session-cache" : "none");
+        const persistedFallbackTimestamp = insightsSource === "persisted"
+          ? (insights && insights.report_persisted_at)
+          : state.lastInsightsCapturedAt;
+        const persistedFallbackStale =
+          (insightsSource === "persisted" || (insightsSource === "session-cache" && state.lastInsightsSource === "persisted")) &&
+          isOlderThanThreshold(persistedFallbackTimestamp, 24 * 60 * 60 * 1000);
+        const persistedFallbackStaleSuffix = persistedFallbackStale
+          ? " This fallback is older than 24 hours and may be stale."
+          : "";
+        if (service.ok && state.ui.topicFocus && Array.isArray(dashboard.threads) && dashboard.threads.length) {
+          const topicFocusStillValid = dashboard.threads.some((thread) => topicFocusMatches(thread, state.ui.topicFocus));
+          if (!topicFocusStillValid) {
+            state.ui.topicFocus = null;
+            persistUi();
+          }
+        }
         state.selectedThreadId = payload.selectedThreadId;
         state.currentSurface = payload.currentSurface || "editor";
         document.body.classList.toggle("motion-reduced", !state.ui.motionEnabled);
@@ -5530,6 +5762,11 @@ ${renderDrawerShell()}    </div>
         const runningCount = effectiveRunningThreads.length;
         const boardThreads = getBoardThreads(dashboard, payload);
         const interventionThreads = boardThreads.filter((thread) => needsHumanIntervention(thread));
+        if (interventionThreads.length && state.lastInterventionCount === 0 && state.ui.interventionCollapsed) {
+          state.ui.interventionCollapsed = false;
+          persistUi();
+        }
+        state.lastInterventionCount = interventionThreads.length;
         const regularBoardThreads = boardThreads.filter((thread) => !needsHumanIntervention(thread));
         const attachedOnlyCount = boardThreads.filter((thread) => ["attached", "linked"].includes(thread.board_source || "") && effectiveThreadStatus(thread, payload) !== "running").length;
         const serviceBanner = document.getElementById("serviceBanner");
@@ -5541,9 +5778,12 @@ ${renderDrawerShell()}    </div>
               ? (threadCount + " threads loaded" + (runningCount ? " · " + runningCount + " running" : ""))
               : "Connected to the local service, but no threads were returned yet.";
         serviceBanner.className = "service-banner" + (service.ok ? "" : " visible");
-        serviceBanner.textContent = service.ok
+        serviceBanner.innerHTML = service.ok
           ? ""
-          : ("Degraded state: " + (service.message || "Server not reachable") + ". Use Restart 8787 to retry loading thread data.");
+          : (
+              'Degraded state: ' + esc(service.message || "Server not reachable") + '. Use Restart 8787 to retry loading thread data.' +
+              (service.logPath ? (' <button class="chip" data-open-log="' + esc(service.logPath) + '" type="button">Open Service Log</button>') : '')
+            );
         restartButton.hidden = service.ok;
         restartButton.disabled = service.ok;
 
@@ -5690,6 +5930,12 @@ ${renderDrawerShell()}    </div>
             MEDIA.board
           )
         ].join("") : renderCuteEmpty("Usage report unavailable", "The dashboard can still work without the persisted report, but the summary will appear after the insights endpoint responds.", MEDIA.rest);
+        document.getElementById("usageReportNote").textContent =
+          insightsSource === "persisted"
+            ? ("Showing the persisted local report from " + formatFreshnessTimestamp(insights && insights.report_persisted_at) + " while the live insights endpoint is unavailable." + persistedFallbackStaleSuffix)
+            : insightsSource === "session-cache"
+              ? ("Showing the last usable report from this session, captured " + formatFreshnessTimestamp(state.lastInsightsCapturedAt) + ", while the current refresh is missing insights data." + persistedFallbackStaleSuffix)
+              : "A persisted local reading of your thread habits, pacing, and workflow style.";
         document.getElementById("usageKeywords").innerHTML = insights && Array.isArray(insights.keywords) && insights.keywords.length
           ? insights.keywords.slice(0, 8).map((item) => renderKeywordChip(item)).join("")
           : '<span class="sub">暂无高频关键词</span>';
@@ -5701,7 +5947,7 @@ ${renderDrawerShell()}    </div>
           : "";
         document.getElementById("weeklyShift").innerHTML = renderWeeklyShift(insights);
         document.getElementById("wordCloud").innerHTML = renderWordCloud(insights && insights.word_cloud);
-        document.getElementById("topicMap").innerHTML = renderTopicMap(insights && insights.topic_map);
+        document.getElementById("topicMap").innerHTML = renderTopicMap(insights && insights.topic_map, topicFocus);
         document.getElementById("overviewRail").innerHTML = (pinnedThreads.length ? pinnedThreads : effectiveRunningThreads.slice(0, 2)).map((thread) => {
           const status = effectiveThreadStatus(thread, payload);
           return '<div class="mini-thread with-art">' +
@@ -5728,9 +5974,10 @@ ${renderDrawerShell()}    </div>
             ? (effectiveRunningThreads.length + " active thread" + (effectiveRunningThreads.length > 1 ? "s" : ""))
             : "No live agents currently running.";
         document.getElementById("runningSummaryMirror").textContent = document.getElementById("runningSummary").textContent;
+        const boardSizeGuide = "Size guide: T focus, S progress, M preview, L full detail.";
         const boardMetaText = boardThreads.length
-          ? ("Dedicated board · " + boardThreads.length + " card" + (boardThreads.length > 1 ? "s" : "") + " · " + runningCount + " running · " + attachedOnlyCount + " attached · " + interventionThreads.length + " needs human" + (state.ui.layoutLocked ? " · layout locked" : ""))
-          : "No cards yet. Attach threads from the explorer, or wait for a running agent to appear automatically.";
+          ? ("Dedicated board · " + boardThreads.length + " card" + (boardThreads.length > 1 ? "s" : "") + " · " + runningCount + " running · " + attachedOnlyCount + " attached · " + interventionThreads.length + " needs human" + (state.ui.layoutLocked ? " · layout locked" : "") + " · " + boardSizeGuide)
+          : ("No cards yet. Attach threads from the explorer, or wait for a running agent to appear automatically. " + boardSizeGuide);
         document.getElementById("runningBoardMeta").textContent = boardMetaText;
         document.getElementById("runningBoardMetaPrimary").textContent = boardMetaText;
         const lockButtonPrimary = document.getElementById("toggleLayoutLockPrimary");
@@ -5757,15 +6004,9 @@ ${renderDrawerShell()}    </div>
             '<div class="mini-thread-meta">' + esc(short(thread.cwd || "-", 52)) + '</div>' +
           '</div>';
         }).join("") || renderCuteEmpty("No urgent cards", "Needs Human threads will surface here while layout stays focused in the Board workspace.", MEDIA.rest);
-        document.getElementById("threadSummary").textContent =
-          visibleCount
-            ? (
-                topicFocus
-                  ? ("Showing " + visibleCount + " linked threads from topic map · " + (topicFocus.group === "thread" ? "focused thread" : (topicFocus.value || topicFocus.group)))
-                  : ("Showing " + visibleCount + " of " + (dashboard.threads || []).length + " loaded threads · sorted by " + state.ui.sort)
-              )
-            : "No threads match the current search/filter.";
-        document.getElementById("threadSummaryMirror").textContent = document.getElementById("threadSummary").textContent;
+        const threadSummaryMarkup = renderThreadSummaryMarkup(visibleCount, (dashboard.threads || []).length, topicFocus, state.ui.sort);
+        document.getElementById("threadSummary").innerHTML = threadSummaryMarkup;
+        document.getElementById("threadSummaryMirror").innerHTML = threadSummaryMarkup;
         scrollPendingThreadIntoView();
         const batchBar = document.getElementById("batchBar");
         const pendingMeta = pendingBatch ? getBatchActionMeta(pendingBatch.action) : undefined;
@@ -5833,6 +6074,7 @@ ${renderDrawerShell()}    </div>
         const threadMarkup = [
           renderGroup("needs_human", "Needs Human", groups.needs_human),
           renderGroup("running", "Running", groups.running),
+          renderGroup("linked", "Linked", groups.linked),
           renderGroup("recent", "Recent", groups.recent),
           renderGroup("idle", "Idle", groups.idle),
           renderGroup("archived", "Archived", groups.archived),
@@ -5996,6 +6238,10 @@ ${renderDrawerShell()}    </div>
         });
         document.querySelectorAll("[data-running-card]").forEach((node) => {
           node.addEventListener("dragstart", (event) => {
+            if (event.target && event.target.closest("button, input, textarea, select, [data-resize-card]")) {
+              event.preventDefault();
+              return;
+            }
             if (state.ui.layoutLocked) {
               event.preventDefault();
               return;
@@ -6003,6 +6249,7 @@ ${renderDrawerShell()}    </div>
             state.draggedRunningThreadId = node.dataset.runningCard;
             state.activeBoardId = node.closest(".running-board-grid")?.id;
             node.classList.add("dragging");
+            syncDragBoardState();
             if (event.dataTransfer) {
               event.dataTransfer.effectAllowed = "move";
               event.dataTransfer.setData("text/plain", state.draggedRunningThreadId || "");
@@ -6019,11 +6266,10 @@ ${renderDrawerShell()}    </div>
             scheduleDragIndicator(target, board?.id);
             if (event.dataTransfer) event.dataTransfer.dropEffect = "move";
           });
-          node.addEventListener("dragleave", () => {
-            if (state.runningDropIndicator && state.runningDropIndicator.threadId === node.dataset.runningCard) {
-              clearRunningDropIndicator();
-              scheduleDragIndicator(undefined, state.activeBoardId);
-            }
+          node.addEventListener("dragleave", (event) => {
+            const board = node.closest(".running-board-grid");
+            if (boardContainsPointer(board, event.clientX, event.clientY)) return;
+            resetRunningDropIndicator(board?.id);
           });
           node.addEventListener("drop", (event) => {
             event.preventDefault();
@@ -6068,11 +6314,9 @@ ${renderDrawerShell()}    </div>
             if (event.dataTransfer) event.dataTransfer.dropEffect = "move";
           });
           runningBoard.addEventListener("dragleave", (event) => {
-            if (!runningBoard.contains(event.relatedTarget)) {
-              runningBoard.classList.remove("drag-over", "drag-end");
-              clearRunningDropIndicator();
-              scheduleDragIndicator(undefined, runningBoard.id);
-            }
+            if (boardContainsPointer(runningBoard, event.clientX, event.clientY)) return;
+            runningBoard.classList.remove("drag-over", "drag-end");
+            resetRunningDropIndicator(runningBoard.id);
           });
           runningBoard.addEventListener("drop", (event) => {
             if (state.ui.layoutLocked) return;
@@ -6305,6 +6549,10 @@ ${renderDrawerShell()}    </div>
           }
           if (target.dataset.view) {
             setWorkspaceView(target.dataset.view);
+            return;
+          }
+          if (target.dataset.clearTopicFocus) {
+            applyTopicFocus(null);
             return;
           }
           if (target.dataset.topicNode) {

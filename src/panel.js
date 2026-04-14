@@ -9,6 +9,7 @@ const {
   copyText,
   openLogFile,
   renameThread,
+  showThreadInCodex,
 } = require("./host/lifecycle");
 const {
   openInCodexEditor,
@@ -173,6 +174,10 @@ class CodexAgentPanel {
 
   async renameThread(threadId, currentTitle = "") {
     return renameThread(this, threadId, currentTitle);
+  }
+
+  async showThreadInCodex(threadId, preferredTitle = "") {
+    return showThreadInCodex(this, threadId, preferredTitle);
   }
 
   async configureAutoContinue(threadId, currentPrompt = "") {

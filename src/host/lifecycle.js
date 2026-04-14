@@ -2,6 +2,7 @@ const vscode = require("vscode");
 const fs = require("fs");
 
 const { getConfig, postLifecycleAction, postRenameThread } = require("./server");
+const { openInCodexEditor } = require("./codex-link");
 
 async function runLifecycleAction(panel, action, threadIdsOrOne) {
   const ids = Array.isArray(threadIdsOrOne)
@@ -74,9 +75,30 @@ async function renameThread(panel, threadId, currentTitle = "") {
   }
 }
 
+async function showThreadInCodex(panel, threadId, preferredTitle = "") {
+  if (!threadId) return;
+  const config = getConfig();
+  const title = String(preferredTitle || "").trim();
+  try {
+    if (title) {
+      await postRenameThread(config.baseUrl, threadId, title);
+    }
+    await postLifecycleAction(config.baseUrl, "unarchive", [threadId], true);
+    await openInCodexEditor(threadId);
+    panel.lastActionNotice = "Showed thread in Codex";
+    vscode.window.setStatusBarMessage(`Codex-Managed-Agent: ${panel.lastActionNotice}`, 2600);
+    await panel.refresh();
+  } catch (error) {
+    panel.lastActionNotice = error instanceof Error ? error.message : String(error);
+    vscode.window.showErrorMessage(`Codex-Managed-Agent: ${panel.lastActionNotice}`);
+    await panel.refresh({ silent: true });
+  }
+}
+
 module.exports = {
   runLifecycleAction,
   copyText,
   openLogFile,
   renameThread,
+  showThreadInCodex,
 };

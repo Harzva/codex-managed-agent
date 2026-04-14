@@ -2,7 +2,7 @@ function renderInsightsSections() {
   return `<section class="overview-digest">
           <div class="panel">
             <div class="section-title">Usage Report</div>
-            <div class="section-note">A persisted local reading of your thread habits, pacing, and workflow style.</div>
+            <div class="section-note" id="usageReportNote">A persisted local reading of your thread habits, pacing, and workflow style.</div>
             <div class="summary-deck" id="usageSummary"></div>
             <div class="insight-chip-list" id="usageKeywords"></div>
           </div>
