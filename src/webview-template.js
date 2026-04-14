@@ -1,3 +1,8 @@
+const vscode = require("vscode");
+const { renderBoardPane } = require("./webview/board");
+const { renderInsightsSections } = require("./webview/insights");
+const { renderDrawerShell } = require("./webview/drawer");
+
 function getWebviewHtml(webview, extensionUri) {
   const nonce = String(Date.now());
   const mediaRoot = vscode.Uri.joinPath(extensionUri, "media");
@@ -3347,34 +3352,7 @@ function getWebviewHtml(webview, extensionUri) {
             <div class="digest-rail" id="overviewRail"></div>
           </div>
         </section>
-        <section class="overview-digest">
-          <div class="panel">
-            <div class="section-title">Usage Report</div>
-            <div class="section-note">A persisted local reading of your thread habits, pacing, and workflow style.</div>
-            <div class="summary-deck" id="usageSummary"></div>
-            <div class="insight-chip-list" id="usageKeywords"></div>
-          </div>
-          <div class="panel">
-            <div class="section-title">Vibe Advice</div>
-            <div class="section-note">Suggestions grounded in simple stack, plan-first, stepwise verification, and modular context control.</div>
-            <div class="insight-list" id="vibeAdvice"></div>
-            <div class="insight-list" id="analysisViews"></div>
-          </div>
-        </section>
-        <section class="overview-digest">
-          <div class="panel">
-            <div class="section-title">Topic Map</div>
-            <div class="section-note">A compact visual mind map built from recurring themes, dominant working styles, and top threads.</div>
-            <div id="topicMap" class="topic-map"></div>
-          </div>
-          <div class="panel">
-            <div class="section-title">This Week Shift</div>
-            <div class="section-note">See whether this week leans more toward planning, automation, execution, or UI vibing than the previous week.</div>
-            <div id="weeklyShift" class="insight-list"></div>
-            <div class="section-title compact-title">Word Cloud</div>
-            <div id="wordCloud" class="word-cloud"></div>
-          </div>
-        </section>
+        ${renderInsightsSections()}
         <section class="meta-grid" id="metrics"></section>
         <section class="overview-grid">
           <div class="stack">
@@ -3497,33 +3475,7 @@ function getWebviewHtml(webview, extensionUri) {
         </section>
       </section>
 
-      <section class="workspace-pane" data-workspace-pane="board">
-        <section class="single-grid">
-          <div class="panel board-stage">
-            <div class="board-view-shell">
-              <div class="running-board-toolbar">
-                <div class="running-board-title">
-                  <div class="board-icon"><img class="board-icon-vivid theme-is-optional" src="${media.board}" alt="" /><span class="theme-bar board-icon-clean variant-hero phase-tooling" aria-hidden="true"></span></div>
-                  <div>
-                    <div class="section-title">Running Agent Board</div>
-                    <div class="running-board-copy" id="runningBoardMetaPrimary">Pinned and attached agents stay here even when they stop running.</div>
-                  </div>
-                </div>
-              <div class="chip-row">
-                  <button class="chip" data-view="threads" type="button">Back to Threads</button>
-                  <button class="chip" id="toggleLayoutLockPrimary" type="button">Lock Layout</button>
-                  <button class="chip" id="resetRunningLayoutPrimary" type="button">Reset Layout</button>
-                </div>
-              </div>
-              <div id="interventionDockPrimary" class="intervention-dock"></div>
-              <div class="board-surface">
-                <div id="runningBoardPrimary" class="running-board-grid"></div>
-                <div id="boardDropOverlayPrimary" class="board-drop-overlay"></div>
-              </div>
-            </div>
-          </div>
-        </section>
-      </section>
+      ${renderBoardPane(media)}
 
       <section class="workspace-pane" data-workspace-pane="live">
         <section class="single-grid">
@@ -3549,21 +3501,7 @@ function getWebviewHtml(webview, extensionUri) {
           </div>
         </section>
       </section>
-      <div id="drawerBackdrop" class="drawer-backdrop"></div>
-      <aside id="threadDrawer" class="drawer">
-        <div class="drawer-head">
-          <div class="drawer-kicker">Inspector</div>
-          <div class="drawer-topline">
-            <div class="drawer-title" id="drawerTitle">Thread detail</div>
-            <button id="drawerClose" class="drawer-close" type="button">Close</button>
-          </div>
-          <div class="drawer-meta" id="drawerMeta"></div>
-          <div class="drawer-summary" id="drawerSummary"></div>
-        </div>
-        <div class="action-rail" id="drawerActions"></div>
-        <div class="drawer-scroll" id="drawerBody"></div>
-      </aside>
-    </div>
+${renderDrawerShell()}    </div>
     <script nonce="${nonce}">
       const vscode = acquireVsCodeApi();
       let bootRetryTimer;
