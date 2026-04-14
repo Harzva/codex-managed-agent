@@ -97,6 +97,7 @@ Related plans:
 - `task-plans/operational-reliability-task-plan.md`
 - `task-plans/codex-visibility-control-task-plan.md`
 - `task-plans/cma-codex-communication-optimization-task-plan.md`
+- `task-plans/codex-loop-control-surface-task-plan.md`
 - `task-plans/cross-path-unified-management-task-plan.md`
 
 ### Priority 2 — Workflow Multipliers
@@ -142,6 +143,11 @@ Immediate follow-on track:
 
 - `task-plans/cma-codex-communication-optimization-task-plan.md`
 
+Next follow-on track after that:
+
+- `task-plans/codex-loop-control-surface-task-plan.md`
+
 Current handoff state:
 
-- Re-anchor from `ROADMAP.md`, then start the communication-optimization follow-on track as the next bounded codex-loop sequence.
+- First complete the communication-optimization bounded slices.
+- Then open the loop-control-surface track so daemon status, watch/tail, and per-card interval controls move into the extension UI.
