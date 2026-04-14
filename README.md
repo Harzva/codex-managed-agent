@@ -1,45 +1,144 @@
-# Codex-Managed-Agent VS Code Extension
+# Codex-Managed-Agent
 
-`Codex-Managed-Agent` is a VS Code extension for managing Codex agent threads inside the editor.
+Manage Codex threads inside VS Code with a dedicated dashboard, board view, inspector, and local runtime controls.
 
-It provides a native VS Code surface for:
+`Codex-Managed-Agent` is built for people who want to work across many Codex threads without treating the official sidebar as the only control surface.
 
-- browsing and filtering threads
-- pinning and grouping active work
-- inspecting logs and conversation history
-- running lifecycle actions
-- opening and controlling the local dashboard service
+## Why this extension exists
 
-## What it does
+Codex already gives you thread-level interaction. What it does not give you well is a strong in-editor management surface for:
 
-- Opens `Codex-Managed-Agent` in the editor area, sidebar, or bottom panel
-- Detects whether the local `Codex-Managed-Agent` server is reachable
-- Can auto-start the local FastAPI server on `8787`
-- Supports thread search, filter, sort, and pin workflows
-- Includes an inspector drawer with conversation, logs, and command helpers
-- Supports single-thread and batch lifecycle actions
+- scanning many threads at once
+- grouping and pinning active work
+- watching `Needs Human` states
+- inspecting logs and conversation context
+- controlling loop and background runtime behavior
+- managing work across more than one project root
 
-## Current status
+`Codex-Managed-Agent` is the layer that sits above those threads and turns them into an operating workspace.
 
-This extension is currently a preview build intended for local and team workflows.
+## Core workflows
 
-It works best when paired with the local `codex_manager` service that exposes thread and log data.
+### 1. Thread management inside VS Code
 
-## Development usage
+Use the dashboard to:
 
-1. Start the local service:
+- search, filter, sort, and pin threads
+- inspect logs and conversation context
+- manage lifecycle actions
+- move between list, board, and inspector views
 
-   ```bash
-   cd <your-workspace>/codex_manager
-   source .venv/bin/activate
-   uvicorn codex_manager.app:app --reload --port 8787
-   ```
+### 2. Board-based active work
 
-2. In VS Code, open this extension folder
-3. Press `F5`
-4. Choose `Run Codex Agent Extension` if VS Code asks for a launch target
-5. A new `Extension Development Host` window opens
-6. Run `Codex-Managed-Agent: Open Dashboard` from the Command Palette
+Use the board when you need a higher-signal working surface:
+
+- attach important threads to the board
+- keep `Needs Human` items visible
+- resize and reorganize cards
+- track active operational state without opening each thread one by one
+
+### 3. Runtime and local service control
+
+The extension can work with the local `codex_manager` service and help with:
+
+- server reachability checks
+- starting the local service when needed
+- degraded-state recovery visibility
+- local dashboard integration on `8787`
+
+## Feature highlights
+
+- Native VS Code dashboard in the editor, sidebar, or bottom panel
+- Thread search, filter, sort, grouping, and pin workflows
+- Board view for active, attached, and intervention work
+- Inspector drawer with logs, conversation context, and actions
+- Local server awareness with startup and recovery support
+- Loop and background-control surfaces for ongoing work
+- Cross-surface navigation between dashboard and Codex thread views
+
+## Screenshots
+
+Real screenshots should be used here for release-quality presentation. The current capture plan is tracked in:
+
+- [`SCREENSHOT_INVENTORY.md`](./SCREENSHOT_INVENTORY.md)
+
+Recommended screenshot sections for the marketplace page:
+
+### Main Dashboard
+
+Show:
+
+- thread list
+- board summary
+- one populated inspector state
+
+### Board With Active Cards
+
+Show:
+
+- active cards
+- `Needs Human` presence
+- readable card density
+
+### Needs Human Dock
+
+Show:
+
+- multiple urgent cards
+- compact but visible intervention space
+
+### Sidebar or Bottom Placement
+
+Show:
+
+- the extension docked in a normal VS Code layout
+
+## Installation
+
+### Install from Marketplace
+
+Search for:
+
+- `Codex-Managed-Agent`
+
+Publisher:
+
+- `harzva`
+
+### Install from VSIX
+
+```bash
+code --install-extension codex-managed-agent-0.0.3.vsix
+```
+
+Or inside VS Code:
+
+1. Open Extensions
+2. Click `...`
+3. Choose `Install from VSIX...`
+4. Select the generated package
+
+## Local service setup
+
+The extension works best with the local `codex_manager` service.
+
+Start it like this:
+
+```bash
+cd <your-workspace>/codex_manager
+source .venv/bin/activate
+uvicorn codex_manager.app:app --reload --port 8787
+```
+
+If the service is not reachable, the extension can try to start it automatically.
+
+## Development workflow
+
+1. Open this extension folder in VS Code
+2. Press `F5`
+3. Choose `Run Codex Agent Extension` if prompted
+4. In the Extension Development Host, run:
+   - `Codex-Managed-Agent: Open Dashboard`
 
 Useful placement commands:
 
@@ -50,27 +149,25 @@ Useful placement commands:
 - `Codex-Managed-Agent: Full Screen`
 - `Codex-Managed-Agent: Move to New Window`
 
-Notes:
+## Configuration
 
-- The extension now also shows a left Activity Bar icon.
-- The editor tab can be opened in the center area, beside another editor, or moved to a new window.
-- The docked view can be opened in the Sidebar or the bottom Panel.
-- If you want it on the right side, drag the view container to the Secondary Side Bar or move the Side Bar position in VS Code.
+### `codexAgent.baseUrl`
 
-If the server is not running, the extension will try to start it automatically when the panel opens.
+- default: `http://127.0.0.1:8787/`
+- use this when your local dashboard is running on a different URL or port
 
-## Settings
+### `codexAgent.autoStartServer`
 
-- `codexAgent.baseUrl`
-  - default: `http://127.0.0.1:8787/`
-  - point this to another port if your local dashboard runs elsewhere
-- `codexAgent.autoStartServer`
-  - default: `true`
-  - starts the local FastAPI service when the panel cannot connect
-- `codexAgent.pythonPath`
-  - optional override for the Python binary used to launch the server
-- `codexAgent.serverRoot`
-  - optional absolute path to the local `codex_manager` server root
+- default: `true`
+- attempts to start the local service when the panel cannot connect
+
+### `codexAgent.pythonPath`
+
+- optional override for the Python executable used to launch the local service
+
+### `codexAgent.serverRoot`
+
+- optional absolute path to the local `codex_manager` service root
 
 ## Commands
 
@@ -84,50 +181,30 @@ If the server is not running, the extension will try to start it automatically w
 - `Codex-Managed-Agent: Open in Browser`
 - `Codex-Managed-Agent: Start Local Server`
 
-## Package as VSIX
+## Release workflow
 
-Local installable package:
+Package locally:
 
 ```bash
-cd /path/to/codex-managed-agent
-npx @vscode/vsce package
+npm run package
 ```
 
-This produces a file like:
-
-```text
-codex-managed-agent-0.0.3.vsix
-```
-
-Before treating the package as release-ready, run through the repo smoke checklist:
+Before calling a build release-ready, use:
 
 - [`SMOKE_CHECKLIST.md`](./SMOKE_CHECKLIST.md)
+- [`CHANGELOG.md`](./CHANGELOG.md)
+- [`SCREENSHOT_INVENTORY.md`](./SCREENSHOT_INVENTORY.md)
 
-Then install it in VS Code:
+## Current status
 
-1. Open Extensions view
-2. Click `...`
-3. Choose `Install from VSIX...`
-4. Select the generated `.vsix`
+This extension is still a preview build.
 
-## Publish to Marketplace
+The current focus is to make it:
 
-Typical release flow:
-
-```bash
-npx @vscode/vsce package
-npx @vscode/vsce publish
-```
-
-Publishing requires:
-
-- a valid Visual Studio Marketplace publisher
-- authentication for `vsce publish`
-- a completed pass through [`SMOKE_CHECKLIST.md`](./SMOKE_CHECKLIST.md) for the candidate VSIX
-- release-facing notes kept current in [`CHANGELOG.md`](./CHANGELOG.md)
+- operationally reliable
+- smoother as a board-based control surface
+- more usable for multi-thread Codex work inside VS Code
 
 ## Repository
 
 - Source: `https://github.com/Harzva/codex-managed-agent`
-- Release notes: [`CHANGELOG.md`](./CHANGELOG.md)
-- Screenshot plan: [`SCREENSHOT_INVENTORY.md`](./SCREENSHOT_INVENTORY.md)
