@@ -1,8 +1,4 @@
 const vscode = require("vscode");
-const childProcess = require("child_process");
-const fs = require("fs");
-const os = require("os");
-const path = require("path");
 
 const { getWebviewHtml } = require("./webview-template");
 const { registerCommands } = require("./host/commands");
@@ -11,11 +7,15 @@ const {
   summarizeServiceState,
   fetchDashboardState,
   fetchThreadDetail,
-  postLifecycleAction,
-  postRenameThread,
   probeServer,
   startServer,
 } = require("./host/server");
+const {
+  runLifecycleAction,
+  copyText,
+  openLogFile,
+  renameThread,
+} = require("./host/lifecycle");
 const {
   openInCodexEditor,
   revealInCodexSidebar,
@@ -23,39 +23,16 @@ const {
   isPassiveLinkedThread,
   isEffectivelyRunningThread,
 } = require("./host/codex-link");
-
-function shortText(value, len = 120) {
-  const text = String(value || "");
-  return text.length > len ? `${text.slice(0, len)}...` : text;
-}
-
-function ensureDirSync(dirPath) {
-  fs.mkdirSync(dirPath, { recursive: true });
-  return dirPath;
-}
-
-function safeFileSlug(value, fallback = "thread") {
-  return String(value || fallback).replace(/[^a-zA-Z0-9._-]+/g, "-").replace(/^-+|-+$/g, "").slice(0, 48) || fallback;
-}
-
-function delay(ms) {
-  return new Promise((resolve) => setTimeout(resolve, ms));
-}
-
-function readFileTail(filePath, maxBytes = 8192) {
-  if (!filePath || !fs.existsSync(filePath)) return "";
-  const stat = fs.statSync(filePath);
-  const start = Math.max(0, stat.size - maxBytes);
-  const fd = fs.openSync(filePath, "r");
-  try {
-    const length = stat.size - start;
-    const buffer = Buffer.alloc(length);
-    fs.readSync(fd, buffer, 0, length, start);
-    return buffer.toString("utf8");
-  } finally {
-    fs.closeSync(fd);
-  }
-}
+const {
+  saveAutoContinueConfigs,
+  configureAutoContinue,
+  setAutoContinue,
+  clearAutoContinue,
+  inferAutoContinueResult,
+  enrichAutoContinueConfigs,
+  sendPromptToThread,
+  triggerAutoContinue,
+} = require("./host/auto-continue");
 
 class CodexAgentPanel {
   constructor(extensionUri, storage) {
@@ -206,7 +183,7 @@ class CodexAgentPanel {
   }
 
   saveAutoContinueConfigs() {
-    return this.storage.update("codexAgent.autoContinueConfigs", this.autoContinueConfigs);
+    return saveAutoContinueConfigs(this);
   }
 
   resolveSidebarView(webviewView) {
@@ -334,49 +311,15 @@ class CodexAgentPanel {
   }
 
   async runLifecycleAction(action, threadIdsOrOne) {
-    const ids = Array.isArray(threadIdsOrOne)
-      ? threadIdsOrOne.map((item) => String(item || "").trim()).filter(Boolean)
-      : [String(threadIdsOrOne || "").trim()].filter(Boolean);
-    if (!ids.length) return;
-    const config = getConfig();
-    try {
-      const result = await postLifecycleAction(config.baseUrl, action, ids, true);
-      const updatedCount = Array.isArray(result.updated) ? result.updated.length : 0;
-      const deletedCount = Array.isArray(result.deleted) ? result.deleted.length : 0;
-      const skippedCount = Array.isArray(result.skipped) ? result.skipped.length : 0;
-      this.lastActionNotice = `${action}: updated ${updatedCount}${deletedCount ? `, deleted ${deletedCount}` : ""}${skippedCount ? `, skipped ${skippedCount}` : ""}`;
-      const stillExists = action !== "hard_delete";
-      if (!stillExists && ids.includes(this.selectedThreadId)) {
-        this.selectedThreadId = undefined;
-      }
-      vscode.window.setStatusBarMessage(`Codex-Managed-Agent: ${this.lastActionNotice}`, 3200);
-      await this.refresh();
-    } catch (error) {
-      this.lastActionNotice = error instanceof Error ? error.message : String(error);
-      vscode.window.showErrorMessage(`Codex-Managed-Agent: ${this.lastActionNotice}`);
-      await this.refresh({ silent: true });
-    }
+    return runLifecycleAction(this, action, threadIdsOrOne);
   }
 
   async copyText(text, label = "Copied") {
-    if (!text) return;
-    await vscode.env.clipboard.writeText(String(text));
-    this.lastActionNotice = `${label} copied`;
-    vscode.window.setStatusBarMessage(`Codex-Managed-Agent: ${this.lastActionNotice}`, 2400);
-    await this.refresh({ silent: true });
+    return copyText(this, text, label);
   }
 
   async openLogFile(filePath) {
-    if (!filePath) return;
-    if (!fs.existsSync(filePath)) {
-      vscode.window.showWarningMessage(`Codex-Managed-Agent: log file not found: ${filePath}`);
-      return;
-    }
-    const uri = vscode.Uri.file(filePath);
-    const doc = await vscode.workspace.openTextDocument(uri);
-    await vscode.window.showTextDocument(doc, { preview: false, preserveFocus: false });
-    this.lastActionNotice = "Opened background log";
-    vscode.window.setStatusBarMessage(`Codex-Managed-Agent: ${this.lastActionNotice}`, 2200);
+    return openLogFile(this, filePath);
   }
 
   async runCommandInTerminal(command, label = "Command") {
@@ -389,289 +332,35 @@ class CodexAgentPanel {
   }
 
   async renameThread(threadId, currentTitle = "") {
-      if (!threadId) return;
-    const nextTitle = await vscode.window.showInputBox({
-      title: "Rename Codex thread",
-      prompt: "Update the thread label used by Codex-Managed-Agent",
-      value: String(currentTitle || ""),
-      ignoreFocusOut: true,
-      validateInput: (value) => String(value || "").trim() ? undefined : "Title cannot be empty",
-    });
-    if (nextTitle === undefined) return;
-    const title = String(nextTitle).trim();
-    if (!title) return;
-    const config = getConfig();
-    try {
-      await postRenameThread(config.baseUrl, threadId, title);
-      this.lastActionNotice = `Renamed thread to ${title}`;
-      vscode.window.setStatusBarMessage(`Codex-Managed-Agent: ${this.lastActionNotice}`, 2600);
-      await this.refresh();
-    } catch (error) {
-      this.lastActionNotice = error instanceof Error ? error.message : String(error);
-      vscode.window.showErrorMessage(`Codex-Managed-Agent: ${this.lastActionNotice}`);
-      await this.refresh({ silent: true });
-    }
+    return renameThread(this, threadId, currentTitle);
   }
 
   async configureAutoContinue(threadId, currentPrompt = "") {
-    if (!threadId) return;
-    const countPick = await vscode.window.showQuickPick(
-      [
-        { label: "10 times", value: 10 },
-        { label: "20 times", value: 20 },
-        { label: "50 times", value: 50 },
-        { label: "100 times", value: 100 },
-        { label: "Custom", value: -1 },
-      ],
-      {
-        title: "Auto continue loop",
-        placeHolder: "Choose how many times to auto resume this thread after it stops",
-        ignoreFocusOut: true,
-      },
-    );
-    if (!countPick) return;
-    let remaining = countPick.value;
-    if (remaining < 0) {
-      const customCount = await vscode.window.showInputBox({
-        title: "Auto continue loop",
-        prompt: "How many resume attempts should be allowed?",
-        value: "10",
-        ignoreFocusOut: true,
-        validateInput: (value) => {
-          const parsed = Number(String(value || "").trim());
-          return Number.isInteger(parsed) && parsed > 0 ? undefined : "Enter a positive integer";
-        },
-      });
-      if (customCount === undefined) return;
-      remaining = Number(customCount);
-    }
-    const prompt = await vscode.window.showInputBox({
-      title: "Auto continue loop",
-      prompt: "Prompt to send when the thread stops",
-      value: String(currentPrompt || "continue"),
-      ignoreFocusOut: true,
-      validateInput: (value) => String(value || "").trim() ? undefined : "Prompt cannot be empty",
-    });
-    if (prompt === undefined) return;
-    this.autoContinueConfigs[threadId] = {
-      prompt: String(prompt).trim(),
-      remaining,
-      total: remaining,
-      active: true,
-      lastTriggeredAt: 0,
-      lastLaunchStatus: "armed",
-      lastLogPath: "",
-      lastError: "",
-    };
-    await this.saveAutoContinueConfigs();
-    this.lastActionNotice = `Auto loop armed for ${remaining} run(s)`;
-    vscode.window.setStatusBarMessage(`Codex-Managed-Agent: ${this.lastActionNotice}`, 2800);
-    await this.refresh({ silent: true });
+    return configureAutoContinue(this, threadId, currentPrompt);
   }
 
   async setAutoContinue(threadId, prompt, count) {
-    if (!threadId) return;
-    const nextPrompt = String(prompt || "").trim();
-    const nextCount = Number(count);
-    if (!nextPrompt || !Number.isInteger(nextCount) || nextCount <= 0) {
-      vscode.window.showWarningMessage("Codex-Managed-Agent: auto loop needs a prompt and a positive count");
-      return;
-    }
-    this.autoContinueConfigs[threadId] = {
-      prompt: nextPrompt,
-      remaining: nextCount,
-      total: nextCount,
-      active: true,
-      lastTriggeredAt: 0,
-      lastLaunchStatus: "armed",
-      lastLogPath: "",
-      lastError: "",
-    };
-    await this.saveAutoContinueConfigs();
-    this.lastActionNotice = `Auto loop armed for ${nextCount} run(s)`;
-    vscode.window.setStatusBarMessage(`Codex-Managed-Agent: ${this.lastActionNotice}`, 2800);
-    await this.refresh({ silent: true });
+    return setAutoContinue(this, threadId, prompt, count);
   }
 
   async clearAutoContinue(threadId) {
-    if (!threadId || !this.autoContinueConfigs[threadId]) return;
-    delete this.autoContinueConfigs[threadId];
-    await this.saveAutoContinueConfigs();
-    this.lastActionNotice = "Auto loop removed";
-    vscode.window.setStatusBarMessage(`Codex-Managed-Agent: ${this.lastActionNotice}`, 2200);
-    await this.refresh({ silent: true });
-  }
-
-  findThreadContext(threadId) {
-    const dashboard = this.lastPayload?.dashboard;
-    const thread = dashboard?.threads?.find((item) => item.id === threadId)
-      || dashboard?.runningThreads?.find((item) => item.id === threadId)
-      || (this.lastPayload?.detail?.thread?.id === threadId ? this.lastPayload.detail.thread : undefined);
-    return thread || {};
-  }
-
-  isProcessAlive(pid) {
-    const value = Number(pid);
-    if (!Number.isInteger(value) || value <= 0) return false;
-    try {
-      process.kill(value, 0);
-      return true;
-    } catch (error) {
-      return false;
-    }
+    return clearAutoContinue(this, threadId);
   }
 
   inferAutoContinueResult(config) {
-    if (!config) {
-      return {
-        state: "idle",
-        label: "Idle",
-        detail: "No background continue activity recorded yet.",
-        tailLine: "",
-      };
-    }
-    const pidAlive = this.isProcessAlive(config.lastPid);
-    const tail = readFileTail(config.lastLogPath, 10000).trim();
-    const tailLine = tail.split(/\n/).map((line) => line.trim()).filter(Boolean).slice(-1)[0] || "";
-    if (config.lastLaunchStatus === "failed") {
-      return {
-        state: "failed",
-        label: "Failed",
-        detail: config.lastError || "Background continue failed to launch.",
-        tailLine,
-      };
-    }
-    if (pidAlive) {
-      return {
-        state: "running",
-        label: "Still running",
-        detail: "The detached Codex resume process is still active.",
-        tailLine,
-      };
-    }
-    const failedRe = /(error:|failed|panic|unexpected argument|no rollout found|refusing to start|not authorized|permission denied)/i;
-    const successRe = /("task_complete"|"completed"|final_response|assistant_message|applied|done|finished successfully|patch applied)/i;
-    if (failedRe.test(tail)) {
-      return {
-        state: "failed",
-        label: "Failed",
-        detail: shortText(tailLine || config.lastError || "Background continue failed.", 180),
-        tailLine,
-      };
-    }
-    if (successRe.test(tail)) {
-      return {
-        state: "success",
-        label: "Succeeded",
-        detail: "The last detached continue appears to have completed successfully.",
-        tailLine,
-      };
-    }
-    if (config.lastTriggeredAt) {
-      return {
-        state: "queued",
-        label: "Queued",
-        detail: "The last detached continue was queued; waiting for a clearer completion signal.",
-        tailLine,
-      };
-    }
-    return {
-      state: "armed",
-      label: "Armed",
-      detail: "Auto loop is armed and waiting for a real stop signal.",
-      tailLine,
-    };
+    return inferAutoContinueResult(config);
   }
 
   enrichAutoContinueConfigs() {
-    const result = {};
-    Object.entries(this.autoContinueConfigs || {}).forEach(([threadId, config]) => {
-      const inferred = this.inferAutoContinueResult(config);
-      result[threadId] = {
-        ...config,
-        lastResult: inferred,
-      };
-    });
-    return result;
-  }
-
-  launchCodexExecResume(threadId, prompt, cwd, reason = "manual") {
-    const logsDir = ensureDirSync(path.join(os.homedir(), ".codex-managed-agent", "logs"));
-    const stamp = new Date().toISOString().replace(/[:.]/g, "-");
-    const logPath = path.join(logsDir, `${safeFileSlug(threadId)}-${safeFileSlug(reason)}-${stamp}.log`);
-    const out = fs.openSync(logPath, "a");
-    const child = childProcess.spawn(
-      "codex",
-      ["exec", "resume", threadId, prompt, "--skip-git-repo-check", "--json"],
-      {
-        cwd,
-        detached: true,
-        stdio: ["ignore", out, out],
-        env: { ...process.env, TERM: process.env.TERM || "xterm-256color" },
-      },
-    );
-    child.unref();
-    return { pid: child.pid, logPath };
+    return enrichAutoContinueConfigs(this);
   }
 
   async sendPromptToThread(threadId, prompt) {
-    if (!threadId) return;
-    const nextPrompt = String(prompt || "").trim();
-    if (!nextPrompt) {
-      vscode.window.showWarningMessage("Codex-Managed-Agent: prompt cannot be empty");
-      return;
-    }
-
-    const thread = this.findThreadContext(threadId);
-    const fallbackCwd = vscode.workspace.workspaceFolders?.[0]?.uri.fsPath || os.homedir();
-    const cwd = thread.cwd || fallbackCwd;
-    try {
-      const launched = this.launchCodexExecResume(threadId, nextPrompt, cwd, "manual");
-      this.lastActionNotice = `Prompt queued in background · ${thread.title || threadId}`;
-      vscode.window.setStatusBarMessage(`Codex-Managed-Agent: ${this.lastActionNotice}`, 2600);
-      await this.refresh({ silent: true });
-      return launched;
-    } catch (error) {
-      const detail = error instanceof Error ? error.message : String(error);
-      vscode.window.showErrorMessage(`Codex-Managed-Agent: Failed to send prompt in background: ${detail}`);
-      throw error;
-    }
+    return sendPromptToThread(this, threadId, prompt);
   }
 
   async triggerAutoContinue(threadId, config) {
-    if (!threadId || !config || !config.active || config.remaining <= 0) return false;
-    const now = Date.now();
-    if (config.lastTriggeredAt && now - config.lastTriggeredAt < 8000) {
-      return false;
-    }
-    const prompt = String(config.prompt || "continue").trim();
-    const thread = this.findThreadContext(threadId);
-    const fallbackCwd = vscode.workspace.workspaceFolders?.[0]?.uri.fsPath || os.homedir();
-    const cwd = thread.cwd || fallbackCwd;
-    try {
-      const launched = this.launchCodexExecResume(threadId, prompt, cwd, "auto-loop");
-      config.lastLaunchStatus = "queued";
-      config.lastLogPath = launched.logPath || "";
-      config.lastPid = launched.pid || 0;
-      config.lastError = "";
-    } catch (error) {
-      config.lastLaunchStatus = "failed";
-      config.lastError = error instanceof Error ? error.message : String(error);
-      await this.saveAutoContinueConfigs();
-      this.lastActionNotice = `Auto loop failed to queue`;
-      vscode.window.showWarningMessage(`Codex-Managed-Agent: ${this.lastActionNotice}`);
-      return false;
-    }
-    config.remaining -= 1;
-    config.lastTriggeredAt = now;
-    config.lastPrompt = prompt;
-    if (config.remaining <= 0) {
-      config.active = false;
-    }
-    await this.saveAutoContinueConfigs();
-    this.lastActionNotice = `Auto loop queued in background · ${config.remaining} left`;
-    vscode.window.setStatusBarMessage(`Codex-Managed-Agent: ${this.lastActionNotice}`, 3200);
-    return true;
+    return triggerAutoContinue(this, threadId, config);
   }
 
   async openInCodexEditor(threadId) {
