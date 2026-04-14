@@ -8,16 +8,16 @@ function getWebviewHtml(webview, extensionUri) {
   const mediaRoot = vscode.Uri.joinPath(extensionUri, "media");
   const media = {
     hero: webview.asWebviewUri(vscode.Uri.joinPath(mediaRoot, "home-runing.svg")).toString(),
-    board: webview.asWebviewUri(vscode.Uri.joinPath(mediaRoot, "卡通形象.svg")).toString(),
-    intervention: webview.asWebviewUri(vscode.Uri.joinPath(mediaRoot, "小鸡 动物 鸟.svg")).toString(),
-    spotlight: webview.asWebviewUri(vscode.Uri.joinPath(mediaRoot, "live照片.svg")).toString(),
+    board: webview.asWebviewUri(vscode.Uri.joinPath(mediaRoot, "board-hero.svg")).toString(),
+    intervention: webview.asWebviewUri(vscode.Uri.joinPath(mediaRoot, "intervention-bird.svg")).toString(),
+    spotlight: webview.asWebviewUri(vscode.Uri.joinPath(mediaRoot, "spotlight-live-photo.svg")).toString(),
     timeline: webview.asWebviewUri(vscode.Uri.joinPath(mediaRoot, "toruning.svg")).toString(),
     rest: webview.asWebviewUri(vscode.Uri.joinPath(mediaRoot, "婴儿枕头.svg")).toString(),
     planning: webview.asWebviewUri(vscode.Uri.joinPath(mediaRoot, "createtask.svg")).toString(),
-    tooling: webview.asWebviewUri(vscode.Uri.joinPath(mediaRoot, "卡通手表.svg")).toString(),
+    tooling: webview.asWebviewUri(vscode.Uri.joinPath(mediaRoot, "tooling-watch.svg")).toString(),
     editing: webview.asWebviewUri(vscode.Uri.joinPath(mediaRoot, "edit.svg")).toString(),
     testing: webview.asWebviewUri(vscode.Uri.joinPath(mediaRoot, "runing.svg")).toString(),
-    waiting: webview.asWebviewUri(vscode.Uri.joinPath(mediaRoot, "卡通绵羊-copy.svg")).toString(),
+    waiting: webview.asWebviewUri(vscode.Uri.joinPath(mediaRoot, "waiting-sheep.svg")).toString(),
   };
   return `<!doctype html>
 <html lang="en">

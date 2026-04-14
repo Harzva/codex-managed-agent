@@ -4,4 +4,10 @@
 node_modules/**
 *.vsix
 *.log
-
+media/064_提醒.svg
+media/卡通.svg
+media/卡通头像.svg
+media/卡通牛.svg
+media/卡通马.svg
+media/婴儿枕头.svg
+media/提醒.svg
