@@ -38,6 +38,7 @@ Notes:
 
 - Goal: show the board as the core differentiator
 - Reference: `SCENE_DESIGN.md` → Scene 2
+- Shot spec: `docs/screenshots/board-active-cards-shot.md`
 
 ### 3. `needs-human-dock.png`
 
