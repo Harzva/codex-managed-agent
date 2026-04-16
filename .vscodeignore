@@ -5,6 +5,8 @@ node_modules/**
 out/**
 dist/**
 coverage/**
+__pycache__/**
+*.py[cod]
 .DS_Store
 .codex-loop/**
 .claude/**

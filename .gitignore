@@ -12,3 +12,5 @@ coverage/
 .codex-loop/state/
 *.pid
 *.log
+__pycache__/
+*.py[cod]
