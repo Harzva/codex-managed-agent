@@ -1,0 +1,9 @@
+Completed one bounded `codex-loop` analysis slice.
+
+Audited the explicit-state hardening and found a containment issue: `taskHasStatus()` currently inherits `taskStatus()`’s `queued` fallback, so a malformed or legacy task with missing `status` can become claimable. That is a behavior drift from the prior inline check, where missing status was not claimable.
+
+Updated [.claude/plans/ACTIVE_PLAN.md](/home/clashuser/hzh/work_bo/codex_manager/vscode-extension/recovered/codex-managed-agent-0.0.71/extension/.claude/plans/ACTIVE_PLAN.md):19 to make the next slice a containment execution pass. Reopened the explicit-state checkbox in [task-plans/codex-team-mailbox-loop-task-plan.md](/home/clashuser/hzh/work_bo/codex_manager/vscode-extension/recovered/codex-managed-agent-0.0.71/extension/task-plans/codex-team-mailbox-loop-task-plan.md):41 until that fallback behavior is fixed.
+
+Wrote the evolution note at [.claude/plans/loloop/evolution-2026-04-16-mailbox-explicit-state-fallback-audit.md](/home/clashuser/hzh/work_bo/codex_manager/vscode-extension/recovered/codex-managed-agent-0.0.71/extension/.claude/plans/loloop/evolution-2026-04-16-mailbox-explicit-state-fallback-audit.md). `node --check src/host/team-coordination.js` passed; no code changed in this analysis pass, so packaging was not required. Synced the task plan, active plan, and evolution note to `/home/clashuser/hzh/work_bo/codex_manager/vscode-extension` and verified with `cmp`.
+
+Next smallest handoff: follow [.claude/plans/ACTIVE_PLAN.md](/home/clashuser/hzh/work_bo/codex_manager/vscode-extension/recovered/codex-managed-agent-0.0.71/extension/.claude/plans/ACTIVE_PLAN.md):21 and fix the status predicate fallback so missing `task.status` is not treated as `queued` for claimable, active, blockable, or completable checks.

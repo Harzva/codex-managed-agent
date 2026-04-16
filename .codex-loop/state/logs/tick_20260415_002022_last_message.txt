@@ -1,9 +1,0 @@
-完成了一个有边界的 `prompt-rule-memo-cards` Task 3 slice：thread drawer 现在也会显示 prompt/rule/memo shortcut row。
-
-改动只在 [webview-template.js](/home/clashuser/export/codex-managed-agent/src/webview-template.js#L6334)。我复用了已有的 `renderMemoryShortcutRow()`，只在 drawer 的正常 actions 态下注入这组 shortcuts，不碰 confirm state。这样 prompt/rule/memo 的 memory context 现在已经覆盖 spotlight、main running board 和 drawer 三个 active-work surfaces，所以 [prompt-rule-memo-cards-task-plan.md](/home/clashuser/export/codex-managed-agent/task-plans/prompt-rule-memo-cards-task-plan.md#L1) 里 Task 3 两项都已经勾完。
-
-我已更新 [ACTIVE_PLAN.md](/home/clashuser/export/codex-managed-agent/.claude/plans/ACTIVE_PLAN.md#L1)，把下一步收敛到一次 Task 3 review。新的 evolution note 在 [evolution-2026-04-15-prompt-rule-memo-drawer-shortcuts.md](/home/clashuser/export/codex-managed-agent/.claude/plans/loloop/evolution-2026-04-15-prompt-rule-memo-drawer-shortcuts.md#L1)。
-
-验证已完成：`node --check src/webview-template.js` 和 `npm run package` 都通过，并重新生成了 [codex-managed-agent-0.0.3.vsix](/home/clashuser/export/codex-managed-agent/codex-managed-agent-0.0.3.vsix)。代码、task-plan、active plan、note 和 VSIX 已同步到 `/home/clashuser/hzh/work_bo/codex_manager/vscode-extension`。
-
-下一轮 handoff 保持同一 track 且不扩张：只做一次 Task 3 review，确认 workflow integration 是否已经足够关闭，再决定是否进入这条 track 的 exit review。

@@ -1,9 +1,0 @@
-完成了一个有边界的 `codex-loop-control-surface` Task 1 slice：现有 `Loop Daemon` card 现在也会显示最新状态和一段 last-tick summary。
-
-实现落点在 [src/host/state-sync.js](/home/clashuser/export/codex-managed-agent/src/host/state-sync.js#L1)。这次仍然没有加新 UI 结构，只把 `.codex-loop/state/status.json` 里的 `phase` 和 `last_message_preview` 截断后拼进现有 daemon card 的 detail 文案里。
-
-我已更新 [codex-loop-control-surface-task-plan.md](/home/clashuser/export/codex-managed-agent/task-plans/codex-loop-control-surface-task-plan.md#L1)，Task 1 现在三项都已完成；[ACTIVE_PLAN.md](/home/clashuser/export/codex-managed-agent/.claude/plans/ACTIVE_PLAN.md#L1) 也已经切到 Task 2 audit。新的 evolution note 在 [evolution-2026-04-15-loop-control-status-summary.md](/home/clashuser/export/codex-managed-agent/.claude/plans/loloop/evolution-2026-04-15-loop-control-status-summary.md#L1)。
-
-验证已完成：`node --check src/host/state-sync.js`、`node --check src/webview-template.js` 通过，`npm run package` 通过，并重新生成了 [codex-managed-agent-0.0.3.vsix](/home/clashuser/export/codex-managed-agent/codex-managed-agent-0.0.3.vsix)。代码、task-plan、active plan、note 和 VSIX 已同步到 `/home/clashuser/hzh/work_bo/codex_manager/vscode-extension`。
-
-下一轮 handoff 保持同一轨道且不扩张：只做一次 Task 2 audit，找出第一个最小的 watch/tail surface gap，不进入 runtime controls。

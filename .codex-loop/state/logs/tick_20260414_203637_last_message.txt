@@ -1,7 +1,0 @@
-完成了一次有边界的 `codex-loop-control-surface` Task 2 audit，没有加新代码。
-
-结论是：`raw_log_path` 已经可见之后，下一个最小的 watch/tail gap 不是直接做 tail，而是先给现有 loop daemon surface 加一个直接打开最新日志的动作。理由很直接：`raw_log_path` 已经在 UI 里，host 侧也已经有 [openLogFile()](/home/clashuser/export/codex-managed-agent/src/host/lifecycle.js#L182)，但 loop daemon 卡片还没有 one-click log access。这个结论已经收敛进 [ACTIVE_PLAN.md](/home/clashuser/export/codex-managed-agent/.claude/plans/ACTIVE_PLAN.md#L17)。
-
-我已写入新的 evolution note：[evolution-2026-04-15-loop-control-task2-second-audit.md](/home/clashuser/export/codex-managed-agent/.claude/plans/loloop/evolution-2026-04-15-loop-control-task2-second-audit.md#L1)。这轮是 review-only，没有代码变化，所以没有运行打包。更新后的 active plan 和新 note 已同步到 `/home/clashuser/hzh/work_bo/codex_manager/vscode-extension`。
-
-下一轮 handoff 保持同一轨道且不扩张：只补一个 `latest-log open action`，复用现有 `openLogFile` 通路，不进入 tail 渲染或 runtime controls。

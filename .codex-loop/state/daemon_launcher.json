@@ -1,8 +1,8 @@
 {
   "launcher": "tmux",
   "thread_mode": "forced_thread",
-  "tmux_session": "codex-loop-codex-managed-agent-77382836",
-  "workspace": "/home/clashuser/export/codex-managed-agent",
-  "prompt_file": "/home/clashuser/export/codex-managed-agent/.codex-loop/prompt.md",
-  "state_dir": "/home/clashuser/export/codex-managed-agent/.codex-loop/state"
+  "tmux_session": "codex-loop-extension-f67e12b2",
+  "workspace": "/home/clashuser/hzh/work_bo/codex_manager/vscode-extension/recovered/codex-managed-agent-0.0.71/extension",
+  "prompt_file": "/home/clashuser/hzh/work_bo/codex_manager/vscode-extension/recovered/codex-managed-agent-0.0.71/extension/.codex-loop/prompt.md",
+  "state_dir": "/home/clashuser/hzh/work_bo/codex_manager/vscode-extension/recovered/codex-managed-agent-0.0.71/extension/.codex-loop/state"
 }

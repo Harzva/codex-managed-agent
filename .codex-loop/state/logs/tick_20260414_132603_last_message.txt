@@ -1,7 +1,0 @@
-完成了一次有边界的 `no-editor-first-workflows` Task 3 audit，没有加新代码。
-
-审计结论是：当前最小的 fallback-path gap 在 editor-opening 动作的命名。running board card 里主按钮仍然叫 `Open`，spotlight / drawer 里也有 `Open Codex` 这类表述；这些动作实际上都在离开 managed center，但文案没有把它们明确标成 editor fallback。因此我把当前 slice 收敛到一个很小的 wording patch，见 [ACTIVE_PLAN.md](/home/clashuser/export/codex-managed-agent/.claude/plans/ACTIVE_PLAN.md#L17)。
-
-新的 evolution note 已写入 [evolution-2026-04-14-no-editor-task3-audit.md](/home/clashuser/export/codex-managed-agent/.claude/plans/loloop/evolution-2026-04-14-no-editor-task3-audit.md#L1)。这轮没有代码变化，所以没有运行打包；更新后的 active plan 和新 note 已同步到 `/home/clashuser/hzh/work_bo/codex_manager/vscode-extension`。
-
-下一轮 handoff 保持同一轨道且不扩张：只做一个 Task 3 小切片，把 editor-opening fallback actions 的文案改成明确的 editor wording，不碰 terminal semantics 或更大的 action redesign。

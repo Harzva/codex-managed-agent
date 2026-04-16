@@ -1,7 +1,0 @@
-完成了一次有边界的 `codex-loop-control-surface` Task 1 audit，没有加新代码。
-
-结论是：daemon running-state 之后，下一个最小的 loop-status metadata gap 是 `current thread id + launcher + heartbeat`。这三项都已经在 `.codex-loop/state/thread_id.txt`、`.codex-loop/state/daemon_launcher.json` 和 `.codex-loop/state/daemon_heartbeat.json` 里存在，所以最合理的下一 slice 是把它们接到现有 `Loop Daemon` surface，而不是先扩到 `status.json` 的 last tick summary 或 watch/tail。
-
-我已更新 [ACTIVE_PLAN.md](/home/clashuser/export/codex-managed-agent/.claude/plans/ACTIVE_PLAN.md#L1)，把当前 slice 收敛成“只补 thread id、launcher 和 heartbeat metadata”。新的 evolution note 在 [evolution-2026-04-15-loop-control-task1-second-audit.md](/home/clashuser/export/codex-managed-agent/.claude/plans/loloop/evolution-2026-04-15-loop-control-task1-second-audit.md#L1)。
-
-这轮是 review-only，没有代码变化，所以没有运行打包。更新后的 active plan 和新 note 已同步到 `/home/clashuser/hzh/work_bo/codex_manager/vscode-extension`。下一轮 handoff 保持同一轨道且不扩张：只补 `thread id + launcher + heartbeat` metadata，不进入 last tick summary、watch/tail 或 runtime controls。

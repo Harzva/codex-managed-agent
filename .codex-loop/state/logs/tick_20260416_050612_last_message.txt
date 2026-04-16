@@ -1,0 +1,11 @@
+Completed one bounded analysis loop for the mailbox track.
+
+Audited the stale-lease recovery note against the current runtime constants and action paths. The note aligns with `TASK_STATES.STALE`, current stale claimability, and the absence of any background stale detector. No drift or regression risk was found.
+
+Updated [ACTIVE_PLAN.md](/home/clashuser/hzh/work_bo/codex_manager/vscode-extension/recovered/codex-managed-agent-0.0.71/extension/.claude/plans/ACTIVE_PLAN.md):19 to steer the next pass toward a foreground supervisor stale-marking action only. Wrote the new analysis note at [evolution-2026-04-16-mailbox-stale-lease-analysis.md](/home/clashuser/hzh/work_bo/codex_manager/vscode-extension/recovered/codex-managed-agent-0.0.71/extension/.claude/plans/loloop/evolution-2026-04-16-mailbox-stale-lease-analysis.md):1.
+
+Validation: `node --check src/host/team-coordination.js` passed. Packaging was not run because only plan/note files changed.
+
+Synced the changed files back to `/home/clashuser/hzh/work_bo/codex_manager/vscode-extension` and verified them with `cmp`.
+
+Next smallest handoff: follow [ACTIVE_PLAN.md](/home/clashuser/hzh/work_bo/codex_manager/vscode-extension/recovered/codex-managed-agent-0.0.71/extension/.claude/plans/ACTIVE_PLAN.md):19 and implement only a foreground supervisor recovery path that marks expired `running` leases as `stale`, preserves owner/result data, appends `task.stale`, refreshes mailbox state, and avoids background reclamation.

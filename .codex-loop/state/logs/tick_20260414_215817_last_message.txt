@@ -1,9 +1,0 @@
-完成了一次有边界的 `codex-loop-control-surface` Task 4 audit，没有加新代码。
-
-结论很明确：第一个最小的 runtime control gap 是 `stop`，不是 `start` 或 `restart`。原因也很直接，`codex_loop_automation.py` 已经原生支持 `.codex-loop/state/stop.flag` 这条 stop contract，所以它是现成的、最窄的 host-side control path；而 `start` / `restart` 都要处理更大的 launcher 语义。
-
-我已更新 [ACTIVE_PLAN.md](/home/clashuser/export/codex-managed-agent/.claude/plans/ACTIVE_PLAN.md#L17)，把当前 slice 收敛成“add one bounded stop-loop control path”。新的 evolution note 在 [evolution-2026-04-15-loop-control-task4-first-audit.md](/home/clashuser/export/codex-managed-agent/.claude/plans/loloop/evolution-2026-04-15-loop-control-task4-first-audit.md#L1)。
-
-这轮是 review-only，没有代码变化，所以没有运行打包。更新后的 active plan 和新 note 已同步到 `/home/clashuser/hzh/work_bo/codex_manager/vscode-extension`。
-
-下一轮 handoff 保持同一轨道且不扩张：只 patch 一个 stop-loop control path，不进入 start、restart 或 broader daemon-management redesign。

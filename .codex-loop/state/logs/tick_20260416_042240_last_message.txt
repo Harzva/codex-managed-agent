@@ -1,0 +1,9 @@
+Completed one bounded mailbox execution slice.
+
+Changed [src/host/team-coordination.js](/home/clashuser/hzh/work_bo/codex_manager/vscode-extension/recovered/codex-managed-agent-0.0.71/extension/src/host/team-coordination.js:277) to add `isInboxEnvelope()` and make `appendInbox()` append only messages with `message_id`, `target_agent_id`, and `created_at`. Task IDs, event IDs, inbox message IDs, UI, stale recovery, and board/tab behavior were left unchanged.
+
+Updated [ACTIVE_PLAN.md](/home/clashuser/hzh/work_bo/codex_manager/vscode-extension/recovered/codex-managed-agent-0.0.71/extension/.claude/plans/ACTIVE_PLAN.md:19) and wrote the evolution note at [evolution-2026-04-16-mailbox-append-inbox-envelope-guard.md](/home/clashuser/hzh/work_bo/codex_manager/vscode-extension/recovered/codex-managed-agent-0.0.71/extension/.claude/plans/loloop/evolution-2026-04-16-mailbox-append-inbox-envelope-guard.md:1).
+
+Validation passed: `node --check src/host/team-coordination.js` and `npm run package` completed successfully; VSIX output was 85 files, 411.78 KB. Synced the repo-facing changed files back to `/home/clashuser/hzh/work_bo/codex_manager/vscode-extension` and verified them with `cmp`. The generated VSIX was not synced.
+
+Next smallest handoff: run an analysis loop from `.claude/plans/ACTIVE_PLAN.md` to verify valid inbox messages still append, malformed messages are rejected, and task/event/inbox ID behavior did not drift before authorizing broader Task 2 write-path hardening.

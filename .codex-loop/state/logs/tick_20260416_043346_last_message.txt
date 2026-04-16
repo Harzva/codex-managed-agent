@@ -1,0 +1,9 @@
+Completed one bounded mailbox execution slice.
+
+Changed [src/host/team-coordination.js](/home/clashuser/hzh/work_bo/codex_manager/vscode-extension/recovered/codex-managed-agent-0.0.71/extension/src/host/team-coordination.js:235) so `readTaskRecords` now accepts only task files whose filename stem matches a filename-safe `task_id` envelope. This keeps restart recovery anchored on mailbox task files and ignores mismatched or unsafe task records without changing task creation, IDs, UI, stale recovery, or board/tab semantics.
+
+Updated [ACTIVE_PLAN.md](/home/clashuser/hzh/work_bo/codex_manager/vscode-extension/recovered/codex-managed-agent-0.0.71/extension/.claude/plans/ACTIVE_PLAN.md:19) and wrote [evolution-2026-04-16-mailbox-task-recovery-read-filter.md](/home/clashuser/hzh/work_bo/codex_manager/vscode-extension/recovered/codex-managed-agent-0.0.71/extension/.claude/plans/loloop/evolution-2026-04-16-mailbox-task-recovery-read-filter.md:1).
+
+Validation passed: `node --check src/host/team-coordination.js`, a focused recovery probe, and `npm run package`; package output was 85 files, 412.3 KB. Synced source and plan changes to `/home/clashuser/hzh/work_bo/codex_manager/vscode-extension` and verified with `cmp`.
+
+Next smallest handoff: run the analysis slice in `.claude/plans/ACTIVE_PLAN.md` to verify valid task files recover, mismatched or unsafe task files are ignored, and task/event/inbox ID behavior did not drift before selecting the next mailbox-file-only restart-recovery slice.

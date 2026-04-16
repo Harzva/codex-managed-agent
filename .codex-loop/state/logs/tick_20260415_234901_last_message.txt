@@ -1,0 +1,9 @@
+**Analysis Loop**
+
+This pass stayed in analysis mode again. I re-audited the mailbox track and narrowed the remaining hardening risk: mailbox actions currently trust any non-empty `threadId`, so they can write `.codex-team` task or agent state for stale or non-existent threads even though they still do not directly mutate legacy thread lifecycle or board/tab metadata.
+
+I updated [ACTIVE_PLAN.md](/home/clashuser/hzh/work_bo/codex_manager/vscode-extension/recovered/codex-managed-agent-0.0.71/extension/.claude/plans/ACTIVE_PLAN.md) so the next bounded execution slice is now explicit: reject stale or non-existent thread ids before mailbox actions write `.codex-team` state. I also wrote the new analysis note at [evolution-2026-04-16-mailbox-thread-id-safety-analysis.md](/home/clashuser/hzh/work_bo/codex_manager/vscode-extension/recovered/codex-managed-agent-0.0.71/extension/.claude/plans/loloop/evolution-2026-04-16-mailbox-thread-id-safety-analysis.md). The cadence audit is still aligned: current task plan, active plan, prompt, and UI all use the `1 minute` default, and the earlier `10 minute` / `2 minute` notes remain historical drift only.
+
+No code changed, so I did not run packaging. I synced the updated active plan and note back to `/home/clashuser/hzh/work_bo/codex_manager/vscode-extension`.
+
+Next smallest handoff for the same track: execute one hardening-first slice that adds live-thread validation before `assign`, `claim`, `heartbeat`, `block`, or `complete` can mutate `.codex-team` state.

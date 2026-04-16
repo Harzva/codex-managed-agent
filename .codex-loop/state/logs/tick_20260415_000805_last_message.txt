@@ -1,7 +1,0 @@
-完成了一次有边界的 `prompt-rule-memo-cards` Task 3 audit，没有加新代码。
-
-结论已经收敛：当前第一个最小的 workflow-integration gap 是 running board cards 还没有 prompt/rule/memo references。memory cards 已经独立存在，spotlight 也已经有 memory shortcut row，但 agent cards 本身还没有直接引用这些 memory objects，所以这条链路还没有真正进入 active work surface。
-
-我已更新 [ACTIVE_PLAN.md](/home/clashuser/export/codex-managed-agent/.claude/plans/ACTIVE_PLAN.md#L1)，把当前 slice 收敛成“只给 running board cards 补一个 bounded prompt/rule/memo shortcut row”。新的 evolution note 在 [evolution-2026-04-15-prompt-rule-memo-task3-first-audit.md](/home/clashuser/export/codex-managed-agent/.claude/plans/loloop/evolution-2026-04-15-prompt-rule-memo-task3-first-audit.md#L1)。这轮是 review-only，没有运行打包。相关 active plan 和新 note 已同步到 `/home/clashuser/hzh/work_bo/codex_manager/vscode-extension`。
-
-下一轮 handoff 保持同一 track 且不扩张：只 patch running board cards 的 memory shortcut row，不进入更大的 memory workflow redesign。

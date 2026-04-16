@@ -1,6 +1,6 @@
 {
-  "pid": 2219351,
-  "interval_minutes": 3,
-  "stopped_at": "2026-04-16T13:34:23.048954+00:00",
-  "phase": "stopped"
+  "pid": 1909072,
+  "interval_minutes": 1,
+  "last_loop_started_at": "2026-04-16T05:12:36.717225+00:00",
+  "phase": "tick"
 }

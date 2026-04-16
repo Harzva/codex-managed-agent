@@ -1,9 +1,0 @@
-完成了一个有边界的 `no-editor-first-workflows` Task 3 slice：drawer command cards 的 terminal-launch fallback 文案现在已经明确了。改动都在 [src/webview-template.js](/home/clashuser/export/codex-managed-agent/src/webview-template.js#L5848) 和 [src/webview-template.js](/home/clashuser/export/codex-managed-agent/src/webview-template.js#L5998) 附近，包括：
-- `Resume` → `Resume in Terminal`
-- `Fork` → `Fork in Terminal`
-- `Run` → `Run in Terminal`
-- `Copy` → `Copy Command`
-
-我已更新 [ACTIVE_PLAN.md](/home/clashuser/export/codex-managed-agent/.claude/plans/ACTIVE_PLAN.md#L17)，把下一步收敛到一次 Task 3 review。新的 evolution note 已写入 [evolution-2026-04-14-no-editor-task3-terminal-wording.md](/home/clashuser/export/codex-managed-agent/.claude/plans/loloop/evolution-2026-04-14-no-editor-task3-terminal-wording.md#L1)。
-
-验证已完成：`node --check src/webview-template.js` 通过，`npm run package` 通过，并重新生成了 `codex-managed-agent-0.0.2.vsix`。代码、active plan 和新 note 已同步到 `/home/clashuser/hzh/work_bo/codex_manager/vscode-extension`。下一轮 handoff 保持同一轨道且不扩张：只做一次 Task 3 review，判断 fallback actions 现在是否已经足够显式；如果还差一点，只补那个最小剩余 fallback-path gap。

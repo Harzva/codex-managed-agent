@@ -1,0 +1,11 @@
+Completed one bounded execution loop for the mailbox track.
+
+Added the stale-lease recovery behavior note and closed the final Task 3 checkbox in [codex-team-mailbox-loop-task-plan.md](/home/clashuser/hzh/work_bo/codex_manager/vscode-extension/recovered/codex-managed-agent-0.0.71/extension/task-plans/codex-team-mailbox-loop-task-plan.md):75. The note keeps stale recovery explicit/manual, preserves non-destructive behavior, and prohibits background reclamation until a later hardening slice.
+
+Updated [ACTIVE_PLAN.md](/home/clashuser/hzh/work_bo/codex_manager/vscode-extension/recovered/codex-managed-agent-0.0.71/extension/.claude/plans/ACTIVE_PLAN.md):19 and wrote the new evolution note at [evolution-2026-04-16-mailbox-stale-lease-behavior.md](/home/clashuser/hzh/work_bo/codex_manager/vscode-extension/recovered/codex-managed-agent-0.0.71/extension/.claude/plans/loloop/evolution-2026-04-16-mailbox-stale-lease-behavior.md):1.
+
+Validation: `node --check src/host/team-coordination.js` passed. Packaging was not run because only docs/plan files changed.
+
+Synced the changed files back to `/home/clashuser/hzh/work_bo/codex_manager/vscode-extension` and verified them with `cmp`.
+
+Next smallest handoff: follow [ACTIVE_PLAN.md](/home/clashuser/hzh/work_bo/codex_manager/vscode-extension/recovered/codex-managed-agent-0.0.71/extension/.claude/plans/ACTIVE_PLAN.md):19 and run an analysis loop to audit the stale-lease note against `TASK_STATES`, current claimability, and non-destructive constraints before choosing the next hardening or Task 6 slice.

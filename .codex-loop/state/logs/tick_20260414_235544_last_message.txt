@@ -1,7 +1,0 @@
-完成了一次有边界的 `prompt-rule-memo-cards` Task 2 audit，没有加新代码。
-
-结论已经收敛：file-backed metadata 之后，下一个最小的 source-integration gap 不是 editing，而是 prompt source 对齐。当前 prompt card 和 spotlight 的 prompt shortcut 仍然都指向 `plan.md`，但实际 loop prompt 文件在 [lifecycle.js](/home/clashuser/export/codex-managed-agent/src/host/lifecycle.js#L45) 里已经明确是 `.codex-loop/prompt.md`。所以现在最小、最干净的一刀就是把 prompt memory surface 对齐到真实 prompt 文件。
-
-我已更新 [ACTIVE_PLAN.md](/home/clashuser/export/codex-managed-agent/.claude/plans/ACTIVE_PLAN.md#L1)，把当前 slice 收敛成“只把 prompt card 和 prompt shortcut 从 `plan.md` 改到 `.codex-loop/prompt.md`”。新的 evolution note 在 [evolution-2026-04-15-prompt-rule-memo-task2-audit.md](/home/clashuser/export/codex-managed-agent/.claude/plans/loloop/evolution-2026-04-15-prompt-rule-memo-task2-audit.md#L1)。这轮是 review-only，没有运行打包。相关 active plan 和新 note 已同步到 `/home/clashuser/hzh/work_bo/codex_manager/vscode-extension`。
-
-下一轮 handoff 保持同一 track 且不扩张：只 patch prompt-source alignment，把 prompt card 和 prompt shortcut 指到 `.codex-loop/prompt.md`，不进入 editing flow 或更大的 memory workflow work。

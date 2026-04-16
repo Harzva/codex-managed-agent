@@ -1,0 +1,7 @@
+这是一次 `analysis loop`，没有改代码。
+
+这轮我把剩余 Task 6 执行目标进一步收窄到了真实的数据源上：在 [codex-team-mailbox-loop-task-plan.md](/home/clashuser/hzh/work_bo/codex_manager/vscode-extension/recovered/codex-managed-agent-0.0.71/extension/task-plans/codex-team-mailbox-loop-task-plan.md) 和 [ACTIVE_PLAN.md](/home/clashuser/hzh/work_bo/codex_manager/vscode-extension/recovered/codex-managed-agent-0.0.71/extension/.claude/plans/ACTIVE_PLAN.md) 里明确写成“共享 live-thread resolver 必须基于当前 host dashboard thread set”，而不是留成隐含实现。这个结论对应现有 host state 路径：dashboard 线程集已经在 [state-sync.js](/home/clashuser/hzh/work_bo/codex_manager/vscode-extension/recovered/codex-managed-agent-0.0.71/extension/src/host/state-sync.js) 的 refresh/broadcast 流里稳定存在，所以没有必要再引入第二套 thread source。
+
+新的分析 note 在 [evolution-2026-04-16-mailbox-live-thread-source-analysis.md](/home/clashuser/hzh/work_bo/codex_manager/vscode-extension/recovered/codex-managed-agent-0.0.71/extension/.claude/plans/loloop/evolution-2026-04-16-mailbox-live-thread-source-analysis.md)。这轮仍然确认：legacy lifecycle safety、board/tab semantic safety、1 分钟 cadence、task-plan/code alignment 都没有新增回归，下一步依然应当 hardening-first。没有代码变更，所以没有跑打包。我已把更新同步回 `/home/clashuser/hzh/work_bo/codex_manager/vscode-extension`。
+
+下一轮同一 track 的最小 handoff：执行一个 hardening-first slice，在 [team-coordination.js](/home/clashuser/hzh/work_bo/codex_manager/vscode-extension/recovered/codex-managed-agent-0.0.71/extension/src/host/team-coordination.js) 里加入共享 live-thread resolver，数据源只用当前 host dashboard thread set，并一次性收掉剩余两个 Task 6 stale-thread validation checkbox。

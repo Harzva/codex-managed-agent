@@ -1,7 +1,0 @@
-完成了一次有边界的 `cma-codex-communication-optimization` exit review，没有加新代码。
-
-结论是这个 track 可以关闭。对照 [cma-codex-communication-optimization-task-plan.md](/home/clashuser/export/codex-managed-agent/task-plans/cma-codex-communication-optimization-task-plan.md#L1)，Task 1 到 Task 3 现在都可以收口：常见的 narrow mutation paths 已经改成 optimistic cue、patch message 或 bounded local DOM sync，剩下的 full renders 主要只在完整 `state` delivery 和显式 degraded-state fallback 上保留。我已把该 task-plan 标成 `Status: complete`，并勾掉 Task 3 的剩余项。
-
-我同时更新了 [ROADMAP.md](/home/clashuser/export/codex-managed-agent/ROADMAP.md#L102)，把 immediate follow-on track 对齐到 `task-plans/codex-loop-control-surface-task-plan.md`；[ACTIVE_PLAN.md](/home/clashuser/export/codex-managed-agent/.claude/plans/ACTIVE_PLAN.md#L1) 也已经切到这个新 track 的 re-entry audit。新的 evolution note 在 [evolution-2026-04-15-cma-exit-review.md](/home/clashuser/export/codex-managed-agent/.claude/plans/loloop/evolution-2026-04-15-cma-exit-review.md#L1)。
-
-这轮是 review-only，没有代码变化，所以没有运行打包。更新后的 roadmap、task-plan、active plan 和新 note 已同步到 `/home/clashuser/hzh/work_bo/codex_manager/vscode-extension`。下一轮 handoff 保持收敛：只做一次 `task-plans/codex-loop-control-surface-task-plan.md` 的 re-entry audit，找出第一个最小的 daemon/watch control gap。

@@ -1,9 +1,0 @@
-完成了一个有边界的 `prompt-rule-memo-cards` Task 3 slice：main running board cards 现在也会直接显示 prompt/rule/memo shortcut row。
-
-改动只落在 [webview-template.js](/home/clashuser/export/codex-managed-agent/src/webview-template.js#L4197) 和 running board 渲染路径 [webview-template.js](/home/clashuser/export/codex-managed-agent/src/webview-template.js#L6200)。我把 spotlight 里现有的 memory shortcut row 抽成了一个小 helper，然后只在主 running board cards 上复用，保持 compact intervention cards 不变。这样 agent cards 现在已经能直接 reference prompt/rule/memo objects，所以 [prompt-rule-memo-cards-task-plan.md](/home/clashuser/export/codex-managed-agent/task-plans/prompt-rule-memo-cards-task-plan.md#L1) 里 Task 3 的第一项已经勾掉。
-
-我已更新 [ACTIVE_PLAN.md](/home/clashuser/export/codex-managed-agent/.claude/plans/ACTIVE_PLAN.md#L1)，把下一步收敛到一次 Task 3 audit，专门识别“surface the right context beside active work”的最小剩余 gap。新的 evolution note 在 [evolution-2026-04-15-prompt-rule-memo-running-board-shortcuts.md](/home/clashuser/export/codex-managed-agent/.claude/plans/loloop/evolution-2026-04-15-prompt-rule-memo-running-board-shortcuts.md#L1)。
-
-验证已完成：`node --check src/webview-template.js` 和 `npm run package` 都通过，并重新生成了 [codex-managed-agent-0.0.3.vsix](/home/clashuser/export/codex-managed-agent/codex-managed-agent-0.0.3.vsix)。代码、task-plan、active plan、note 和 VSIX 已同步到 `/home/clashuser/hzh/work_bo/codex_manager/vscode-extension`。
-
-下一轮 handoff 保持同一 track 且不扩张：只做一次 Task 3 audit，识别最小的 memory-context gap，不进入更大的 memory workflow redesign。

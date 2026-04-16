@@ -1,13 +1,12 @@
 node_modules/
-*.vsix
 .vscode-test/
 out/
 dist/
 coverage/
 .DS_Store
-
 .recovery-backups/
 *.pid
+*.vsix
 *.log
 __pycache__/
 *.py[cod]

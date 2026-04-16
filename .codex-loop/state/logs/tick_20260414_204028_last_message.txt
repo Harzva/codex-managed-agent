@@ -1,9 +1,0 @@
-完成了一个有边界的 `codex-loop-control-surface` Task 2 slice：`Loop Daemon` 卡片现在有一个直接的 `Open Latest Log` 动作，复用了现有 `openLogFile` 通路。
-
-改动只落在 [webview-template.js](/home/clashuser/export/codex-managed-agent/src/webview-template.js#L4105) 和 [webview-template.js](/home/clashuser/export/codex-managed-agent/src/webview-template.js#L6666)。`renderSummaryCard()` 现在支持可选 action 区域，而 `Loop Daemon` 这一张卡会在有 `rawLogPath` 时渲染 `Open Latest Log` 按钮。没有扩到 watch/tail 命令，也没有做 embedded tail。
-
-我已更新 [ACTIVE_PLAN.md](/home/clashuser/export/codex-managed-agent/.claude/plans/ACTIVE_PLAN.md#L17)，把当前 slice 切回 Task 2 audit。新的 evolution note 在 [evolution-2026-04-15-loop-control-open-latest-log.md](/home/clashuser/export/codex-managed-agent/.claude/plans/loloop/evolution-2026-04-15-loop-control-open-latest-log.md#L1)。
-
-验证已完成：`node --check src/webview-template.js`、`node --check src/host/state-sync.js`、`npm run package` 都通过，并重新生成了 [codex-managed-agent-0.0.3.vsix](/home/clashuser/export/codex-managed-agent/codex-managed-agent-0.0.3.vsix)。代码、active plan、note 和 VSIX 已同步到 `/home/clashuser/hzh/work_bo/codex_manager/vscode-extension`。
-
-下一轮 handoff 保持同一轨道且不扩张：只做一次 Task 2 audit，识别 `Open Latest Log` 之后下一个最小的 watch/tail surface gap，不进入 runtime controls。

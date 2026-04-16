@@ -1,0 +1,7 @@
+这是一次 `analysis loop`，没有改代码。
+
+我只做了一个最小的 sole-state 收口：在 [ACTIVE_PLAN.md](/home/clashuser/hzh/work_bo/codex_manager/vscode-extension/recovered/codex-managed-agent-0.0.71/extension/.claude/plans/ACTIVE_PLAN.md) 里补了一条，明确在 execution slice 尚未开始之前，当前 unchanged hardening-first mailbox handoff 仍然是唯一活跃状态，不应被解读成存在并行 mailbox 分支。对应的新 note 是 [evolution-2026-04-16-mailbox-unchanged-handoff-sole-state.md](/home/clashuser/hzh/work_bo/codex_manager/vscode-extension/recovered/codex-managed-agent-0.0.71/extension/.claude/plans/loloop/evolution-2026-04-16-mailbox-unchanged-handoff-sole-state.md)。
+
+结论仍然不变：legacy thread lifecycle safety、board/tab semantic safety、1 分钟 cadence、task-plan/code alignment 都稳定；当前唯一有价值的下一步仍然是 Task 6 的共享 live-thread resolver。没有代码变更，所以没有跑 packaging 或 syntax check。我已把更新同步回 `/home/clashuser/hzh/work_bo/codex_manager/vscode-extension`。
+
+下一轮同一 track 的最小 handoff：执行一个 hardening-first slice，在 [team-coordination.js](/home/clashuser/hzh/work_bo/codex_manager/vscode-extension/recovered/codex-managed-agent-0.0.71/extension/src/host/team-coordination.js) 中加入共享 live-thread resolver，数据源只用 `panel.lastPayload.dashboard.threads`，收掉剩余 stale-thread validation pair，并在代码变更后补跑 Task 6 syntax check。

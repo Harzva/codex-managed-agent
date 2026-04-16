@@ -1,0 +1,9 @@
+Completed one bounded mailbox execution slice.
+
+Changed [src/host/team-coordination.js](/home/clashuser/hzh/work_bo/codex_manager/vscode-extension/recovered/codex-managed-agent-0.0.71/extension/src/host/team-coordination.js:206) so `ensureAgentRecord` now keeps the computed filename-safe `agent_id` authoritative over stale file contents or patch-provided `agent_id` values. Agent file paths, task creation, IDs, UI, stale recovery, and board/tab semantics were not changed.
+
+Updated [ACTIVE_PLAN.md](/home/clashuser/hzh/work_bo/codex_manager/vscode-extension/recovered/codex-managed-agent-0.0.71/extension/.claude/plans/ACTIVE_PLAN.md:19) and wrote [evolution-2026-04-16-mailbox-agent-writer-envelope-id.md](/home/clashuser/hzh/work_bo/codex_manager/vscode-extension/recovered/codex-managed-agent-0.0.71/extension/.claude/plans/loloop/evolution-2026-04-16-mailbox-agent-writer-envelope-id.md:1).
+
+Validation passed: `node --check src/host/team-coordination.js`, a focused writer/recovery probe, and `npm run package`; package output was 85 files, 388.19 KB. Synced source and plan changes to `/home/clashuser/hzh/work_bo/codex_manager/vscode-extension` and verified with `cmp`.
+
+Next smallest handoff: run the analysis slice in `.claude/plans/ACTIVE_PLAN.md` to verify stale file contents and patch-provided `agent_id` values cannot override the computed agent ID, valid agent recovery still works, and task/event/inbox ID behavior did not drift before selecting the next mailbox-file-only restart-recovery slice.

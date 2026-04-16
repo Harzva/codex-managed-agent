@@ -1,7 +1,0 @@
-完成了一个有边界的 `codex-loop-control-surface` Task 4 slice：extension 现在有了 replay-based `Start Loop` path，会复用 last-known daemon `threadId + intervalMinutes` 启动 loop，而不是引入新的 fresh-start orchestration。
-
-代码落点在 [lifecycle.js](/home/clashuser/export/codex-managed-agent/src/host/lifecycle.js#L81)、[panel-view.js](/home/clashuser/export/codex-managed-agent/src/host/panel-view.js#L101)、[panel.js](/home/clashuser/export/codex-managed-agent/src/panel.js#L211) 和 [webview-template.js](/home/clashuser/export/codex-managed-agent/src/webview-template.js#L6712)。计划文件也已经收口：[`codex-loop-control-surface-task-plan.md`](/home/clashuser/export/codex-managed-agent/task-plans/codex-loop-control-surface-task-plan.md#L1) 现在是 `Status: complete`，[`ACTIVE_PLAN.md`](/home/clashuser/export/codex-managed-agent/.claude/plans/ACTIVE_PLAN.md#L1) 已切到同一 track 的 exit review，新 note 在 [evolution-2026-04-15-loop-control-start-path.md](/home/clashuser/export/codex-managed-agent/.claude/plans/loloop/evolution-2026-04-15-loop-control-start-path.md#L1)。
-
-验证已完成：`node --check src/host/lifecycle.js`、`src/host/panel-view.js`、`src/panel.js`、`src/webview-template.js` 和 `npm run package` 都通过，并重新生成了 [codex-managed-agent-0.0.3.vsix](/home/clashuser/export/codex-managed-agent/codex-managed-agent-0.0.3.vsix)。相关代码、计划文件、note 和 VSIX 已同步到 `/home/clashuser/hzh/work_bo/codex_manager/vscode-extension`。
-
-下一轮 handoff 保持同一 roadmap track 且不扩张：只做一次 `task-plans/codex-loop-control-surface-task-plan.md` 的 exit review，明确关闭这个 track，再决定是否进入下一个 follow-on track。

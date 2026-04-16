@@ -1,0 +1,9 @@
+Completed one bounded `codex-loop` analysis slice.
+
+Audited the containment fix in [src/host/team-coordination.js](/home/clashuser/hzh/work_bo/codex_manager/vscode-extension/recovered/codex-managed-agent-0.0.71/extension/src/host/team-coordination.js):88. `taskHasStatus()` now requires an explicit task status, so missing `task.status` is no longer claimable through the shared state predicates. The summary-only `queued` fallback remains isolated to task counting.
+
+Updated [.claude/plans/ACTIVE_PLAN.md](/home/clashuser/hzh/work_bo/codex_manager/vscode-extension/recovered/codex-managed-agent-0.0.71/extension/.claude/plans/ACTIVE_PLAN.md):19 to authorize the next bounded execution slice: deterministic task file ids for newly assigned mailbox tasks only. Wrote the evolution note at [.claude/plans/loloop/evolution-2026-04-16-mailbox-state-containment-analysis.md](/home/clashuser/hzh/work_bo/codex_manager/vscode-extension/recovered/codex-managed-agent-0.0.71/extension/.claude/plans/loloop/evolution-2026-04-16-mailbox-state-containment-analysis.md):1.
+
+Validation: `node --check src/host/team-coordination.js` passed. No code changed in this analysis pass, so packaging was not required. Synced the active plan and evolution note to `/home/clashuser/hzh/work_bo/codex_manager/vscode-extension` and verified with `cmp`.
+
+Next smallest handoff: follow [.claude/plans/ACTIVE_PLAN.md](/home/clashuser/hzh/work_bo/codex_manager/vscode-extension/recovered/codex-managed-agent-0.0.71/extension/.claude/plans/ACTIVE_PLAN.md):21 and add a narrow deterministic task-id helper for `assignTaskToThread` task files, leaving event ids, inbox ids, UI, stale recovery, and board/tab semantics unchanged.

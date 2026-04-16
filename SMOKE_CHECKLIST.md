@@ -10,13 +10,13 @@ Use this checklist before handing out a VSIX or cutting a release candidate.
 npm run package
 ```
 
-- Confirm a fresh `codex-managed-agent-1.0.3.vsix` is produced in the repo root.
+- Confirm a fresh `codex-managed-agent-0.0.3.vsix` is produced in the repo root.
 
 ## 2. Install
 
 - In VS Code, open the Extensions view.
 - Use `...` -> `Install from VSIX...`.
-- Select the generated `codex-managed-agent-1.0.3.vsix`.
+- Select the generated `codex-managed-agent-0.0.3.vsix`.
 - Reload the window if VS Code asks for it.
 
 ## 3. Activation

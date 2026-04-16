@@ -1,7 +1,0 @@
-完成了一次有边界的 `codex-loop-control-surface` Task 3 audit，没有加新代码。
-
-结论是：当前最小的 per-card enablement gap 不是 preset 或 custom input，而是先补一个受控的 host-side handoff path。extension 现在已经能读出 daemon 的 `threadId`，但还不能把某张 card 设成 daemon 的目标线程。基于 `thread_mode: "forced_thread"` 和 `.codex-loop/state/thread_id.txt`，下一步最小切口应当是一个写入 `thread_id.txt` 的 handoff path，再配一个 card-level entrypoint。这个收敛结果已经写进 [ACTIVE_PLAN.md](/home/clashuser/export/codex-managed-agent/.claude/plans/ACTIVE_PLAN.md#L17)。
-
-新的 evolution note 在 [evolution-2026-04-15-loop-control-task3-second-audit.md](/home/clashuser/export/codex-managed-agent/.claude/plans/loloop/evolution-2026-04-15-loop-control-task3-second-audit.md#L1)。这轮是 review-only，没有代码变化，所以没有运行打包。更新后的 active plan 和新 note 已同步到 `/home/clashuser/hzh/work_bo/codex_manager/vscode-extension`。
-
-下一轮 handoff 保持同一轨道且不扩张：只补一个 `thread_id.txt` handoff path 加一个 card-level entrypoint，不进入 interval presets、custom input 或 runtime actions。

@@ -1,7 +1,0 @@
-完成了一次有边界的 `codex-loop-control-surface` Task 1 audit，没有加新代码。
-
-结论是：daemon running-state 和 metadata 之后，Task 1 剩下的最小 gap 就是 `.codex-loop/state/status.json` 里的 `latest status + last tick summary`。这些字段已经存在，而且仍然属于同一个 loop-status surface，所以比 watch/tail 或 runtime controls 更适合作为下一步。
-
-我已更新 [ACTIVE_PLAN.md](/home/clashuser/export/codex-managed-agent/.claude/plans/ACTIVE_PLAN.md#L1)，把当前 slice 收敛成“只补 latest status 和 last tick summary”。新的 evolution note 在 [evolution-2026-04-15-loop-control-task1-third-audit.md](/home/clashuser/export/codex-managed-agent/.claude/plans/loloop/evolution-2026-04-15-loop-control-task1-third-audit.md#L1)。
-
-这轮是 review-only，没有代码变化，所以没有运行打包。更新后的 active plan 和新 note 已同步到 `/home/clashuser/hzh/work_bo/codex_manager/vscode-extension`。下一轮 handoff 保持同一轨道且不扩张：只补 `.codex-loop/state/status.json` 的 latest status 和 last tick summary，不进入 watch/tail 或 runtime controls。

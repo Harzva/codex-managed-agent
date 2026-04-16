@@ -1,0 +1,7 @@
+这是一次 `analysis loop`，没有改代码。
+
+这轮我完成了另一个有边界的 rule-level 收口：把 [codex-team-mailbox-loop-task-plan.md](/home/clashuser/hzh/work_bo/codex_manager/vscode-extension/recovered/codex-managed-agent-0.0.71/extension/task-plans/codex-team-mailbox-loop-task-plan.md) 顶层 `Rules` 里的“team-mode 必须是 opt-in/additive，而不是替代现有流程”这条也正式勾掉了。这个结论已经被现有 repo 反复证明：Task 4 已经收口，team surface 仍然是 secondary/additive surface，当前活跃 handoff 也没有把 mailbox 设计成替换现有 single-thread、board、loop 或 dashboard 行为。
+
+我同时更新了 [ACTIVE_PLAN.md](/home/clashuser/hzh/work_bo/codex_manager/vscode-extension/recovered/codex-managed-agent-0.0.71/extension/.claude/plans/ACTIVE_PLAN.md) 和新 note [evolution-2026-04-16-mailbox-optin-rule-closure.md](/home/clashuser/hzh/work_bo/codex_manager/vscode-extension/recovered/codex-managed-agent-0.0.71/extension/.claude/plans/loloop/evolution-2026-04-16-mailbox-optin-rule-closure.md)，把规则层面的 opt-in policy 也从剩余 gap 里移除了。没有代码变更，所以没有跑打包。我已把更新同步回 `/home/clashuser/hzh/work_bo/codex_manager/vscode-extension`。
+
+下一轮同一 track 的最小 handoff：执行一个 hardening-first slice，在 [team-coordination.js](/home/clashuser/hzh/work_bo/codex_manager/vscode-extension/recovered/codex-managed-agent-0.0.71/extension/src/host/team-coordination.js) 中加入共享 live-thread resolver，数据源只用 `panel.lastPayload.dashboard.threads`，收掉剩余 stale-thread validation pair，并在代码变更后补跑 Task 6 syntax check。

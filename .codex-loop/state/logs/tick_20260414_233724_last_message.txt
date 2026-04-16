@@ -1,9 +1,0 @@
-完成了一个有边界的 `cross-path-unified-management` Task 3 slice：`boardSummaryQueue` 里的 urgent mini-cards 现在会走和其他 board surface 一样的线程选择/抽屉通路。
-
-改动只在 [webview-template.js](/home/clashuser/export/codex-managed-agent/src/webview-template.js#L6916)。我给 queue mini-card 接上了现有的 `data-thread-id`，这样它会自动复用已存在的 click handler，打开同一个 selected-thread + drawer flow，而不是继续停留在静态 preview。这个补丁收掉了 Task 3 最后一个 unified-board gap，所以 [cross-path-unified-management-task-plan.md](/home/clashuser/export/codex-managed-agent/task-plans/cross-path-unified-management-task-plan.md#L1) 现在已经是 `Status: complete`。
-
-我已更新 [ACTIVE_PLAN.md](/home/clashuser/export/codex-managed-agent/.claude/plans/ACTIVE_PLAN.md#L1)，把下一步收敛成这个 track 的 exit review。新的 evolution note 在 [evolution-2026-04-15-cross-path-board-summary-clickthrough.md](/home/clashuser/export/codex-managed-agent/.claude/plans/loloop/evolution-2026-04-15-cross-path-board-summary-clickthrough.md#L1)。
-
-验证已完成：`node --check src/webview-template.js` 和 `npm run package` 都通过，并重新生成了 [codex-managed-agent-0.0.3.vsix](/home/clashuser/export/codex-managed-agent/codex-managed-agent-0.0.3.vsix)。代码、task-plan、active plan、note 和 VSIX 已同步到 `/home/clashuser/hzh/work_bo/codex_manager/vscode-extension`。
-
-下一轮 handoff 保持同一 roadmap track 且不扩张：只做一次 `task-plans/cross-path-unified-management-task-plan.md` 的 exit review，确认这个 track 可以正式关闭，再决定 follow-on work。

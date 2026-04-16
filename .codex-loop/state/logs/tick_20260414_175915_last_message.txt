@@ -1,7 +1,0 @@
-完成了一次有边界的 `cma-codex-communication-optimization` Task 2 review，没有加新代码。
-
-结论是：Task 2 还不能关。现在 host 侧的最小问题已经解决了，`codexLinkStatePatched` 不再重放整份 payload；但 webview 收到这条窄消息后仍然直接走 [render(state.payload)](/home/clashuser/export/codex-managed-agent/src/webview-template.js#L7019)，所以“avoid recomputing unrelated panes when only Codex tab state changes” 这一项还没满足。与此同时，board 和 thread list 的一致性已经因为这次 full render 被维持住了，因此剩下的最小 gap 已经很明确：不是 state correctness，而是 webview reaction scope。
-
-我已更新 [ACTIVE_PLAN.md](/home/clashuser/export/codex-managed-agent/.claude/plans/ACTIVE_PLAN.md#L1)，把当前 slice 收敛成下一步实现：给 `codexLinkStatePatched` 增加一个 local DOM sync path，只更新 link badges / linked-status classes，不再全量 rerender。新的 evolution note 在 [evolution-2026-04-15-cma-task2-review.md](/home/clashuser/export/codex-managed-agent/.claude/plans/loloop/evolution-2026-04-15-cma-task2-review.md#L1)。
-
-这轮是 review-only，没有代码变化，所以没有运行打包。更新后的 active plan 和新 note 已同步到 `/home/clashuser/hzh/work_bo/codex_manager/vscode-extension`。下一轮 handoff 保持同一轨道且不扩张：只实现 link-state patch 的 local DOM sync，范围限制在 thread rows、spotlight 和 running-card 的 link badge / class 更新，不进入 general pane diffing。

@@ -1,7 +1,0 @@
-完成了一次有边界的 `cma-codex-communication-optimization` Task 3 audit，没有加新代码。
-
-结论是：`threadsRemoved` 之后，下一个最小的 rerender-heavy mutation 是 `threadsPatched`。host 侧在 [src/host/lifecycle.js](/home/clashuser/export/codex-managed-agent/src/host/lifecycle.js#L136) 已经发的是窄的 batch patch 消息，但 webview 在 [src/webview-template.js](/home/clashuser/export/codex-managed-agent/src/webview-template.js#L7323) 里仍然无条件 `render(state.payload)`，所以它就是当前最小的剩余 lifecycle gap。
-
-我已更新 [ACTIVE_PLAN.md](/home/clashuser/export/codex-managed-agent/.claude/plans/ACTIVE_PLAN.md#L1)，把当前 slice 收敛成“只给 `threadsPatched` 做 bounded local DOM sync path”。新的 evolution note 在 [evolution-2026-04-15-cma-task3-tenth-audit.md](/home/clashuser/export/codex-managed-agent/.claude/plans/loloop/evolution-2026-04-15-cma-task3-tenth-audit.md#L1)。
-
-这轮是 review-only，没有代码变化，所以没有运行打包。更新后的 active plan 和新 note 已同步到 `/home/clashuser/hzh/work_bo/codex_manager/vscode-extension`。下一轮 handoff 保持同一轨道且不扩张：只 patch `threadsPatched`，不要顺手扩到 broader render-reduction work。

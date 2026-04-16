@@ -1,7 +1,0 @@
-完成了一次有边界的 `cross-path-unified-management` Task 3 audit，没有加新代码。
-
-结论已经收敛：当前第一个最小的 cross-path board-action gap 是 running board cards 还没有 loop-managed handoff 和 interval entrypoint，而 spotlight 已经有这条路径。attach、pin 和 Codex reveal 基本都已经按 `thread.id` 工作，所以这轮不需要再扩到更大的 multi-root workflow 设计。
-
-我已更新 [ACTIVE_PLAN.md](/home/clashuser/export/codex-managed-agent/.claude/plans/ACTIVE_PLAN.md#L1)，把当前 slice 收敛成“只给 running board cards 补一个 bounded loop-management entrypoint”。新的 evolution note 在 [evolution-2026-04-15-cross-path-task3-first-audit.md](/home/clashuser/export/codex-managed-agent/.claude/plans/loloop/evolution-2026-04-15-cross-path-task3-first-audit.md#L1)。这轮是 review-only，没有运行打包。相关 plan 和 note 已同步到 `/home/clashuser/hzh/work_bo/codex_manager/vscode-extension`。
-
-下一轮 handoff 保持同一 track 且不扩张：只 patch running board cards 的 loop-management gap，不先展开 board filtering、board restructuring 或更大的 multi-root workflow work。

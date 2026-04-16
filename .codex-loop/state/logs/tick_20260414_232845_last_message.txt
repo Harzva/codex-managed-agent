@@ -1,9 +1,0 @@
-完成了一个有边界的 `cross-path-unified-management` Task 3 slice：running board cards 现在也有 loop-management entrypoint 了。
-
-改动只在 [webview-template.js](/home/clashuser/export/codex-managed-agent/src/webview-template.js#L6268)。我复用了现有 `data-set-loop-managed` 通路，在 running board 的 action rail 上补了 `Manage Loop` / disabled `Loop Managed` 按钮，没有引入新的 host path，也没有顺手扩到 interval presets。这样 attach、pin、loop 和 Codex visibility controls 现在都已经能按 `thread.id` 跨 root 工作，所以我把 Task 3 的第一项勾掉了，见 [cross-path-unified-management-task-plan.md](/home/clashuser/export/codex-managed-agent/task-plans/cross-path-unified-management-task-plan.md#L1)。
-
-我已更新 [ACTIVE_PLAN.md](/home/clashuser/export/codex-managed-agent/.claude/plans/ACTIVE_PLAN.md#L1)，把下一步收敛回“只审计剩下的 unified-board gap”。新的 evolution note 在 [evolution-2026-04-15-cross-path-board-loop-entrypoint.md](/home/clashuser/export/codex-managed-agent/.claude/plans/loloop/evolution-2026-04-15-cross-path-board-loop-entrypoint.md#L1)。
-
-验证已完成：`node --check src/webview-template.js` 和 `npm run package` 都通过，并重新生成了 [codex-managed-agent-0.0.3.vsix](/home/clashuser/export/codex-managed-agent/codex-managed-agent-0.0.3.vsix)。代码、task-plan、active plan、note 和 VSIX 已同步到 `/home/clashuser/hzh/work_bo/codex_manager/vscode-extension`。
-
-下一轮 handoff 保持同一 track 且不扩张：只做一次 Task 3 audit，识别最后剩下的 unified-board gap，不进入更大的 multi-root workflow work。

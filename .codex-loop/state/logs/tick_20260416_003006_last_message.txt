@@ -1,0 +1,7 @@
+这是一次 `analysis loop`，没有改代码。
+
+我用最新两次 mailbox 分析循环做了 review-window 审计，并把结果写回 [ACTIVE_PLAN.md](/home/clashuser/hzh/work_bo/codex_manager/vscode-extension/recovered/codex-managed-agent-0.0.71/extension/.claude/plans/ACTIVE_PLAN.md) 和新 note [evolution-2026-04-16-mailbox-post-isolation-review-window.md](/home/clashuser/hzh/work_bo/codex_manager/vscode-extension/recovered/codex-managed-agent-0.0.71/extension/.claude/plans/loloop/evolution-2026-04-16-mailbox-post-isolation-review-window.md)。结论没有变化：legacy thread lifecycle safety、board/tab semantic safety、1 分钟 cadence、task-plan/code alignment 在这个 review window 里都没有新增漂移或回归，下一步仍然应当保持 hardening-first。
+
+这轮的具体推进是把 handoff 固定到同一个剩余 Task 6 gap：只在 [team-coordination.js](/home/clashuser/hzh/work_bo/codex_manager/vscode-extension/recovered/codex-managed-agent-0.0.71/extension/src/host/team-coordination.js) 增加一个共享 live-thread resolver，并且只接入 `assignTaskToThread`、`claimTaskForThread`、`heartbeatThread`、`blockTaskForThread`、`completeTaskForThread`。没有代码变更，所以没有跑打包。我已把更新同步回 `/home/clashuser/hzh/work_bo/codex_manager/vscode-extension`。
+
+下一轮同一 track 的最小 handoff：执行一个 hardening-first slice，加入共享 live-thread resolver，并一次性收掉剩余两个 Task 6 stale-thread validation checkbox。
