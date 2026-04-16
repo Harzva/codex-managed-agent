@@ -1,0 +1,18 @@
+完成了一个有边界的 `cma-codex-communication-optimization` Task 3 slice：`copyText()` 不再触发不必要的 silent refresh，clipboard feedback 现在完全留在本地。
+
+改动很小，只在：
+- [src/host/lifecycle.js](/home/clashuser/export/codex-managed-agent/src/host/lifecycle.js#L31)
+
+具体就是去掉了 `copyText()` 末尾的 `await panel.refresh({ silent: true })`。这个动作本来只会写剪贴板并更新 status bar，不会改 dashboard 数据，所以不应该再拉一次后台刷新。
+
+计划文件已更新：
+- [ACTIVE_PLAN.md](/home/clashuser/export/codex-managed-agent/.claude/plans/ACTIVE_PLAN.md#L1) 现在把下一步收敛回一次 Task 3 audit，专门找 `copyText()` 之后的下一个最小 refresh-heavy 动作
+- 新 evolution note：
+  - [evolution-2026-04-15-cma-copytext-local-feedback.md](/home/clashuser/export/codex-managed-agent/.claude/plans/loloop/evolution-2026-04-15-cma-copytext-local-feedback.md#L1)
+
+验证已完成：
+- `node --check src/host/lifecycle.js`
+- `npm run package`
+- 重新生成了 [codex-managed-agent-0.0.3.vsix](/home/clashuser/export/codex-managed-agent/codex-managed-agent-0.0.3.vsix)
+
+代码、active plan、note 和 VSIX 已同步到 `/home/clashuser/hzh/work_bo/codex_manager/vscode-extension`。下一轮 handoff 保持同一轨道且不扩张：只做一次 Task 3 audit，识别 `copyText()` 之后下一个最小的 refresh-heavy 本地动作路径。

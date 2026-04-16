@@ -1,0 +1,14 @@
+完成了一次有边界的 `cma-codex-communication-optimization` Task 1 review，没有继续加代码。
+
+结论是：Task 1 现在可以收口。依据现有实现：
+- `sendPrompt` 的 optimistic queued cue 走本地 patch，并且会在后续真实 thread 更新时由 host reconciliation 清掉，见 [src/host/state-sync.js](/home/clashuser/export/codex-managed-agent/src/host/state-sync.js#L92)
+- `auto-continue` 的 armed / queued / failed 状态走轻量 config patch，并会被下一次正常 `state.autoContinueConfigs` 覆盖，见 [src/host/auto-continue.js](/home/clashuser/export/codex-managed-agent/src/host/auto-continue.js#L35) 和 [src/webview-template.js](/home/clashuser/export/codex-managed-agent/src/webview-template.js#L3823)
+- 两条路径的 failure cue 都已经是显式的，不需要等 full refresh 才出现
+
+计划文件已更新：
+- [task-plans/cma-codex-communication-optimization-task-plan.md](/home/clashuser/export/codex-managed-agent/task-plans/cma-codex-communication-optimization-task-plan.md#L1) 里 Task 1 四个 checkbox 现在都已勾掉
+- [ACTIVE_PLAN.md](/home/clashuser/export/codex-managed-agent/.claude/plans/ACTIVE_PLAN.md#L1) 已把当前 slice 切到 `Task 2 audit`
+- 新 evolution note：
+  - [evolution-2026-04-15-cma-task1-review.md](/home/clashuser/export/codex-managed-agent/.claude/plans/loloop/evolution-2026-04-15-cma-task1-review.md#L1)
+
+这轮是 review-only，没有新代码改动，所以没有再跑打包。更新后的 task-plan、active plan 和新 note 已同步到 `/home/clashuser/hzh/work_bo/codex_manager/vscode-extension`。下一轮 handoff 保持同一轨道且不扩张：只做一次 Task 2 audit，找出 Codex `open / focused / linked` 状态里第一个仍然依赖 full dashboard refresh 的最小 gap。

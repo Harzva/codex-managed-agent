@@ -1,0 +1,5 @@
+按你要求的顺序读取后，这轮只完成了一次 Milestone 5 audit，没有做代码改动。结论是：仓库已经有 `vsce package` / `vsce publish` 命令，也有 README 里的 VSIX 安装和 Marketplace 发布说明，但还缺一个 repo-visible、可重复执行的 smoke/validation routine。这个比继续做 Marketplace polish 或更大的 release engineering 更早成为阻塞点。
+
+我已把 active slice 收敛到“写一份紧凑的 VSIX 打包与本地安装验证清单”，见 [ACTIVE_PLAN.md](/home/clashuser/export/codex-managed-agent/.claude/plans/ACTIVE_PLAN.md#L12)。新的 evolution note 已写入 [evolution-2026-04-14-m5-release-doc-audit.md](/home/clashuser/export/codex-managed-agent/.claude/plans/loloop/evolution-2026-04-14-m5-release-doc-audit.md#L1)。
+
+本轮没有代码变化，所以没有运行打包。我已将更新后的 [ACTIVE_PLAN.md](/home/clashuser/export/codex-managed-agent/.claude/plans/ACTIVE_PLAN.md#L1) 和新 note 同步到 `/home/clashuser/hzh/work_bo/codex_manager/vscode-extension`。下一轮 handoff 保持最小范围：只添加一份 repo-visible 的 smoke/validation checklist，覆盖 VSIX packaging 和本地安装验证，不扩到更大的 release workflow redesign。

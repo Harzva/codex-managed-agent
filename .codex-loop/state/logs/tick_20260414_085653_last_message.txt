@@ -1,0 +1,5 @@
+本轮完成了一个最小的 `Needs Human` 行为修复：当 urgent intervention 卡片数量从 `0` 变成 `>0` 时，dock 会自动展开一次，避免新的人工介入需求被上一次持久化的折叠状态继续藏住。实现落在 [src/webview-template.js](/home/clashuser/export/codex-managed-agent/src/webview-template.js#L3511) 和 [src/webview-template.js](/home/clashuser/export/codex-managed-agent/src/webview-template.js#L5584)。
+
+active plan 已更新，Milestone 2 新增了这条已完成项，并把当前 slice 收敛到“collapsed 时保留 `Needs Human` 摘要可见”，见 [active-codex-managed-agent-roadmap.md](/home/clashuser/export/codex-managed-agent/.claude/plans/active-codex-managed-agent-roadmap.md#L25)。新的 evolution note 已写入 [evolution-2026-04-14-m2-needs-human-auto-expand.md](/home/clashuser/export/codex-managed-agent/.claude/plans/loloop/evolution-2026-04-14-m2-needs-human-auto-expand.md#L1)。
+
+验证已完成：`node --check src/webview-template.js` 通过，`npm run package` 通过，并成功生成 `codex-managed-agent-0.0.2.vsix`。变更也已同步到 `/home/clashuser/hzh/work_bo/codex_manager/vscode-extension`。下一轮 handoff 继续保持最小范围：只做 collapsed `Needs Human` summary 的可见性，不扩到其他交互区。

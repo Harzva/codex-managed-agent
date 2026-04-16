@@ -1,0 +1,7 @@
+按你要求的顺序读取后，结论不变：`ROADMAP.md` 仍把 Milestone 2 当作 top-level immediate focus，但 [board-interaction-quality-task-plan.md](/home/clashuser/export/codex-managed-agent/task-plans/board-interaction-quality-task-plan.md) 在 active plan 里已是 complete，所以本轮继续沿当前未完成的 Milestone 4 task-plan 执行一个最小切片，使用的是 [codex-visibility-control-task-plan.md](/home/clashuser/export/codex-managed-agent/task-plans/codex-visibility-control-task-plan.md)。
+
+本轮只完成了 `Task 3 — Visibility Feedback` 的一个最小实现：drawer summary 现在新增了独立的 `Visibility` 指标，显式给出 `Visible / Hidden / Linked / Focused`，不再要求用户从较底层的 `Codex Link` 文案里自行推断，[src/webview-template.js](/home/clashuser/export/codex-managed-agent/src/webview-template.js#L5025) [src/webview-template.js](/home/clashuser/export/codex-managed-agent/src/webview-template.js#L5480)。
+
+active plan 已更新，当前 slice 收敛到同一 task-plan 的下一个最小项：给 thread rows 增加一个 compact visibility cue，见 [active-codex-managed-agent-roadmap.md](/home/clashuser/export/codex-managed-agent/.claude/plans/active-codex-managed-agent-roadmap.md#L109)。新的 evolution note 已写入 [evolution-2026-04-14-m4-drawer-visibility-metric.md](/home/clashuser/export/codex-managed-agent/.claude/plans/loloop/evolution-2026-04-14-m4-drawer-visibility-metric.md#L1)。
+
+验证已完成：`node --check src/webview-template.js` 通过，`npm run package` 通过，并生成了 `codex-managed-agent-0.0.2.vsix`。变更和计划文件已同步到 `/home/clashuser/hzh/work_bo/codex_manager/vscode-extension`。下一轮 handoff 保持同一轨道且不扩张：只给 thread rows 增加一个 compact visibility cue，让 `hidden / linked / focused` 可以在扫描面直接看见。

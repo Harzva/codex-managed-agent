@@ -1,0 +1,5 @@
+本轮完成了一个最小的 Milestone 3 可靠性修复：reload 时如果持久化的 `topicFocus` 已经不再匹配当前线程数据，就会自动清掉，避免 insights 导航状态把线程列表卡在一个失效的过滤视图里。实现落在 [src/webview-template.js](/home/clashuser/export/codex-managed-agent/src/webview-template.js#L5584)。
+
+active plan 已更新，Milestone 3 新增了这条已完成项，并把当前 slice 收敛到“让 insights surface 在瞬时拿不到可用 report payload 时不要直接掉回空状态”，见 [active-codex-managed-agent-roadmap.md](/home/clashuser/export/codex-managed-agent/.claude/plans/active-codex-managed-agent-roadmap.md#L52)。新的 evolution note 已写入 [evolution-2026-04-14-m3-topic-focus-validation.md](/home/clashuser/export/codex-managed-agent/.claude/plans/loloop/evolution-2026-04-14-m3-topic-focus-validation.md#L1)。
+
+验证已完成：`node --check src/webview-template.js` 通过，`npm run package` 通过，并成功生成 `codex-managed-agent-0.0.2.vsix`。变更也已同步到 `/home/clashuser/hzh/work_bo/codex_manager/vscode-extension`。下一轮 handoff 保持最小范围：只补一个 active-session 内的 last-known insights fallback，不扩到更大的 report 生成逻辑。

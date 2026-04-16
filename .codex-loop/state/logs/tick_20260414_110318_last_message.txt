@@ -1,0 +1,5 @@
+按你要求的顺序读取后，这轮只完成了一次 Milestone 5 release/doc audit，没有做代码改动。结论是：README 已经连上了 [SMOKE_CHECKLIST.md](/home/clashuser/export/codex-managed-agent/SMOKE_CHECKLIST.md#L1)，package/publish 命令也已存在，但仓库仍然缺一个 repo-visible 的 versioned release-notes 载体，也就是还没有 `CHANGELOG.md` 或等价的 release-notes home。
+
+我已把 active slice 收敛到下一个最小项：添加一个紧凑的 [CHANGELOG.md](/home/clashuser/export/codex-managed-agent/CHANGELOG.md) scaffold，见 [ACTIVE_PLAN.md](/home/clashuser/export/codex-managed-agent/.claude/plans/ACTIVE_PLAN.md#L12)。新的 evolution note 已写入 [evolution-2026-04-14-m5-release-gap-audit.md](/home/clashuser/export/codex-managed-agent/.claude/plans/loloop/evolution-2026-04-14-m5-release-gap-audit.md#L1)。
+
+本轮没有代码变化，所以没有运行打包。我已将更新后的 [ACTIVE_PLAN.md](/home/clashuser/export/codex-managed-agent/.claude/plans/ACTIVE_PLAN.md#L1) 和新 note 同步到 `/home/clashuser/hzh/work_bo/codex_manager/vscode-extension`。下一轮 handoff 保持最小范围：只添加一个 `CHANGELOG.md` scaffold，给 versioned release notes 一个 repo-visible home，不扩到更大的 release workflow 设计。

@@ -1,0 +1,5 @@
+按你要求的顺序读取后，这轮只完成了一个最小的 Milestone 5 文档切片：新增了一份 repo 根目录下的 smoke/validation checklist，[SMOKE_CHECKLIST.md](/home/clashuser/export/codex-managed-agent/SMOKE_CHECKLIST.md#L1)。它覆盖了当前已有的 VSIX 打包命令、本地安装路径、激活检查、local server 恢复检查，以及一个紧凑的 core-UI smoke pass。
+
+`ACTIVE_PLAN.md` 已更新，当前 slice 收敛到下一最小项：在 README 里补一个显式入口指向这份 checklist，见 [ACTIVE_PLAN.md](/home/clashuser/export/codex-managed-agent/.claude/plans/ACTIVE_PLAN.md#L12)。新的 evolution note 已写入 [evolution-2026-04-14-m5-smoke-checklist.md](/home/clashuser/export/codex-managed-agent/.claude/plans/loloop/evolution-2026-04-14-m5-smoke-checklist.md#L1)。
+
+本轮没有代码变化，所以没有运行打包。我已将 [SMOKE_CHECKLIST.md](/home/clashuser/export/codex-managed-agent/SMOKE_CHECKLIST.md#L1)、[ACTIVE_PLAN.md](/home/clashuser/export/codex-managed-agent/.claude/plans/ACTIVE_PLAN.md#L1) 和新 note 同步到 `/home/clashuser/hzh/work_bo/codex_manager/vscode-extension`。下一轮 handoff 保持最小范围：只在 [README.md](/home/clashuser/export/codex-managed-agent/README.md#L87) 的 packaging/release 区域增加一个指向 smoke checklist 的入口，不扩到更大的 release workflow 重写。

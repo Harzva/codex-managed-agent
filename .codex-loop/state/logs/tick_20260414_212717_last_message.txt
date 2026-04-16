@@ -1,0 +1,9 @@
+完成了一次有边界的 `codex-loop-control-surface` Task 3 audit，没有加新代码。
+
+结论很明确：当前最小的 interval-preset gap 不是 custom input，也不是新的 state-file 写回路径。`codex-loop` 的 interval 来自 daemon 启动参数 `--interval-minutes`，不在 repo 里的 `.codex-loop/state` 下单独持久化，所以直接做 preset UI 而不先接上 launcher command bridge 会落空。基于这个约束，我把下一步收敛成一个更小的切口：先补一个针对 selected thread 的 preset interval command path，再考虑 custom input 或完整 runtime controls。
+
+我已更新 [ACTIVE_PLAN.md](/home/clashuser/export/codex-managed-agent/.claude/plans/ACTIVE_PLAN.md#L17)，当前 slice 现在是“add one bounded preset command bridge for loop interval handoff”。新的 evolution note 在 [evolution-2026-04-15-loop-control-task3-third-audit.md](/home/clashuser/export/codex-managed-agent/.claude/plans/loloop/evolution-2026-04-15-loop-control-task3-third-audit.md#L1)。
+
+这轮是 review-only，没有代码变化，所以没有运行打包。更新后的 active plan 和新 note 已同步到 `/home/clashuser/hzh/work_bo/codex_manager/vscode-extension`。
+
+下一轮 handoff 保持同一轨道且不扩张：只 patch 一个 preset interval command path for the selected thread，不进入 custom input 或 full runtime actions。

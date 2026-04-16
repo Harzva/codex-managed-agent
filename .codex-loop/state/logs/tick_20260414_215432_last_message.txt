@@ -1,0 +1,14 @@
+完成了一次有边界的 `codex-loop-control-surface` Task 3 review，没有加新代码。
+
+结论是 Task 3 现在可以收口。当前 card-level loop control surface 已经具备：
+- managed-thread handoff
+- `10 min` / `20 min` preset bridges
+- custom interval input bridge
+
+这已经满足 [codex-loop-control-surface-task-plan.md](/home/clashuser/export/codex-managed-agent/task-plans/codex-loop-control-surface-task-plan.md#L35) 里 Task 3 的目标，也满足“one card can enter loop mode with a clear interval setting”这条 exit criterion。
+
+我已更新 [ACTIVE_PLAN.md](/home/clashuser/export/codex-managed-agent/.claude/plans/ACTIVE_PLAN.md#L17)，把当前 slice 切到 Task 4 audit。新的 evolution note 在 [evolution-2026-04-15-loop-control-task3-review.md](/home/clashuser/export/codex-managed-agent/.claude/plans/loloop/evolution-2026-04-15-loop-control-task3-review.md#L1)。
+
+这轮是 review-only，没有代码变化，所以没有运行打包。更新后的 active plan 和新 note 已同步到 `/home/clashuser/hzh/work_bo/codex_manager/vscode-extension`。
+
+下一轮 handoff 保持同一轨道且不扩张：只做一次 Task 4 audit，识别第一个最小的 runtime control gap，不进入 broader daemon-management redesign。

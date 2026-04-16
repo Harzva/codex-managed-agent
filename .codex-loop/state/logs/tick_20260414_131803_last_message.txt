@@ -1,0 +1,7 @@
+完成了一次有边界的 `no-editor-first-workflows` Task 2 audit，没有加新代码。
+
+审计结论是：当前最小的 embedded-status gap 在 selected-agent spotlight。drawer 已经有 `Recent Logs`，较大的 running board cards 也已经有 loop `Last Result` / `Log Tail`，但 spotlight 这个最常用的 selected-agent surface 还只有状态和 action shortcuts，没有任何内嵌 recent-log cue，所以最常见的“先看一眼它刚做了什么”仍然要跳到 `Console` 子页。这个结论已经收敛进 [ACTIVE_PLAN.md](/home/clashuser/export/codex-managed-agent/.claude/plans/ACTIVE_PLAN.md#L11)。
+
+新的 evolution note 已写入 [evolution-2026-04-14-no-editor-task2-audit.md](/home/clashuser/export/codex-managed-agent/.claude/plans/loloop/evolution-2026-04-14-no-editor-task2-audit.md#L1)。这轮没有代码变化，所以没有运行打包；更新后的 plan 和新 note 已同步到 `/home/clashuser/hzh/work_bo/codex_manager/vscode-extension`。
+
+下一轮 handoff 保持同一轨道且不扩张：只做一个最小的 Task 2 切片，在 spotlight 里补一条 concise recent-log cue，让常见检查不必先切到 `Console`。

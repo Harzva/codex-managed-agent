@@ -1,0 +1,16 @@
+完成了一次有边界的 `cma-codex-communication-optimization` Task 2 review，没有继续加代码。
+
+结论是：Task 2 现在可以收口。依据现有实现：
+- host 侧已经不再为 Codex tab watcher 变化重放整份 payload，见 [src/host/state-sync.js](/home/clashuser/export/codex-managed-agent/src/host/state-sync.js#L75)
+- webview 侧也已经不再默认走 full render，而是先走同一条 [syncCodexLinkStateDom()](/home/clashuser/export/codex-managed-agent/src/webview-template.js#L3861) 路径
+- 这条 DOM sync 同时覆盖 thread rows、running cards 和 spotlight，所以 board / thread-list consistency 没有再留下一个独立的 Task 2 gap
+
+我已更新：
+- [task-plans/cma-codex-communication-optimization-task-plan.md](/home/clashuser/export/codex-managed-agent/task-plans/cma-codex-communication-optimization-task-plan.md#L1)
+  Task 2 三项现在都已勾掉
+- [ACTIVE_PLAN.md](/home/clashuser/export/codex-managed-agent/.claude/plans/ACTIVE_PLAN.md#L1)
+  当前 slice 已切到 `Task 3 audit`
+- 新 evolution note：
+  - [evolution-2026-04-15-cma-task2-review.md](/home/clashuser/export/codex-managed-agent/.claude/plans/loloop/evolution-2026-04-15-cma-task2-review.md#L1)
+
+这轮是 review-only，没有代码变化，所以没有运行打包。更新后的 task-plan、active plan 和新 note 已同步到 `/home/clashuser/hzh/work_bo/codex_manager/vscode-extension`。下一轮 handoff 保持同一轨道且不扩张：只做一次 Task 3 audit，找出第一个仍然依赖 full refresh 或 full rerender 的小动作路径。

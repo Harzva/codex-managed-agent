@@ -1,0 +1,1 @@
+I checked the current release posture against the repo state. `preview: true`, the README preview wording, and the current changelog entry are aligned enough, so the next smallest gap is not posture text itself. It’s discoverability of the screenshot inventory we now have in the repo.

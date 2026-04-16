@@ -1,0 +1,11 @@
+完成了一次有边界的 cross-path Task 2 slice：新增了显式的 `Clear root filter` affordance，不再只依赖再次点击同一个 root pill 来退出过滤状态。
+
+实现落点在 [src/webview-template.js](/home/clashuser/export/codex-managed-agent/src/webview-template.js#L3946) 和 [src/webview-template.js](/home/clashuser/export/codex-managed-agent/src/webview-template.js#L6680)。这次改动只做了两件事：
+- thread summary 现在会在 root filter 生效时直接说明当前过滤状态，并显示 `Clear root filter`
+- 新增对应 click handling，显式清掉 `rootFilter` state
+
+`ACTIVE_PLAN.md` 已更新，当前 slice 收敛到下一步的 Task 2 review：判断 cross-path filtering 是否已经足够 bootstrapped，可以离开 entry-point ergonomics，见 [ACTIVE_PLAN.md](/home/clashuser/export/codex-managed-agent/.claude/plans/ACTIVE_PLAN.md#L1)。新的 evolution note 在 [evolution-2026-04-14-cross-path-root-filter-clear.md](/home/clashuser/export/codex-managed-agent/.claude/plans/loloop/evolution-2026-04-14-cross-path-root-filter-clear.md#L1)。
+
+验证已完成：`node --check src/webview-template.js` 通过，`npm run package` 通过，并生成了 `codex-managed-agent-0.0.2.vsix`。代码、plan 和 note 已同步到 `/home/clashuser/hzh/work_bo/codex_manager/vscode-extension`。
+
+下一轮 handoff 保持同一轨道且不扩张：只做一次 Task 2 review，判断 cross-path filtering 是否已经足够 bootstrapped；如果还有缺口，只点出那个最小剩余 filtering gap。

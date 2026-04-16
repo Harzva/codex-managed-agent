@@ -1,0 +1,7 @@
+完成了一次有边界的 `cross-path-unified-management` Task 2 review，没有加新代码。
+
+结论是 Task 2 现在可以收口。[`cross-path-unified-management-task-plan.md`](/home/clashuser/export/codex-managed-agent/task-plans/cross-path-unified-management-task-plan.md#L28) 里两项都已勾掉：现有 filtering 路径已经覆盖 root filtering、active-workspace filtering，并且 `threadMatches` 里已经和 topic focus / pinned-thread 条件组合。对应的 handoff 已切到 Task 3 audit，见 [ACTIVE_PLAN.md](/home/clashuser/export/codex-managed-agent/.claude/plans/ACTIVE_PLAN.md#L17)。新 note 在 [evolution-2026-04-15-cross-path-task2-review.md](/home/clashuser/export/codex-managed-agent/.claude/plans/loloop/evolution-2026-04-15-cross-path-task2-review.md#L1)。
+
+这轮是 review-only，没有代码变化，所以没有重新打包。相关 task-plan、active plan 和新 note 已同步到 `/home/clashuser/hzh/work_bo/codex_manager/vscode-extension`。
+
+下一轮 handoff 保持同一 track 且不扩张：只做一次 Task 3 audit，识别第一个最小的 cross-path board-action gap，不进入更大的 multi-root workflow work。

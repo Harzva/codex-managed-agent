@@ -1,0 +1,9 @@
+完成了一次有边界的 `codex-loop-control-surface` Task 4 audit，没有加新代码。
+
+结论很明确：`restart` 之后，当前更小的剩余 runtime gap 不是 fresh start，而是 unexpected-exit consistency。现在 `loopDaemon.label` 已经会因为 pid 消失而变成 `Stopped`，但 [state-sync.js](/home/clashuser/export/codex-managed-agent/src/host/state-sync.js#L94) 里的 detail 仍可能保留旧的 `Heartbeat tick/sleeping` 语义，所以会出现“已经停了，但细节还像在跑”的不一致。
+
+我已更新 [ACTIVE_PLAN.md](/home/clashuser/export/codex-managed-agent/.claude/plans/ACTIVE_PLAN.md#L17)，把当前 slice 收敛成“tighten unexpected-exit consistency”。新的 evolution note 在 [evolution-2026-04-15-loop-control-task4-third-audit.md](/home/clashuser/export/codex-managed-agent/.claude/plans/loloop/evolution-2026-04-15-loop-control-task4-third-audit.md#L1)。
+
+这轮是 review-only，没有代码变化，所以没有运行打包。更新后的 active plan 和新 note 已同步到 `/home/clashuser/hzh/work_bo/codex_manager/vscode-extension`。
+
+下一轮 handoff 保持同一轨道且不扩张：只 patch unexpected-exit consistency in loop-daemon state rendering，不进入 fresh-start orchestration。

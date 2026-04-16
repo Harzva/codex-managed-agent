@@ -1,0 +1,9 @@
+完成了一次有边界的 `prompt-rule-memo-cards` Task 1 review，没有加新代码。
+
+结论是：Task 1 现在可以先收口。Prompt / Rule / Memo 已经作为 first-class card types 出现在独立的 `Working Memory Cards` panel 中，并且通过 type-specific styling 和显式 placeholder state 与 agent cards 区分开了，见 [src/webview-template.js](/home/clashuser/export/codex-managed-agent/src/webview-template.js#L1173), [src/webview-template.js](/home/clashuser/export/codex-managed-agent/src/webview-template.js#L3682) 和 [src/webview-template.js](/home/clashuser/export/codex-managed-agent/src/webview-template.js#L3896)。
+
+我已更新 [ACTIVE_PLAN.md](/home/clashuser/export/codex-managed-agent/.claude/plans/ACTIVE_PLAN.md#L11)，把当前 slice 切到 Task 2 audit。新的 evolution note 在 [evolution-2026-04-14-prompt-rule-memo-task1-review.md](/home/clashuser/export/codex-managed-agent/.claude/plans/loloop/evolution-2026-04-14-prompt-rule-memo-task1-review.md#L1)。
+
+这轮没有代码变化，所以没有运行打包。plan 和新 note 已同步到 `/home/clashuser/hzh/work_bo/codex_manager/vscode-extension`。
+
+下一轮 handoff 保持同一轨道且不扩张：只做一次 Task 2 audit，找出 Prompt / Rule / Memo cards 的第一个最小 source-integration gap。

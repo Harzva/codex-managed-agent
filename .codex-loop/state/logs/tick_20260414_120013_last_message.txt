@@ -1,0 +1,9 @@
+完成了一次有边界的 cross-path Task 1 parity slice：spotlight 现在也会显示 compact root-identity label，不再只有 thread rows 能看见项目来源。
+
+实现落点在 [src/webview-template.js](/home/clashuser/export/codex-managed-agent/src/webview-template.js#L5236)。这次改动只做了一件事：在 spotlight 里复用现有的 `renderRootIdentityPill()`，让 selected-thread inspector 也有和 thread rows 一致的 `Root <name>` 标识，同时保留下面的完整路径文本。
+
+`ACTIVE_PLAN.md` 已更新，当前 slice 收敛到下一步的 Task 1 review：判断 path-origin visibility 是否已经足够，可以从 path labeling 转入 cross-path filtering，见 [ACTIVE_PLAN.md](/home/clashuser/export/codex-managed-agent/.claude/plans/ACTIVE_PLAN.md#L1)。新的 evolution note 在 [evolution-2026-04-14-cross-path-spotlight-root-label.md](/home/clashuser/export/codex-managed-agent/.claude/plans/loloop/evolution-2026-04-14-cross-path-spotlight-root-label.md#L1)。
+
+验证已完成：`node --check src/webview-template.js` 通过，`npm run package` 通过，并生成了 `codex-managed-agent-0.0.2.vsix`。代码、plan 和 note 已同步到 `/home/clashuser/hzh/work_bo/codex_manager/vscode-extension`。
+
+下一轮 handoff 保持同一轨道且不扩张：只做一次 Task 1 review，判断 path-origin visibility 是否已经足够，然后再决定是否进入最小的 cross-path filtering slice。

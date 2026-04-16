@@ -1,0 +1,9 @@
+完成了一次有边界的 cross-path unified management re-entry audit，没有加新代码。
+
+结论是：这个 track 的第一个最小缺口在 Task 1 `Path Model`。当前 UI 还没有稳定、紧凑的 root identity；`cwd` 主要还是以原始文本散落在 thread row / card / drawer 里，而不是一个可扫描、可复用的 path-origin label。相关现状可以从 [src/webview-template.js](/home/clashuser/export/codex-managed-agent/src/webview-template.js#L5181) 和 [src/webview-template.js](/home/clashuser/export/codex-managed-agent/src/webview-template.js#L5560) 看出来。
+
+我已更新 [ACTIVE_PLAN.md](/home/clashuser/export/codex-managed-agent/.claude/plans/ACTIVE_PLAN.md#L1)，把当前 slice 收敛到一个最小实现：只在 thread rows 增加 compact root-identity label。新的 evolution note 在 [evolution-2026-04-14-cross-path-reentry-audit.md](/home/clashuser/export/codex-managed-agent/.claude/plans/loloop/evolution-2026-04-14-cross-path-reentry-audit.md#L1)。
+
+这轮没有代码变化，所以没有运行打包。plan 和新 note 已同步到 `/home/clashuser/hzh/work_bo/codex_manager/vscode-extension`。
+
+下一轮 handoff 保持同一轨道且不扩张：只给 thread rows 增加一个 compact root-identity label，让 cross-path origin 可见，但不同时做 path filter、grouping 或 board-action redesign。

@@ -1,0 +1,7 @@
+完成了一次有边界的 codex-loop 迭代，这轮重新按 `ROADMAP.md` 锚回了 Milestone 2，并把刚落地的 `Needs Human` compact-card 可读性修复正式收进 `task-plans/board-interaction-quality-task-plan.md` 的 Task 4 轨道。
+
+这轮对应的具体切片是：把 compact `Needs Human` 卡片的标题提到专用 header，并保证 `Codex` 按钮文字在 tiny compact 卡片里始终可见。代码落点在 [src/webview-template.js](/home/clashuser/export/codex-managed-agent/src/webview-template.js#L1956) 和 [src/webview-template.js](/home/clashuser/export/codex-managed-agent/src/webview-template.js#L5382)。这个切片的代码已经完成验证：`node --check src/webview-template.js` 通过，`npm run package` 通过。
+
+我已更新 [ACTIVE_PLAN.md](/home/clashuser/export/codex-managed-agent/.claude/plans/ACTIVE_PLAN.md#L1)，把当前 active track 切回 Milestone 2，并把当前 slice 收敛到一次 Task 4 exit review。新的 evolution note 已写入 [evolution-2026-04-14-m2-needs-human-compact-header.md](/home/clashuser/export/codex-managed-agent/.claude/plans/loloop/evolution-2026-04-14-m2-needs-human-compact-header.md#L1)。相关 plan 和 note 也已同步到 `/home/clashuser/hzh/work_bo/codex_manager/vscode-extension`。
+
+下一轮 handoff 保持同一轨道且不扩张：只做一次 `Needs Human` compactness 的 Task 4 exit review，判断标题与 `Codex` action 可见性修复后，urgent cards 是否已经“readable enough in compact mode”；如果还差一个点，只补那个最小缺口。

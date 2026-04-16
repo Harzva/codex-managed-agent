@@ -1,0 +1,12 @@
+完成了一次有边界的 Milestone 3 exit review，没有继续扩展 insights surface。
+
+结论是 Milestone 3 可以关闭。对照 [insight-and-guidance-task-plan.md](/home/clashuser/export/codex-managed-agent/task-plans/insight-and-guidance-task-plan.md#L1) 的 exit criteria，当前已经具备：
+- insight panels 在 reload 后可恢复，并且 fallback / freshness 状态明确
+- topic map、word cloud、keyword chips 都能把用户导回真实 thread filtering
+- advice surfaces 已经给出具体的 weekly next action，并且 `Vibe Advice` 也有 workflow-signal grounding
+
+我已更新 [ACTIVE_PLAN.md](/home/clashuser/export/codex-managed-agent/.claude/plans/ACTIVE_PLAN.md#L1)，把 Milestone 3 标记为 complete，并把下一轮 handoff 收敛到 [cross-path-unified-management-task-plan.md](/home/clashuser/export/codex-managed-agent/task-plans/cross-path-unified-management-task-plan.md#L1) 的 re-entry audit。新的 evolution note 在 [evolution-2026-04-14-m3-exit-review.md](/home/clashuser/export/codex-managed-agent/.claude/plans/loloop/evolution-2026-04-14-m3-exit-review.md#L1)。
+
+这轮没有代码变化，所以没有运行打包。plan 和新 note 已同步到 `/home/clashuser/hzh/work_bo/codex_manager/vscode-extension`。
+
+下一轮 handoff 保持收敛：离开已关闭的 Milestone 3，只做一次 [cross-path-unified-management-task-plan.md](/home/clashuser/export/codex-managed-agent/task-plans/cross-path-unified-management-task-plan.md#L1) re-entry audit，找出那个 track 的第一个最小未完成 gap。

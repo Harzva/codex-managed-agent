@@ -1,0 +1,7 @@
+完成了一次有边界的 `codex-loop-control-surface` Task 2 review，没有加新代码。
+
+结论是：Task 2 现在可以收口。当前 loop daemon surface 已经具备一条完整但有边界的 watch/tail 路径：log path 可见、可直接打开、可 `tail -f` 到 terminal、也有 compact recent-tail preview，所以不需要再停留在 watch/tail track。这个结论已经写进 [evolution-2026-04-15-loop-control-task2-review.md](/home/clashuser/export/codex-managed-agent/.claude/plans/loloop/evolution-2026-04-15-loop-control-task2-review.md#L1)。
+
+我已更新 [ACTIVE_PLAN.md](/home/clashuser/export/codex-managed-agent/.claude/plans/ACTIVE_PLAN.md#L17)，把当前 slice 切到 Task 3 audit。这轮是 review-only，没有代码变化，所以没有运行打包。更新后的 active plan 和新 note 已同步到 `/home/clashuser/hzh/work_bo/codex_manager/vscode-extension`。
+
+下一轮 handoff 保持同一轨道且不扩张：只做一次 Task 3 audit，识别第一个最小的 per-card loop-control gap，不进入 runtime actions。

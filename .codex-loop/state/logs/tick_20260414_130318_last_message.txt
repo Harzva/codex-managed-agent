@@ -1,0 +1,15 @@
+完成了一个有边界的 `prompt-rule-memo-cards` Task 3 slice：selected-agent spotlight 里现在有一排 Prompt / Rule / Memo quick-open shortcuts。
+
+实现只做了这一件事：
+- 在 spotlight 里新增了 `Memory` shortcut row，直接复用现有 repo-file quick-open 路径，[src/webview-template.js](/home/clashuser/export/codex-managed-agent/src/webview-template.js#L5381)
+
+这样一来，memory artifacts 不再只停留在独立的 `Working Memory Cards` panel 里；从 active-agent surface 也能直接打开：
+- Prompt → [plan.md](/home/clashuser/export/codex-managed-agent/plan.md#L1)
+- Rule → [ROADMAP.md](/home/clashuser/export/codex-managed-agent/ROADMAP.md#L1)
+- Memo → [ACTIVE_PLAN.md](/home/clashuser/export/codex-managed-agent/.claude/plans/ACTIVE_PLAN.md#L1)
+
+我已更新 [ACTIVE_PLAN.md](/home/clashuser/export/codex-managed-agent/.claude/plans/ACTIVE_PLAN.md#L11)，把下一步收敛到一次 Task 3 review。新的 evolution note 在 [evolution-2026-04-14-spotlight-memory-shortcuts.md](/home/clashuser/export/codex-managed-agent/.claude/plans/loloop/evolution-2026-04-14-spotlight-memory-shortcuts.md#L1)。
+
+验证已完成：`node --check src/webview-template.js` 通过，`npm run package` 通过，并重新生成了 `codex-managed-agent-0.0.2.vsix`。代码、plan 和 note 已同步到 `/home/clashuser/hzh/work_bo/codex_manager/vscode-extension`。
+
+下一轮 handoff 保持同一轨道且不扩张：只做一次 Task 3 review，判断 spotlight-level memory shortcuts 是否已经足够关闭第一个 workflow-integration gap。

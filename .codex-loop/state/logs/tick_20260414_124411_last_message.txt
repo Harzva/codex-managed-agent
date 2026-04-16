@@ -1,0 +1,7 @@
+完成了一次有边界的 `prompt-rule-memo-cards` Task 2 audit，没有加新代码。
+
+结论是：这个 track 的第一个最小 source-integration gap 已经明确。仓库里已经有可用的 memory source，比如 [ROADMAP.md](/home/clashuser/export/codex-managed-agent/ROADMAP.md#L1)，但当前 Prompt / Rule / Memo cards 还没有任何 quick-open 路径；同时 repo 里并没有本地 `prompt.md`，所以最小而真实的下一 slice 不是去造 prompt-file 体系，而是先把 `Rule` card 接到 `ROADMAP.md`。我已把这一步收敛进 [ACTIVE_PLAN.md](/home/clashuser/export/codex-managed-agent/.claude/plans/ACTIVE_PLAN.md#L11)。
+
+新的 evolution note 在 [evolution-2026-04-14-prompt-rule-memo-task2-audit.md](/home/clashuser/export/codex-managed-agent/.claude/plans/loloop/evolution-2026-04-14-prompt-rule-memo-task2-audit.md#L1)。这轮没有代码变化，所以没有运行打包。plan 和 note 已同步到 `/home/clashuser/hzh/work_bo/codex_manager/vscode-extension`。
+
+下一轮 handoff 保持同一轨道且不扩张：只实现一个 `Rule` card 打开 [ROADMAP.md](/home/clashuser/export/codex-managed-agent/ROADMAP.md#L1) 的 quick-open 路径，不扩到 prompt-file 创建、memo 存储或更大的 source integration。

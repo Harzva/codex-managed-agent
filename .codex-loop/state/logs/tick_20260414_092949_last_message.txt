@@ -1,0 +1,5 @@
+本轮完成了一个最小的 Milestone 3 可靠性推进：insights 面板现在会在当前会话内复用最近一次有效的 report payload，所以如果某次刷新临时拿不到可用 insights，界面不会立刻掉回空状态。实现落在 [src/webview-template.js](/home/clashuser/export/codex-managed-agent/src/webview-template.js#L3545) 和 [src/webview-template.js](/home/clashuser/export/codex-managed-agent/src/webview-template.js#L5584)。
+
+active plan 已更新，Milestone 3 新增了这条已完成项，并把当前 slice 收敛到“判断 last-known insights snapshot 是否还需要跨 webview reload 生存”，见 [active-codex-managed-agent-roadmap.md](/home/clashuser/export/codex-managed-agent/.claude/plans/active-codex-managed-agent-roadmap.md#L60)。新的 evolution note 已写入 [evolution-2026-04-14-m3-last-known-insights-fallback.md](/home/clashuser/export/codex-managed-agent/.claude/plans/loloop/evolution-2026-04-14-m3-last-known-insights-fallback.md#L1)。
+
+验证已完成：`node --check src/webview-template.js` 通过，`npm run package` 通过，并成功生成 `codex-managed-agent-0.0.2.vsix`。变更也已同步到 `/home/clashuser/hzh/work_bo/codex_manager/vscode-extension`。下一轮 handoff 保持最小范围：只判断这个 last-known insights snapshot 是否需要跨 webview reload 持久化，不扩到更大的 report 生成或 insights 重构。

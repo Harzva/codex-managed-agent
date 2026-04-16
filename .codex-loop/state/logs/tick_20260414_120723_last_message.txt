@@ -1,0 +1,14 @@
+完成了一次有边界的 cross-path Task 2 slice：thread-row 的 `Root <name>` pill 现在会驱动一个 dedicated `rootFilter` state，而不是只做展示。
+
+实现落点在 [src/webview-template.js](/home/clashuser/export/codex-managed-agent/src/webview-template.js#L3645), [src/webview-template.js](/home/clashuser/export/codex-managed-agent/src/webview-template.js#L3993), [src/webview-template.js](/home/clashuser/export/codex-managed-agent/src/webview-template.js#L4928), [src/webview-template.js](/home/clashuser/export/codex-managed-agent/src/webview-template.js#L4955) 和 [src/webview-template.js](/home/clashuser/export/codex-managed-agent/src/webview-template.js#L6684)。
+
+这次改动只做了三件事：
+- 增加持久化的 `rootFilter` UI state
+- 让 `threadMatches()` 在现有 query / topic focus / status filter / pin-only filter 之外，再组合一个 path-aware root filter
+- 把 thread-row 的 root pill 变成可点击 toggle，并在激活时显示 active 状态
+
+`ACTIVE_PLAN.md` 已更新，当前 slice 收敛到下一步的 Task 2 review：判断这个 root-filter entry point 是否还需要一个显式 clear/reset affordance，见 [ACTIVE_PLAN.md](/home/clashuser/export/codex-managed-agent/.claude/plans/ACTIVE_PLAN.md#L1)。新的 evolution note 在 [evolution-2026-04-14-cross-path-root-filter-entrypoint.md](/home/clashuser/export/codex-managed-agent/.claude/plans/loloop/evolution-2026-04-14-cross-path-root-filter-entrypoint.md#L1)。
+
+验证已完成：`node --check src/webview-template.js` 通过，`npm run package` 通过，并生成了 `codex-managed-agent-0.0.2.vsix`。代码、plan 和 note 已同步到 `/home/clashuser/hzh/work_bo/codex_manager/vscode-extension`。
+
+下一轮 handoff 保持同一轨道且不扩张：只做一次 Task 2 review，判断这个 root-filter entry point 是否需要一个显式 clear/reset affordance；如果需要，只补那个最小 reset slice。

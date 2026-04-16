@@ -1,0 +1,10 @@
+完成了一次有边界的 Milestone 5 exit review，没有继续扩 scope。
+
+结论是 Milestone 5 可以关闭。对照 [publishable-product-quality-task-plan.md](/home/clashuser/export/codex-managed-agent/task-plans/publishable-product-quality-task-plan.md#L1) 的 exit criteria，当前 repo 已经满足：
+- 有明确的截图/预览采集计划：[SCREENSHOT_INVENTORY.md](/home/clashuser/export/codex-managed-agent/SCREENSHOT_INVENTORY.md#L1)
+- root docs 能发现 release-facing 文档：[README.md](/home/clashuser/export/codex-managed-agent/README.md#L113)
+- release posture 已经清晰且一致：[package.json](/home/clashuser/export/codex-managed-agent/package.json#L1), [CHANGELOG.md](/home/clashuser/export/codex-managed-agent/CHANGELOG.md#L1), [SMOKE_CHECKLIST.md](/home/clashuser/export/codex-managed-agent/SMOKE_CHECKLIST.md#L1)
+
+我已更新 [ACTIVE_PLAN.md](/home/clashuser/export/codex-managed-agent/.claude/plans/ACTIVE_PLAN.md#L1)，把 Milestone 5 标记为 complete，并写入新的 evolution note：[evolution-2026-04-14-m5-exit-review.md](/home/clashuser/export/codex-managed-agent/.claude/plans/loloop/evolution-2026-04-14-m5-exit-review.md#L1)。这轮没有代码变化，所以没有运行打包。更新后的 plan 和 note 已同步到 `/home/clashuser/hzh/work_bo/codex_manager/vscode-extension`。
+
+下一轮 handoff 保持收敛：不要继续给 Milestone 5 做额外 polish；从 [ROADMAP.md](/home/clashuser/export/codex-managed-agent/ROADMAP.md#L1) 重新锚定，选择下一个 active roadmap track。

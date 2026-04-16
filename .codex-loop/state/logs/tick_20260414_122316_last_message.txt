@@ -1,0 +1,7 @@
+完成了一个有边界的 cross-path Task 3 parity slice：unified board cards 现在也有 compact root-identity cue，不再让 raw `cwd` subtitle 承担主要的路径识别职责。改动在 [src/webview-template.js](/home/clashuser/export/codex-managed-agent/src/webview-template.js#L2791) 和 [src/webview-template.js](/home/clashuser/export/codex-managed-agent/src/webview-template.js#L5418)。具体就是两点：复用现有 `renderRootIdentityPill(thread.cwd)` 把 `Root <name>` 放进 card body，同时把 subtitle 收敛成 `updated_at + board source` 这类 board metadata。
+
+我已更新 [ACTIVE_PLAN.md](/home/clashuser/export/codex-managed-agent/.claude/plans/ACTIVE_PLAN.md#L11)，把下一步收敛到一次 Task 3 review；新的 evolution note 在 [evolution-2026-04-14-cross-path-board-root-cue.md](/home/clashuser/export/codex-managed-agent/.claude/plans/loloop/evolution-2026-04-14-cross-path-board-root-cue.md#L1)。
+
+验证已完成：`node --check src/webview-template.js` 通过，`npm run package` 通过，并重新生成了 `codex-managed-agent-0.0.2.vsix`。代码、plan 和 note 已同步到 `/home/clashuser/hzh/work_bo/codex_manager/vscode-extension`。
+
+下一轮 handoff 保持同一轨道且不扩张：只做一次 cross-path Task 3 review，判断 board-card root identity 是否已经足够支撑 path-aware unified board actions；如果还差一点，只补那个最小剩余 gap。

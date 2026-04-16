@@ -1,0 +1,1 @@
+我先按你指定顺序把 roadmap、当前 task-plan、`ACTIVE_PLAN.md` 和最新 note 读一遍，确认这轮的最小切片，再只推进那一项。

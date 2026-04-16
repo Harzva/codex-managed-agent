@@ -1,0 +1,7 @@
+完成了一次有边界的 `codex-loop-control-surface` Task 3 re-entry audit，没有加新代码。
+
+结论是：Task 3 的第一个最小 gap 不是 interval preset，也不是 custom input，而是先把“哪个 card 正在被 `codex-loop` 管理”显示出来。daemon state 已经有当前 `threadId`，但 thread row、spotlight 和 running card 还没有任何 loop-managed 身份标记，所以后续 enablement 控制还没有可见锚点。这个收敛结果已经写进 [ACTIVE_PLAN.md](/home/clashuser/export/codex-managed-agent/.claude/plans/ACTIVE_PLAN.md#L17)。
+
+新的 evolution note 在 [evolution-2026-04-15-loop-control-task3-reentry-audit.md](/home/clashuser/export/codex-managed-agent/.claude/plans/loloop/evolution-2026-04-15-loop-control-task3-reentry-audit.md#L1)。这轮是 review-only，没有代码变化，所以没有运行打包。更新后的 active plan 和新 note 已同步到 `/home/clashuser/hzh/work_bo/codex_manager/vscode-extension`。
+
+下一轮 handoff 保持同一轨道且不扩张：只补一个 loop-managed card indicator，不进入 presets、custom input 或 runtime actions。

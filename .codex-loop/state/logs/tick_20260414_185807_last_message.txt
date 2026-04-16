@@ -1,0 +1,7 @@
+完成了一次有边界的 `cma-codex-communication-optimization` Task 3 audit，没有加新代码。
+
+审计结论是：single-thread lifecycle patch 之后，剩下最小的 refresh-heavy mutation 是 [runLifecycleAction()](/home/clashuser/export/codex-managed-agent/src/host/lifecycle.js#L55) 的 batch branch。当前 batch `archive / unarchive / soft_delete / restore / hard_delete` 在 server 返回后仍然统一走 `panel.refresh()`；相比 panel boot 或 command-surface refresh，这条路径和当前 Task 3 目标更贴近，也更小。
+
+我已更新 [ACTIVE_PLAN.md](/home/clashuser/export/codex-managed-agent/.claude/plans/ACTIVE_PLAN.md#L1)，把当前 slice 收敛成“只处理 `runLifecycleAction()` 的 batch branch”。新的 evolution note 在 [evolution-2026-04-15-cma-task3-fifth-audit.md](/home/clashuser/export/codex-managed-agent/.claude/plans/loloop/evolution-2026-04-15-cma-task3-fifth-audit.md#L1)。
+
+这轮是 review-only，没有运行打包。更新后的 active plan 和新 note 已同步到 `/home/clashuser/hzh/work_bo/codex_manager/vscode-extension`。下一轮 handoff 保持同一轨道且不扩张：只 patch `runLifecycleAction()` 的 batch branch，不进入 panel boot 或更大的 render-reduction work。

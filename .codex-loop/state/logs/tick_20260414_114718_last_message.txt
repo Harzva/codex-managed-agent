@@ -1,0 +1,9 @@
+完成了一次有边界的 Milestone 3 Task 3 advice audit，没有加新代码。
+
+审计结论是：当前 advice surfaces 里，`This Week Shift` 已经有足够具体的 `Next action` 提示，但 `Vibe Advice` 还缺一个最小的 grounding cue。当前实现只是把 `insights.guidance.vibe_coding_suggestions` 直接渲染成 advice cards，缺少“为什么这些建议现在出现”的信号说明，见 [src/webview-template.js](/home/clashuser/export/codex-managed-agent/src/webview-template.js#L6008) 和 [src/webview/insights.js](/home/clashuser/export/codex-managed-agent/src/webview/insights.js#L8)。
+
+我已更新 [ACTIVE_PLAN.md](/home/clashuser/export/codex-managed-agent/.claude/plans/ACTIVE_PLAN.md#L1)，把当前 slice 收敛到一个最小实现：只在 `Vibe Advice` 上方增加一条简短 evidence cue，把建议和当前 persona / rhythm signals 关联起来。新的 evolution note 在 [evolution-2026-04-14-m3-task3-advice-audit.md](/home/clashuser/export/codex-managed-agent/.claude/plans/loloop/evolution-2026-04-14-m3-task3-advice-audit.md#L1)。
+
+这轮没有代码变化，所以没有运行打包。plan 和新 note 已同步到 `/home/clashuser/hzh/work_bo/codex_manager/vscode-extension`。
+
+下一轮 handoff 保持同一轨道且不扩张：只给 `Vibe Advice` 增加一条 concise evidence cue，把 advice 和当前 persona / rhythm signals 接上，不做更大的 insights redesign。

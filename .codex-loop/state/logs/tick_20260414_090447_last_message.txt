@@ -1,0 +1,5 @@
+本轮完成了一个最小的 `Needs Human` 视觉竞争修复：compact dock 里的 intervention cards 不再沿用主 board 的脉冲动画和重阴影，所以 urgent 卡片仍可见，但不会再抢主 board 的视觉焦点。改动在 [src/webview-template.js](/home/clashuser/export/codex-managed-agent/src/webview-template.js#L2659)。
+
+active plan 已更新，Milestone 2 新增了这条已完成项，并把当前 slice 收敛到“增加一个减少误触布局编辑的 board interaction guardrail”，见 [active-codex-managed-agent-roadmap.md](/home/clashuser/export/codex-managed-agent/.claude/plans/active-codex-managed-agent-roadmap.md#L25)。新的 evolution note 已写入 [evolution-2026-04-14-m2-needs-human-compact-tone-down.md](/home/clashuser/export/codex-managed-agent/.claude/plans/loloop/evolution-2026-04-14-m2-needs-human-compact-tone-down.md#L1)。
+
+验证已完成：`node --check src/webview-template.js` 通过，`npm run package` 通过，并成功生成 `codex-managed-agent-0.0.2.vsix`。变更也已同步到 `/home/clashuser/hzh/work_bo/codex_manager/vscode-extension`。下一轮 handoff 继续保持最小范围：只补一个 board interaction guardrail，不扩到其他交互面。

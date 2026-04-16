@@ -1,0 +1,5 @@
+读取最新 evolution note 后，当前状态仍然在 Milestone 4，本轮只做了 spotlight loop-state 的 exit review，没有改代码。review 结论是这条 inspector-level status path 现在已经够用：selected-thread inspection 不再需要回到 thread row 或大号 board card 才能看 loop state。下一个最小缺口转到了 roadmap 明确列出的 `Show in Codex / Hide from Codex` 路线，因为当前 UI 仍然只有较底层的 open/archive 动作，还没有显式的可见性控制。
+
+active plan 已更新，并把当前 slice 收敛到“审计当前 visibility-control path，找出第一个最小的 `Show in Codex / Hide from Codex` gap”，见 [active-codex-managed-agent-roadmap.md](/home/clashuser/export/codex-managed-agent/.claude/plans/active-codex-managed-agent-roadmap.md#L96)。新的 evolution note 已写入 [evolution-2026-04-14-m4-spotlight-loop-exit-review.md](/home/clashuser/export/codex-managed-agent/.claude/plans/loloop/evolution-2026-04-14-m4-spotlight-loop-exit-review.md#L1）。
+
+本轮没有代码变化，所以没有运行打包；我已把更新后的 plan 和 evolution note 同步到 `/home/clashuser/hzh/work_bo/codex_manager/vscode-extension`。下一轮 handoff 保持最小范围：只做一次 visibility-control audit，定位第一个 `Show in Codex / Hide from Codex` 缺口，不扩到更大的 lifecycle redesign。

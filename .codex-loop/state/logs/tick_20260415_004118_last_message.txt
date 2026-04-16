@@ -1,0 +1,7 @@
+完成了一次有边界的 `codex-multi-agent-coordination` re-entry audit，没有加新代码。
+
+这轮先把 [codex-multi-agent-coordination-task-plan.md](/home/clashuser/export/codex-managed-agent/task-plans/codex-multi-agent-coordination-task-plan.md#L1) 规范成当前仓库的执行格式：补上了 `Status: active`，并把任务项统一成 checkbox。审计结论也已经收敛：当前仓库里还没有任何显式的 coordination model，尤其没有 `ownership / handoff / waiting` 这种最小 vocabulary，所以第一刀不该先做大块 UI，而应该先落一个最小 coordination-state vocabulary。
+
+我已更新 [ACTIVE_PLAN.md](/home/clashuser/export/codex-managed-agent/.claude/plans/ACTIVE_PLAN.md#L1)，把当前 slice 收敛成“只引入最小 coordination-state vocabulary”。新的 evolution note 在 [evolution-2026-04-15-codex-multi-agent-reentry-audit.md](/home/clashuser/export/codex-managed-agent/.claude/plans/loloop/evolution-2026-04-15-codex-multi-agent-reentry-audit.md#L1)。这轮是 review-only，没有运行打包。相关 task-plan、active plan 和新 note 已同步到 `/home/clashuser/hzh/work_bo/codex_manager/vscode-extension`。
+
+下一轮 handoff 保持同一 track 且不扩张：只 patch最小的 coordination-state vocabulary，不进入更大的 multi-agent workflow work。

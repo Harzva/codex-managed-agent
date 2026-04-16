@@ -1,0 +1,11 @@
+完成了一个有边界的 `prompt-rule-memo-cards` Task 2 slice：`Rule` card 现在可以直接 quick-open [ROADMAP.md](/home/clashuser/export/codex-managed-agent/ROADMAP.md#L1)。
+
+这次改动只做了这一条 source integration：
+- host 侧新增了 repo 文件打开路径，[lifecycle.js](/home/clashuser/export/codex-managed-agent/src/host/lifecycle.js#L53) [panel-view.js](/home/clashuser/export/codex-managed-agent/src/host/panel-view.js#L110) [panel.js](/home/clashuser/export/codex-managed-agent/src/panel.js#L167)
+- webview 侧把 `Rule` card 标成 `ROADMAP linked`，并加上 `Open ROADMAP` 按钮，[webview-template.js](/home/clashuser/export/codex-managed-agent/src/webview-template.js#L3898) [webview-template.js](/home/clashuser/export/codex-managed-agent/src/webview-template.js#L6417)
+
+我已更新 [ACTIVE_PLAN.md](/home/clashuser/export/codex-managed-agent/.claude/plans/ACTIVE_PLAN.md#L11)，把下一步收敛到一次 Task 2 review。新的 evolution note 在 [evolution-2026-04-14-rule-card-roadmap-open.md](/home/clashuser/export/codex-managed-agent/.claude/plans/loloop/evolution-2026-04-14-rule-card-roadmap-open.md#L1)。
+
+验证已完成：`node --check src/webview-template.js`、`src/host/lifecycle.js`、`src/host/panel-view.js`、`src/panel.js` 都通过，`npm run package` 通过，并重新生成了 `codex-managed-agent-0.0.2.vsix`。代码、plan 和 note 已同步到 `/home/clashuser/hzh/work_bo/codex_manager/vscode-extension`。
+
+下一轮 handoff 保持同一轨道且不扩张：只做一次 Task 2 review，判断这条 `Rule -> ROADMAP.md` 集成是否已经足够指引下一个最小 memory-source slice。

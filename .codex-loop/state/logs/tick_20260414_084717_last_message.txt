@@ -1,0 +1,5 @@
+本轮完成了一个最小的 Milestone 2 推进：修正 board 拖拽预览在跨卡片、跨 board 边界时的清理逻辑。现在 `dragleave` 不再依赖旧的 `{threadId, position}` 型 drop state，而是按指针是否仍在 board 区域内来决定是否清理，并通过一个即时 reset helper 同步清掉 pending indicator 和 overlay DOM，避免 stale preview 残留。改动在 [src/webview-template.js](/home/clashuser/export/codex-managed-agent/src/webview-template.js#L4378) 和 [src/webview-template.js](/home/clashuser/export/codex-managed-agent/src/webview-template.js#L6074)。
+
+active plan 已更新，Milestone 2 新增一条已完成项，并把当前 slice 收敛到 `T / S / M / L` 的一个最小密度规则规范化，[active-codex-managed-agent-roadmap.md](/home/clashuser/export/codex-managed-agent/.claude/plans/active-codex-managed-agent-roadmap.md#L25)。新的 evolution note 已写入 [evolution-2026-04-14-m2-drop-indicator-boundary-reset.md](/home/clashuser/export/codex-managed-agent/.claude/plans/loloop/evolution-2026-04-14-m2-drop-indicator-boundary-reset.md#L1)。
+
+验证已完成：`node --check src/webview-template.js` 通过，`npm run package` 通过，并成功生成 `codex-managed-agent-0.0.2.vsix`。本轮变更也已同步到 `/home/clashuser/hzh/work_bo/codex_manager/vscode-extension`。下一轮 handoff 保持最小范围：只规范一个具体的 `T / S / M / L` 信息密度规则，不扩到别的交互面。

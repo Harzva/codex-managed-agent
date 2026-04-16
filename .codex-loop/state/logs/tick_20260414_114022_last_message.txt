@@ -1,0 +1,11 @@
+完成了一次有边界的 Milestone 3 Task 2 切片：`word cloud` 现在不再只是展示文本，token 点击会直接进入现有的 `topicFocus` 导航链路。
+
+实现很小，且复用了现有机制：
+- `renderWordCloud()` 现在把 token 渲染成带 `data-topic-node` / `data-topic-group="keyword"` / `data-topic-focus` 的 button，见 [src/webview-template.js](/home/clashuser/export/codex-managed-agent/src/webview-template.js#L3831)
+- 同时补了最小的 hover / focus 交互样式，让它们明确表现为可点击入口，见 [src/webview-template.js](/home/clashuser/export/codex-managed-agent/src/webview-template.js#L932)
+
+`ACTIVE_PLAN.md` 已更新，当前 slice 收敛到下一步的 Task 2 review：判断 keyword chips 是否也需要同样的 click-through affordance，见 [ACTIVE_PLAN.md](/home/clashuser/export/codex-managed-agent/.claude/plans/ACTIVE_PLAN.md#L1)。新的 evolution note 已写入 [evolution-2026-04-14-m3-word-cloud-clickthrough.md](/home/clashuser/export/codex-managed-agent/.claude/plans/loloop/evolution-2026-04-14-m3-word-cloud-clickthrough.md#L1)。
+
+验证已完成：`node --check src/webview-template.js` 通过，`npm run package` 通过，并生成了 `codex-managed-agent-0.0.2.vsix`。代码、plan 和 note 已同步到 `/home/clashuser/hzh/work_bo/codex_manager/vscode-extension`。
+
+下一轮 handoff 保持同一轨道且不扩张：只做一次 Milestone 3 Task 2 review，判断 keyword chips 是否也需要同样的 click-through affordance；如果需要，只补那个最小 parity slice。

@@ -1,0 +1,5 @@
+读取最新 evolution note 后，当前状态仍然在 Milestone 4，本轮只做了 spotlight log-access 的 exit review，没有改代码。review 结论是这条 compact log path 现在已经够用：auto-loop 日志不再只困在大号 board card 里。下一个最小缺口转到了 degraded-state recovery clarity，因为 service log path 当前仍然只是文本，不是直接可开的动作。
+
+active plan 已更新，并把当前 slice 收敛到“给 degraded-state UI 增加一个 direct service-log open action”，见 [active-codex-managed-agent-roadmap.md](/home/clashuser/export/codex-managed-agent/.claude/plans/active-codex-managed-agent-roadmap.md#L96)。新的 evolution note 已写入 [evolution-2026-04-14-m4-spotlight-log-exit-review.md](/home/clashuser/export/codex-managed-agent/.claude/plans/loloop/evolution-2026-04-14-m4-spotlight-log-exit-review.md#L1)。
+
+本轮没有代码变化，所以没有运行打包；我已把更新后的 plan 和 evolution note 同步到 `/home/clashuser/hzh/work_bo/codex_manager/vscode-extension`。下一轮 handoff 保持最小范围：只给 degraded-state UI 增加一个 direct service-log open action，不扩到更大的 recovery redesign。

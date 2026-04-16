@@ -1,0 +1,11 @@
+完成了一次有边界的 Milestone 3 re-entry audit，没有加新代码。
+
+结论是：Milestone 3 的第一个最小剩余 gap 在 Task 2。当前 insight persistence、fallback disclosure、topic-map-driven thread navigation 和 weekly next-action guidance 都已经在位；但 `word cloud` 仍然只是展示，不是实际的 filter / entry point。代码证据很直接：
+- `renderWordCloud()` 目前只输出静态 `<span class="word-cloud-token">...`，见 [src/webview-template.js](/home/clashuser/export/codex-managed-agent/src/webview-template.js#L3818)
+- 现有 click delegation 已经能处理 `topicFocus`，但 `word cloud` token 没有接入这条路径，见 [src/webview-template.js](/home/clashuser/export/codex-managed-agent/src/webview-template.js#L6599)
+
+我已更新 [ACTIVE_PLAN.md](/home/clashuser/export/codex-managed-agent/.claude/plans/ACTIVE_PLAN.md#L1)，把当前 slice 收敛到一个具体实现：只把 `word cloud` token 点击接到现有 `topicFocus` 导航链路。新的 evolution note 在 [evolution-2026-04-14-m3-reentry-audit.md](/home/clashuser/export/codex-managed-agent/.claude/plans/loloop/evolution-2026-04-14-m3-reentry-audit.md#L1)。
+
+这轮没有代码变化，所以没有运行打包。更新后的 plan 和 note 已同步到 `/home/clashuser/hzh/work_bo/codex_manager/vscode-extension`。
+
+下一轮 handoff 保持同一轨道且不扩张：只实现一个最小切片，把 `word cloud` token 点击接入现有 `topicFocus` 过滤链路，不同时做 keyword chips parity 或更大的 insights redesign。

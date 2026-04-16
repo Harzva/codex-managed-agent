@@ -1,0 +1,7 @@
+完成了一次有边界的 cross-path Task 3 audit，没有扩到实现。
+
+审计结论是：当前 unified board 的主要问题不是 action dispatch。`attach`、`pin`、`Codex`、`auto loop` 这些动作已经按 thread identity 和 thread `cwd` 执行，路径无关性基本成立；真正的最小缺口在 board card 的 path-awareness 还不够紧凑，卡片副标题仍然依赖原始 `cwd` 文本，见 [src/webview-template.js](/home/clashuser/export/codex-managed-agent/src/webview-template.js#L5413) 和 [src/host/auto-continue.js](/home/clashuser/export/codex-managed-agent/src/host/auto-continue.js#L251)。所以这轮把下一 slice 收敛成一个更小、更直接的 UI parity 修复：只给 board cards 补一个 compact root-identity cue。
+
+我已更新 [ACTIVE_PLAN.md](/home/clashuser/export/codex-managed-agent/.claude/plans/ACTIVE_PLAN.md#L1)，并写入新的 evolution note：[evolution-2026-04-14-cross-path-task3-audit.md](/home/clashuser/export/codex-managed-agent/.claude/plans/loloop/evolution-2026-04-14-cross-path-task3-audit.md#L1)。这轮没有代码变化，所以没有运行打包。plan 和 note 已同步到 `/home/clashuser/hzh/work_bo/codex_manager/vscode-extension`。
+
+下一轮 handoff 保持同一轨道且不扩张：只在 unified board 的 card surface 上补一个 compact root-identity cue，减少对 raw `cwd` subtitle 的依赖，不进入 toolbar filtering、board regrouping 或更大的 cross-path redesign。

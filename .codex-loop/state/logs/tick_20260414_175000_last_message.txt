@@ -1,0 +1,7 @@
+完成了一次有边界的 `cma-codex-communication-optimization` Task 2 audit，没有加新代码。
+
+审计结论很明确：当前第一个最小的 Codex link-sync gap 在 host 消息粒度，不在 webview 本地状态。`broadcastLinkState(panel)` 现在还是通过 [src/host/state-sync.js](/home/clashuser/export/codex-managed-agent/src/host/state-sync.js#L75) 直接重放整份 `lastPayload`，只是重新注入新的 `codexLinkState`；而 webview 侧其实已经有 [pendingCodexLink](/home/clashuser/export/codex-managed-agent/src/webview-template.js#L4249) 这种局部 bridge。所以这轮把下一 slice 收敛成一个很小的实现：只把 link-state 变化改成 dedicated patch message，而不是继续 replay full payload。
+
+我已更新 [ACTIVE_PLAN.md](/home/clashuser/export/codex-managed-agent/.claude/plans/ACTIVE_PLAN.md#L1)，当前 slice 现在明确成“replace full-payload `broadcastLinkState(panel.lastPayload)` replay with a dedicated Codex link-state patch message”。新的 evolution note 在 [evolution-2026-04-15-cma-task2-audit.md](/home/clashuser/export/codex-managed-agent/.claude/plans/loloop/evolution-2026-04-15-cma-task2-audit.md#L1)。
+
+这轮是 review-only，没有代码变化，所以没有运行打包。更新后的 active plan 和新 note 已同步到 `/home/clashuser/hzh/work_bo/codex_manager/vscode-extension`。下一轮 handoff 保持同一轨道且不扩张：只实现一个 dedicated Codex link-state patch message，让 `open / focused / linked` 状态变化不再重放整份 dashboard payload。

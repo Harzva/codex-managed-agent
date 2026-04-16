@@ -1,0 +1,7 @@
+按你要求的顺序读取后，结论是：`ROADMAP.md` 仍把 Milestone 2 的 board task-plan 作为 immediate focus，但 [board-interaction-quality-task-plan.md](/home/clashuser/export/codex-managed-agent/task-plans/board-interaction-quality-task-plan.md) 对应内容在 active plan 里已经收口为 complete，所以本轮继续沿当前未完成的 Milestone 4 task-plan 执行一个最小切片，使用的是 [codex-visibility-control-task-plan.md](/home/clashuser/export/codex-managed-agent/task-plans/codex-visibility-control-task-plan.md)。
+
+本轮只完成了 `Task 1 — Show in Codex` 的一个最小实现：drawer 里的普通线程现在有显式 `Show in Codex` 动作，[src/webview-template.js](/home/clashuser/export/codex-managed-agent/src/webview-template.js#L5497)；对应 host 侧新增了组合路径，按“best-effort title sync -> unarchive -> open in Codex editor”执行，[lifecycle.js](/home/clashuser/export/codex-managed-agent/src/host/lifecycle.js#L78)。这轮没有扩到 `Hide from Codex`，也没有扩到其他 surface。
+
+active plan 已更新，当前 slice 切到下一最小项 `Hide from Codex`，见 [active-codex-managed-agent-roadmap.md](/home/clashuser/export/codex-managed-agent/.claude/plans/active-codex-managed-agent-roadmap.md#L109)。新的 evolution note 已写入 [evolution-2026-04-14-m4-show-in-codex-action.md](/home/clashuser/export/codex-managed-agent/.claude/plans/loloop/evolution-2026-04-14-m4-show-in-codex-action.md#L1)。
+
+验证已完成：`node --check src/webview-template.js`、`src/host/lifecycle.js`、`src/host/panel-view.js`、`src/panel.js` 均通过，`npm run package` 通过，并生成 `codex-managed-agent-0.0.2.vsix`。相关代码和计划文件已同步到 `/home/clashuser/hzh/work_bo/codex_manager/vscode-extension`。下一轮 handoff 保持同一轨道且不扩张：只给 drawer 增加一个显式 `Hide from Codex` 动作，底层仍然只是 clean archive，不碰删除语义或更大的 visibility feedback redesign。

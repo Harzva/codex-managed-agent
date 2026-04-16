@@ -1,0 +1,19 @@
+完成了一个有边界的 `cma-codex-communication-optimization` Task 2 slice：Codex `open / focused / linked` 状态现在不再通过 host 侧整份 `lastPayload` 重放来同步了，而是改成了专用的 link-state patch 消息。
+
+改动落点：
+- host 侧把 `broadcastLinkState(panel)` 改成发送 `codexLinkStatePatched`，见 [src/host/state-sync.js](/home/clashuser/export/codex-managed-agent/src/host/state-sync.js#L75)
+- webview 侧只 merge `codexLinkState` 到当前 payload，再触发现有渲染，见 [src/webview-template.js](/home/clashuser/export/codex-managed-agent/src/webview-template.js#L3841) 和 [src/webview-template.js](/home/clashuser/export/codex-managed-agent/src/webview-template.js#L7004)
+
+这轮只完成了 Task 2 的第一个最小项，所以计划文件也只勾掉了这一条：
+- [task-plans/cma-codex-communication-optimization-task-plan.md](/home/clashuser/export/codex-managed-agent/task-plans/cma-codex-communication-optimization-task-plan.md#L1)
+- [ACTIVE_PLAN.md](/home/clashuser/export/codex-managed-agent/.claude/plans/ACTIVE_PLAN.md#L1) 已把下一步收敛到 `Task 2 review`
+- 新 evolution note：
+  - [evolution-2026-04-15-cma-link-state-patch.md](/home/clashuser/export/codex-managed-agent/.claude/plans/loloop/evolution-2026-04-15-cma-link-state-patch.md#L1)
+
+验证已完成：
+- `node --check src/host/state-sync.js`
+- `node --check src/webview-template.js`
+- `npm run package`
+- 重新生成了 [codex-managed-agent-0.0.3.vsix](/home/clashuser/export/codex-managed-agent/codex-managed-agent-0.0.3.vsix)
+
+代码、计划文件、note 和 VSIX 已同步到 `/home/clashuser/hzh/work_bo/codex_manager/vscode-extension`。下一轮 handoff 保持同一轨道且不扩张：只做一次 Task 2 review，判断现在剩下的最小 gap 是否只是 webview 仍然对 link-state patch 走全量 `render(state.payload)`。

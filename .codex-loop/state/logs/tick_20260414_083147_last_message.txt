@@ -1,0 +1,5 @@
+本轮完成了一个最小的 Milestone 2 推进：修正了 board 卡片的八向 resize 中 `north/west` 锚点错误。现在从左侧或上侧拖拽时，会正确回推卡片的 `col/row`，并持久化最终的 `col / row / cols / height`，不再在结束时写回原始位置。实现落在 [src/webview-template.js](/home/clashuser/export/codex-managed-agent/src/webview-template.js#L4279) 和 [src/webview-template.js](/home/clashuser/export/codex-managed-agent/src/webview-template.js#L4493)。
+
+计划和循环记录也已更新：当前 active plan 把本 slice 记为已完成，并把下一最小 slice 收敛到 drag/drop indicator clearing，[active-codex-managed-agent-roadmap.md](/home/clashuser/export/codex-managed-agent/.claude/plans/active-codex-managed-agent-roadmap.md#L25)；新的 evolution note 已写入 [evolution-2026-04-14-m2-directional-resize-anchor.md](/home/clashuser/export/codex-managed-agent/.claude/plans/loloop/evolution-2026-04-14-m2-directional-resize-anchor.md#L1)。
+
+验证已完成：`node --check src/webview-template.js` 通过，`npm run package` 通过，生成了 `codex-managed-agent-0.0.2.vsix`。代码与计划记录也已同步到 `/home/clashuser/hzh/work_bo/codex_manager/vscode-extension`。这轮没有做自动化 UI 测试，下一轮 handoff 保持不扩张：只修 drag/drop indicator 在跨卡片、跨 board 边界时的清理与复位。

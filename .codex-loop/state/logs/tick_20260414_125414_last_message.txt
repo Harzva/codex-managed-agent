@@ -1,0 +1,7 @@
+完成了一次有边界的 `prompt-rule-memo-cards` Task 2 review，没有加新代码。
+
+结论是：在 `Rule -> ROADMAP.md` 和 `Memo -> ACTIVE_PLAN.md` 之后，剩下唯一未接入 source 的 card type 是 `Prompt`。仓库里仍然没有本地 `prompt.md`，所以最小且 grounded 的下一 slice 不该是造新文件，而是先把 [plan.md](/home/clashuser/export/codex-managed-agent/plan.md#L1) 接到 `Prompt` card。这个收敛结果已经写进 [ACTIVE_PLAN.md](/home/clashuser/export/codex-managed-agent/.claude/plans/ACTIVE_PLAN.md#L11)。
+
+新的 evolution note 在 [evolution-2026-04-14-prompt-rule-memo-task2-second-review.md](/home/clashuser/export/codex-managed-agent/.claude/plans/loloop/evolution-2026-04-14-prompt-rule-memo-task2-second-review.md#L1)。这轮没有代码变化，所以没有运行打包。plan 和 note 已同步到 `/home/clashuser/hzh/work_bo/codex_manager/vscode-extension`。
+
+下一轮 handoff 保持同一轨道且不扩张：只实现一个 `Prompt` card 打开 [plan.md](/home/clashuser/export/codex-managed-agent/plan.md#L1) 的 quick-open 路径，不扩到 prompt-file 创建、编辑能力或多源整合。

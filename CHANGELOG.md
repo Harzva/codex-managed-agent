@@ -6,6 +6,11 @@ All notable release-facing changes to this extension should be recorded here.
 
 - Placeholder for the next packaged update.
 
+## 1.0.3
+
+- Restored `.claude/` and `.codex-loop/` planning artifacts to the clean export repository so GitHub keeps the project operation history.
+- Kept local planning artifacts excluded from the VSIX package while publishing the source repository copy.
+
 ## 1.0.2
 
 - Promoted the extension package to the clean publish repository workflow.

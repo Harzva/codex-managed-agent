@@ -1,0 +1,5 @@
+读取最新 evolution note 后，当前状态很明确：Milestone 2 已完成，active milestone 是 Milestone 4，所以本轮按 `ROADMAP.md` 只完成了一个最小的 visibility-control audit，没有回到 Board Interaction Quality。审计结论是：当前 UI 只有拆散的低层动作 `Open Codex / Sidebar Codex / Archive / Unarchive / Rename`，而第一个最小缺口并不是新的 host 能力，而是缺少一个显式的单步 `Show in Codex` 入口，用来把“必要时 unarchive，再打开到 Codex”收敛成一个可预期动作。
+
+active plan 已更新，把这次 audit 记为完成，并把当前 slice 收敛到“增加一个 explicit `Show in Codex` drawer action that unarchives before opening the target thread in Codex”，见 [active-codex-managed-agent-roadmap.md](/home/clashuser/export/codex-managed-agent/.claude/plans/active-codex-managed-agent-roadmap.md#L88)。新的 evolution note 已写入 [evolution-2026-04-14-m4-visibility-control-audit.md](/home/clashuser/export/codex-managed-agent/.claude/plans/loloop/evolution-2026-04-14-m4-visibility-control-audit.md#L1)。
+
+本轮没有代码变化，所以没有运行打包。我已将更新后的 plan 和 evolution note 同步到 `/home/clashuser/hzh/work_bo/codex_manager/vscode-extension`。下一轮 handoff 保持最小范围：只补一个 drawer-level `Show in Codex` 动作，先处理 unarchive + open 的单步路径，不同时扩到 `Hide from Codex`。

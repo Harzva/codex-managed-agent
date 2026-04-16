@@ -1,0 +1,5 @@
+本轮完成了一个最小的 drag smoothness micro-polish：board 的 `drag-active` 视觉状态现在会在 `dragstart` 时立即同步，不再等到第一帧延迟的 drop-indicator 更新后才出现。改动在 [src/webview-template.js](/home/clashuser/export/codex-managed-agent/src/webview-template.js#L6087)。
+
+active plan 已更新，Milestone 2 新增了这条已完成项，并把当前 slice 切到 Milestone 2 exit review，见 [active-codex-managed-agent-roadmap.md](/home/clashuser/export/codex-managed-agent/.claude/plans/active-codex-managed-agent-roadmap.md#L25)。新的 evolution note 已写入 [evolution-2026-04-14-m2-drag-active-feedback.md](/home/clashuser/export/codex-managed-agent/.claude/plans/loloop/evolution-2026-04-14-m2-drag-active-feedback.md#L1)。
+
+验证已完成：`node --check src/webview-template.js` 通过，`npm run package` 通过，并成功生成 `codex-managed-agent-0.0.2.vsix`。变更也已同步到 `/home/clashuser/hzh/work_bo/codex_manager/vscode-extension`。下一轮 handoff 保持最小范围：只做一次 Milestone 2 exit review，判断是否还需要一个额外的小修复，再决定是否向下一个里程碑移动。

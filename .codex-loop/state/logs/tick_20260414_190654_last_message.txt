@@ -1,0 +1,7 @@
+完成了一次有边界的 `cma-codex-communication-optimization` Task 3 audit，没有加新代码。
+
+审计结论是：batch lifecycle patch 之后，当前最小的 full-rerender gap 是 [webview-template.js](/home/clashuser/export/codex-managed-agent/src/webview-template.js#L7193) 里的 `promptQueued` / `promptQueueFailed`。这两条消息只会改变 pending-prompt cue，但目前到达后仍然直接 `render(state.payload)`。相比之下，`autoContinueConfigPatched` 影响面更大，所以这轮没有把范围扩大到它。
+
+我已更新 [ACTIVE_PLAN.md](/home/clashuser/export/codex-managed-agent/.claude/plans/ACTIVE_PLAN.md#L1)，把当前 slice 收敛成“只给 `promptQueued` / `promptQueueFailed` 增加 local pending-prompt DOM sync”。新的 evolution note 在 [evolution-2026-04-15-cma-task3-sixth-audit.md](/home/clashuser/export/codex-managed-agent/.claude/plans/loloop/evolution-2026-04-15-cma-task3-sixth-audit.md#L1)。
+
+这轮是 review-only，没有运行打包。更新后的 active plan 和新 note 已同步到 `/home/clashuser/hzh/work_bo/codex_manager/vscode-extension`。下一轮 handoff 保持同一轨道且不扩张：只 patch `promptQueued` / `promptQueueFailed`，不要顺手扩到 `autoContinueConfigPatched` 或更大的 render-reduction work。

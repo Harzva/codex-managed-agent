@@ -1,0 +1,9 @@
+完成了一次有边界的 `prompt-rule-memo-cards` Task 3 audit，没有加新代码。
+
+结论是：当前最小的 workflow-integration gap 已经明确。Prompt / Rule / Memo cards 虽然已经存在并且都有 linked source，但它们还停留在独立的 `Working Memory Cards` panel 里，active agent surface 本身没有把这些 memory artifacts 带到手边。最小缺口不是编辑或更复杂的 linkage，而是先在 selected-agent spotlight 里给出一组 compact memory shortcuts。
+
+我已更新 [ACTIVE_PLAN.md](/home/clashuser/export/codex-managed-agent/.claude/plans/ACTIVE_PLAN.md#L11)，把当前 slice 收敛为“在 spotlight 里补一排 Prompt / Rule / Memo quick-open shortcuts”。新的 evolution note 在 [evolution-2026-04-14-prompt-rule-memo-task3-audit.md](/home/clashuser/export/codex-managed-agent/.claude/plans/loloop/evolution-2026-04-14-prompt-rule-memo-task3-audit.md#L1)。
+
+这轮没有代码变化，所以没有运行打包。plan 和 note 已同步到 `/home/clashuser/hzh/work_bo/codex_manager/vscode-extension`。
+
+下一轮 handoff 保持同一轨道且不扩张：只在 selected-agent spotlight 增加一组 Prompt / Rule / Memo quick-open shortcuts，不扩到 editing、cross-card semantics 或更大的 memory-system redesign。

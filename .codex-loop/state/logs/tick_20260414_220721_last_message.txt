@@ -1,0 +1,9 @@
+完成了一次有边界的 `codex-loop-control-surface` Task 4 audit，没有加新代码。
+
+结论很明确：`stop` 之后，下一个最小的 runtime control gap 是 `restart`，不是 `start`。原因是当前 daemon state 已经暴露了 `threadId` 和 `intervalMinutes`，而现有 repo 也已经有可复用的 launch bridge，所以 restart 只需要重放当前 daemon config；相比之下，`start` 还缺一个更大的“从哪里取 thread / interval”的 fresh-start 语义。
+
+我已更新 [ACTIVE_PLAN.md](/home/clashuser/export/codex-managed-agent/.claude/plans/ACTIVE_PLAN.md#L17)，把当前 slice 收敛成“add one bounded restart-loop path”。新的 evolution note 在 [evolution-2026-04-15-loop-control-task4-second-audit.md](/home/clashuser/export/codex-managed-agent/.claude/plans/loloop/evolution-2026-04-15-loop-control-task4-second-audit.md#L1)。
+
+这轮是 review-only，没有代码变化，所以没有运行打包。更新后的 active plan 和新 note 已同步到 `/home/clashuser/hzh/work_bo/codex_manager/vscode-extension`。
+
+下一轮 handoff 保持同一轨道且不扩张：只 patch 一个 restart-loop path，不进入 fresh-start orchestration 或 broader daemon-management redesign。

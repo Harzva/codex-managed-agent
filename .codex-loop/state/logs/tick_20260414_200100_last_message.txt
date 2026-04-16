@@ -1,0 +1,7 @@
+完成了一次有边界的 `codex-loop-control-surface` re-entry audit，没有加新代码。
+
+结论是：这个 track 的第一个最小 gap 是 `Task 1 — Loop Status Visibility` 的第一项，先把 `codex-loop` daemon running state 暴露进 extension。当前代码里没有任何 `.codex-loop/state` 读取或 daemon-status surface，所以现在还不该先做 watch/tail 或 runtime controls。相关 task-plan 在 [codex-loop-control-surface-task-plan.md](/home/clashuser/export/codex-managed-agent/task-plans/codex-loop-control-surface-task-plan.md#L1)，我也已经把它从 `Status: planned` 切到 `Status: active`。
+
+我已更新 [ACTIVE_PLAN.md](/home/clashuser/export/codex-managed-agent/.claude/plans/ACTIVE_PLAN.md#L1)，把当前 slice 收敛成“先显示 daemon running state”。新的 evolution note 在 [evolution-2026-04-15-loop-control-reentry-audit.md](/home/clashuser/export/codex-managed-agent/.claude/plans/loloop/evolution-2026-04-15-loop-control-reentry-audit.md#L1)。
+
+这轮是 review-only，没有代码变化，所以没有运行打包。更新后的 task-plan、active plan 和新 note 已同步到 `/home/clashuser/hzh/work_bo/codex_manager/vscode-extension`。下一轮 handoff 保持同一轨道且不扩张：只实现 `codex-loop` daemon running-state visibility，不要顺手扩到 watch/tail 或 runtime controls。

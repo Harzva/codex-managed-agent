@@ -1,0 +1,7 @@
+完成了一次有边界的 `codex-loop-control-surface` Task 2 re-entry audit，没有加新代码。
+
+结论是：Task 2 的第一个最小 gap 是 `raw_log_path` 可见性。`.codex-loop/state/status.json` 已经有 `raw_log_path`，扩展里也已经有 [openLogFile()](/home/clashuser/export/codex-managed-agent/src/host/lifecycle.js#L182) 和对应消息通路，但当前 `Loop Daemon` surface 还没有把这条路径显示出来。因此下一步不该直接跳到 watch/tail actions，而是先把 latest tick log path 暴露进 UI。
+
+我已更新 [ACTIVE_PLAN.md](/home/clashuser/export/codex-managed-agent/.claude/plans/ACTIVE_PLAN.md#L1)，把当前 slice 收敛成“先显示 latest tick log path”。新的 evolution note 在 [evolution-2026-04-15-loop-control-task2-reentry-audit.md](/home/clashuser/export/codex-managed-agent/.claude/plans/loloop/evolution-2026-04-15-loop-control-task2-reentry-audit.md#L1)。
+
+这轮是 review-only，没有代码变化，所以没有运行打包。更新后的 active plan 和新 note 已同步到 `/home/clashuser/hzh/work_bo/codex_manager/vscode-extension`。下一轮 handoff 保持同一轨道且不扩张：只补 `raw_log_path` 可见性，不进入 watch/tail actions 或 runtime controls。

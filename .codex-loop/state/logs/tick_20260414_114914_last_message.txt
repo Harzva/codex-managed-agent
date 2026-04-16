@@ -1,0 +1,17 @@
+完成了一次有边界的 Milestone 3 Task 3 grounding slice：`Vibe Advice` 上方现在会显示一条动态 evidence cue，把建议和当前 persona / rhythm signals 接起来，而不是只显示泛化的静态说明。
+
+实现落点在：
+- [src/webview/insights.js](/home/clashuser/export/codex-managed-agent/src/webview/insights.js#L11)
+- [src/webview-template.js](/home/clashuser/export/codex-managed-agent/src/webview-template.js#L3806)
+- [src/webview-template.js](/home/clashuser/export/codex-managed-agent/src/webview-template.js#L6018)
+
+这次改动只做了一个最小点：
+- 把 `Vibe Advice` 的 section note 改成动态 slot
+- 用当前 report 里已有的 `usage persona`、`short prompt ratio` 和 `compaction count` 生成一条简短 evidence cue
+- 不改 advice cards 本身，不扩到更大的 insights redesign
+
+`ACTIVE_PLAN.md` 已更新，当前 slice 收敛到下一步的 Task 3 review，见 [ACTIVE_PLAN.md](/home/clashuser/export/codex-managed-agent/.claude/plans/ACTIVE_PLAN.md#L1)。新的 evolution note 已写入 [evolution-2026-04-14-m3-vibe-advice-evidence-cue.md](/home/clashuser/export/codex-managed-agent/.claude/plans/loloop/evolution-2026-04-14-m3-vibe-advice-evidence-cue.md#L1)。
+
+验证已完成：`node --check src/webview-template.js`、`node --check src/webview/insights.js` 都通过，`npm run package` 通过，并生成了 `codex-managed-agent-0.0.2.vsix`。代码、plan 和 note 已同步到 `/home/clashuser/hzh/work_bo/codex_manager/vscode-extension`。
+
+下一轮 handoff 保持同一轨道且不扩张：只做一次 Milestone 3 Task 3 review，判断当前 advice surfaces 是否已经足够具体且 grounded in workflow signals；如果还有缺口，只点出那个最小剩余项。

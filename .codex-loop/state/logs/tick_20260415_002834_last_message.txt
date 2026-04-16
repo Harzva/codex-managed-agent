@@ -1,0 +1,7 @@
+完成了一次有边界的 `prompt-rule-memo-cards` Task 1 audit，没有加新代码。
+
+结论已经收敛：剩下最小的 card-type gap 不是结构性缺口，而是 identity 还不够明确。prompt/rule/memo cards 已经有独立 shell 和配色，但 [memory panel](/home/clashuser/export/codex-managed-agent/src/webview-template.js#L3742) 的 section note 仍是未来时，card kicker 也还是 generic `prompt/rule/memo`，还没有把它们明确呈现成 first-class card types。
+
+我已更新 [ACTIVE_PLAN.md](/home/clashuser/export/codex-managed-agent/.claude/plans/ACTIVE_PLAN.md#L1)，把当前 slice 收敛成“只补 explicit card identity labels and copy”。新的 evolution note 在 [evolution-2026-04-15-prompt-rule-memo-task1-audit.md](/home/clashuser/export/codex-managed-agent/.claude/plans/loloop/evolution-2026-04-15-prompt-rule-memo-task1-audit.md#L1)。这轮是 review-only，没有运行打包。相关 active plan 和新 note 已同步到 `/home/clashuser/hzh/work_bo/codex_manager/vscode-extension`。
+
+下一轮 handoff 保持同一 track 且不扩张：只 patch memory panel 里的 explicit card-identity labels and copy，不进入更大的 memory workflow redesign。

@@ -1,0 +1,5 @@
+按你要求的顺序读取后，这轮只完成了一次 Milestone 5 剩余 publishability audit，没有做代码改动。结论是：在 smoke checklist、README discoverability、changelog scaffold 和 metadata polish 之后，剩下的缺口已经不再是一个单独的微小修复，而是开始聚到同一组问题里，包括截图/预览资产、preview/release posture，以及更清晰的 release workflow 描述。因此下一步不应该继续盲挑一个零散修补，而应该先写一个紧凑的 Milestone 5 task-plan。
+
+我已把 active slice 收敛到这一步，见 [ACTIVE_PLAN.md](/home/clashuser/export/codex-managed-agent/.claude/plans/ACTIVE_PLAN.md#L12)。新的 evolution note 已写入 [evolution-2026-04-14-m5-post-metadata-audit.md](/home/clashuser/export/codex-managed-agent/.claude/plans/loloop/evolution-2026-04-14-m5-post-metadata-audit.md#L1)。
+
+本轮没有代码变化，所以没有运行打包。我已将更新后的 [ACTIVE_PLAN.md](/home/clashuser/export/codex-managed-agent/.claude/plans/ACTIVE_PLAN.md#L1) 和新 note 同步到 `/home/clashuser/hzh/work_bo/codex_manager/vscode-extension`。下一轮 handoff 保持最小范围：只写一个紧凑的 Milestone 5 task-plan，用来覆盖低风险文档与 metadata 修补之后剩余的 publishability gaps。

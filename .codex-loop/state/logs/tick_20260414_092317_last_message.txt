@@ -1,0 +1,7 @@
+**Finding**
+
+Milestone 2 remains closed. This iteration moved into Milestone 3 and completed the planned persistence audit. The first smallest reliability gap is now explicit: persisted `topicFocus` is stored through `vscode.setState()`, but it is not revalidated against the current insights payload or current thread set after reload, so stale insight navigation state can strand the thread list in an invalid filtered view.
+
+I updated the active plan to record that audit result and narrowed the next slice to a persisted `topicFocus` validation fix in [active-codex-managed-agent-roadmap.md](/home/clashuser/export/codex-managed-agent/.claude/plans/active-codex-managed-agent-roadmap.md#L52). I also wrote the new evolution note at [evolution-2026-04-14-m3-persistence-audit.md](/home/clashuser/export/codex-managed-agent/.claude/plans/loloop/evolution-2026-04-14-m3-persistence-audit.md#L1).
+
+This turn did not change code, so I did not run packaging. I synced the updated plan and evolution note to `/home/clashuser/hzh/work_bo/codex_manager/vscode-extension`. Next handoff stays narrow: validate persisted `topicFocus` on reload so stale insight navigation state cannot leave the UI filtered into a bad state.

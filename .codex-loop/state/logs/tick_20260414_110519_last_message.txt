@@ -1,0 +1,5 @@
+按你要求的顺序读取后，这轮只完成了一个最小的 Milestone 5 文档切片：新增了 repo 根目录下的 [CHANGELOG.md](/home/clashuser/export/codex-managed-agent/CHANGELOG.md#L1)，提供了一个可持续写入的 release-notes home，并先放入 `Unreleased` 和 `0.0.2` 两个最小段落。
+
+`ACTIVE_PLAN.md` 已更新，当前 slice 收敛到下一步的 Milestone 5 audit：继续检查 changelog scaffold 之后还剩下什么最小的 release/doc 缺口，见 [ACTIVE_PLAN.md](/home/clashuser/export/codex-managed-agent/.claude/plans/ACTIVE_PLAN.md#L12)。新的 evolution note 已写入 [evolution-2026-04-14-m5-changelog-scaffold.md](/home/clashuser/export/codex-managed-agent/.claude/plans/loloop/evolution-2026-04-14-m5-changelog-scaffold.md#L1)。
+
+本轮没有代码变化，所以没有运行打包。我已将 [CHANGELOG.md](/home/clashuser/export/codex-managed-agent/CHANGELOG.md#L1)、[ACTIVE_PLAN.md](/home/clashuser/export/codex-managed-agent/.claude/plans/ACTIVE_PLAN.md#L1) 和新 note 同步到 `/home/clashuser/hzh/work_bo/codex_manager/vscode-extension`。下一轮 handoff 保持最小范围：只做一次剩余 Milestone 5 release/doc audit，找出 changelog scaffold 之后的下一个最小 publishable-product gap。

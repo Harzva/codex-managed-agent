@@ -1,0 +1,9 @@
+完成了一次有边界的 `codex-loop-control-surface` Task 4 audit，没有加新代码。
+
+结论很明确：最后剩下的 fresh-start gap 不需要先引入新的 thread/interval 选择器。当前 `loopDaemon` state 在 stopped / exited 时仍然保留 `threadId` 和 `intervalMinutes`，而 host 侧已经有 [buildLoopDaemonCommand()](/home/clashuser/export/codex-managed-agent/src/host/lifecycle.js#L36)，所以最小切口就是一个“replay last-known daemon config”的 start action。
+
+我已更新 [ACTIVE_PLAN.md](/home/clashuser/export/codex-managed-agent/.claude/plans/ACTIVE_PLAN.md#L17)，把当前 slice 收敛成“add one bounded start-loop path by replaying the last-known daemon thread and interval”。新的 evolution note 在 [evolution-2026-04-15-loop-control-task4-fourth-audit.md](/home/clashuser/export/codex-managed-agent/.claude/plans/loloop/evolution-2026-04-15-loop-control-task4-fourth-audit.md#L1)。
+
+这轮是 review-only，没有代码变化，所以没有运行打包。更新后的 active plan 和新 note 已同步到 `/home/clashuser/hzh/work_bo/codex_manager/vscode-extension`。
+
+下一轮 handoff 保持同一轨道且不扩张：只 patch 一个 replay-based start-loop path，不进入 fresh thread selection 或 broader daemon-management redesign。

@@ -1,0 +1,9 @@
+完成了一次有边界的 `codex-loop-control-surface` Task 3 audit，没有加新代码。
+
+结论已经收敛：当前最小的 custom-interval gap 不是新增嵌入式输入框，而是一个更薄的 input bridge。repo 里已经有 [runLoopIntervalPreset()](/home/clashuser/export/codex-managed-agent/src/host/lifecycle.js#L300) 这条 host path，所以最小切口就是先通过 prompt 收集分钟数，再复用这条现有 command bridge，不需要先引入新的 webview 表单状态。
+
+我已更新 [ACTIVE_PLAN.md](/home/clashuser/export/codex-managed-agent/.claude/plans/ACTIVE_PLAN.md#L17)，把当前 slice 收敛成“add one bounded custom-interval input bridge”。新的 evolution note 在 [evolution-2026-04-15-loop-control-task3-custom-input-audit.md](/home/clashuser/export/codex-managed-agent/.claude/plans/loloop/evolution-2026-04-15-loop-control-task3-custom-input-audit.md#L1)。
+
+这轮是 review-only，没有代码变化，所以没有运行打包。更新后的 active plan 和新 note 已同步到 `/home/clashuser/hzh/work_bo/codex_manager/vscode-extension`。
+
+下一轮 handoff 保持同一轨道且不扩张：只 patch 一个 custom-interval prompt bridge，复用 `runLoopIntervalPreset`，不进入 full runtime actions。

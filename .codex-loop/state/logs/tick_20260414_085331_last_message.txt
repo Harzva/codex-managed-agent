@@ -1,0 +1,5 @@
+本轮完成了一个最小的 Milestone 2 密度规范化切片：把 `preview` 文本的显示阈值从 `S` 提升到 `M`，也就是 `S` 卡片现在稳定为“标题 / 副标题 / 进度”层级，而 `M / L` 才显示过程预览文本。改动在 [src/webview-template.js](/home/clashuser/export/codex-managed-agent/src/webview-template.js#L5160)。
+
+active plan 已更新，Milestone 2 新增了这条已完成项，并把当前 slice 切到 `Needs Human` 的占位与折叠行为，[active-codex-managed-agent-roadmap.md](/home/clashuser/export/codex-managed-agent/.claude/plans/active-codex-managed-agent-roadmap.md#L25)。新的 evolution note 已写入 [evolution-2026-04-14-m2-size-density-preview-threshold.md](/home/clashuser/export/codex-managed-agent/.claude/plans/loloop/evolution-2026-04-14-m2-size-density-preview-threshold.md#L1)。
+
+验证已完成：`node --check src/webview-template.js` 通过，`npm run package` 通过，并成功生成 `codex-managed-agent-0.0.2.vsix`。代码和计划记录也已同步到 `/home/clashuser/hzh/work_bo/codex_manager/vscode-extension`。下一轮 handoff 保持最小范围：只做 `Needs Human` occupancy / collapse 的一个小修复，不扩到别的板块。

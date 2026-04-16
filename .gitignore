@@ -6,11 +6,14 @@ dist/
 coverage/
 .DS_Store
 
-.claude/
-.codex-loop/
 .recovery-backups/
-.codex-loop/state/
 *.pid
 *.log
 __pycache__/
 *.py[cod]
+
+# The export repository intentionally publishes CMA planning state.
+!.claude/
+!.claude/**
+!.codex-loop/
+!.codex-loop/**

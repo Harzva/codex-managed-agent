@@ -155,7 +155,7 @@ Publisher:
 ### Install from VSIX
 
 ```bash
-code --install-extension codex-managed-agent-1.0.2.vsix
+code --install-extension codex-managed-agent-1.0.3.vsix
 ```
 
 Or inside VS Code:

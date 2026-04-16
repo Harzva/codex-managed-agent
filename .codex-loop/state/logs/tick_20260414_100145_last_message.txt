@@ -1,0 +1,5 @@
+读取最新 evolution note 后，当前锚点仍然是 Milestone 3，因为 Milestone 2 已完成。本轮只做了一个最小的 weekly report actionability 推进：weekly surface 现在会新增一张 `Next action` 卡片，优先根据本周最大变化项生成一句简洁建议；如果没有 shift delta，就退回到首条 highlight 或一个稳定的默认提示。实现落在 [webview-template.js](/home/clashuser/export/codex-managed-agent/src/webview-template.js#L3741)。
+
+active plan 已更新，Milestone 3 新增了这条已完成项，并把当前 slice 收敛到“做一次 weekly-report actionability exit review”，见 [active-codex-managed-agent-roadmap.md](/home/clashuser/export/codex-managed-agent/.claude/plans/active-codex-managed-agent-roadmap.md#L66)。新的 evolution note 已写入 [evolution-2026-04-14-m3-weekly-next-action-cue.md](/home/clashuser/export/codex-managed-agent/.claude/plans/loloop/evolution-2026-04-14-m3-weekly-next-action-cue.md#L1)。
+
+验证已完成：`node --check src/webview-template.js` 通过，`npm run package` 通过，并成功生成 `codex-managed-agent-0.0.2.vsix`。变更已同步到 `/home/clashuser/hzh/work_bo/codex_manager/vscode-extension`。下一轮 handoff 保持最小范围：只做一次 weekly-report actionability exit review，判断这块 guidance 是否已经足够具体，再决定下一个 Milestone 3 缺口。

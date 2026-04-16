@@ -1,0 +1,5 @@
+读取最新 evolution note 后，当前 review 结论已经足够明确：Milestone 2 早已完成，而 Milestone 3 现在也可以收口。本轮只做了 Milestone 3 的 exit review，没有再加代码。基于 `ROADMAP.md` 的 exit criteria，当前已经具备：reports survive reloads、topic map 和 thread list 保持联动、weekly report 提供了具体的 next-action cue，所以我把 Milestone 3 标记为完成，并把 Milestone 4 提升为 active。
+
+active plan 已更新，Milestone 3 现在是 `complete`，Milestone 4 现在是 `active`，当前 bounded slice 收敛到“审计 background continue 和 status surfaces，找出第一个最小的 operational reliability gap”，见 [active-codex-managed-agent-roadmap.md](/home/clashuser/export/codex-managed-agent/.claude/plans/active-codex-managed-agent-roadmap.md#L52)。新的 evolution note 已写入 [evolution-2026-04-14-m3-exit-confirmed.md](/home/clashuser/export/codex-managed-agent/.claude/plans/loloop/evolution-2026-04-14-m3-exit-confirmed.md#L1)。
+
+本轮没有代码变化，所以没有运行打包；我已把更新后的 plan 和 evolution note 同步到 `/home/clashuser/hzh/work_bo/codex_manager/vscode-extension`。下一轮 handoff 保持最小范围：只做一次 Milestone 4 operational audit，定位 background continue / status surfaces 的第一个最小可靠性缺口，不扩到别的面。

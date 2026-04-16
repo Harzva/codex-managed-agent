@@ -1,0 +1,7 @@
+完成了一个有边界的 `cross-path-unified-management` Task 1 slice：running rows 现在也带上了 compact root cue，所以 Task 1 可以收口了。
+
+改动只在 running list 上补了一条 root pill，见 [webview-template.js](/home/clashuser/export/codex-managed-agent/src/webview-template.js#L6942)。这样 compact path-origin 现在已经覆盖了 thread explorer、overview/intervention mini-cards、running rows 和 running cards；因此 [cross-path-unified-management-task-plan.md](/home/clashuser/export/codex-managed-agent/task-plans/cross-path-unified-management-task-plan.md#L22) 里 Task 1 三项都已勾完。`ACTIVE_PLAN.md` 也已经切到 Task 2 audit，见 [ACTIVE_PLAN.md](/home/clashuser/export/codex-managed-agent/.claude/plans/ACTIVE_PLAN.md#L17)。新 note 在 [evolution-2026-04-15-cross-path-running-row-root-cue.md](/home/clashuser/export/codex-managed-agent/.claude/plans/loloop/evolution-2026-04-15-cross-path-running-row-root-cue.md#L1)。
+
+验证已完成：`node --check src/webview-template.js`、`npm run package` 都通过，并重新生成了 [codex-managed-agent-0.0.3.vsix](/home/clashuser/export/codex-managed-agent/codex-managed-agent-0.0.3.vsix)。相关代码、task-plan、active plan、note 和 VSIX 已同步到 `/home/clashuser/hzh/work_bo/codex_manager/vscode-extension`。
+
+下一轮 handoff 保持同一 track 且不扩张：只做一次 Task 2 audit，识别第一个最小的 cross-path filtering slice，不进入 board behavior work。

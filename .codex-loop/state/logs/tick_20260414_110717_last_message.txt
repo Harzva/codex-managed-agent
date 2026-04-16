@@ -1,0 +1,5 @@
+按你要求的顺序读取后，这轮只完成了一次 Milestone 5 剩余 release/doc audit，没有做代码改动。结论是：仓库现在已经有 [CHANGELOG.md](/home/clashuser/export/codex-managed-agent/CHANGELOG.md#L1)，但主 [README.md](/home/clashuser/export/codex-managed-agent/README.md#L87) 还没有把它暴露出来，所以 changelog discoverability 是当前最小的 publishable-product gap。
+
+我已把 active slice 收敛到下一步：在 README 中补一个指向 changelog 的最小入口，见 [ACTIVE_PLAN.md](/home/clashuser/export/codex-managed-agent/.claude/plans/ACTIVE_PLAN.md#L12)。新的 evolution note 已写入 [evolution-2026-04-14-m5-post-changelog-audit.md](/home/clashuser/export/codex-managed-agent/.claude/plans/loloop/evolution-2026-04-14-m5-post-changelog-audit.md#L1)。
+
+本轮没有代码变化，所以没有运行打包。我已将更新后的 [ACTIVE_PLAN.md](/home/clashuser/export/codex-managed-agent/.claude/plans/ACTIVE_PLAN.md#L1) 和新 note 同步到 `/home/clashuser/hzh/work_bo/codex_manager/vscode-extension`。下一轮 handoff 保持最小范围：只在 [README.md](/home/clashuser/export/codex-managed-agent/README.md#L87) 增加一个指向 [CHANGELOG.md](/home/clashuser/export/codex-managed-agent/CHANGELOG.md#L1) 的入口，不扩到更大的 release workflow 文档。

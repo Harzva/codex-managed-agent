@@ -1,0 +1,7 @@
+完成了一次有边界的 Milestone 2 Task 5 performance audit，没有加新代码。
+
+审计结论是：当前 drag/resize 热路径已经基本符合 `task-plans/board-interaction-quality-task-plan.md` 的 Task 5 目标。`drag` 期间的 drop-indicator 更新走 `requestAnimationFrame`，并直接同步 board class 与 overlay DOM；`resize` 期间也走 `requestAnimationFrame`，只直接改动当前 card 的 DOM，结束时才做一次整板 `render`。相关实现落点在 [src/webview-template.js](/home/clashuser/export/codex-managed-agent/src/webview-template.js#L4550)、[src/webview-template.js](/home/clashuser/export/codex-managed-agent/src/webview-template.js#L4572) 和 [src/webview-template.js](/home/clashuser/export/codex-managed-agent/src/webview-template.js#L6280)。
+
+我已更新 [ACTIVE_PLAN.md](/home/clashuser/export/codex-managed-agent/.claude/plans/ACTIVE_PLAN.md#L1)，把当前 slice 切到一次 Milestone 2 exit review。新的 evolution note 在 [evolution-2026-04-14-m2-task5-performance-audit.md](/home/clashuser/export/codex-managed-agent/.claude/plans/loloop/evolution-2026-04-14-m2-task5-performance-audit.md#L1)。这轮没有代码变化，所以没有运行打包；plan 和新 note 已同步到 `/home/clashuser/hzh/work_bo/codex_manager/vscode-extension`。
+
+下一轮 handoff 保持同一轨道且不扩张：只做一次 Milestone 2 exit review，判断 [board-interaction-quality-task-plan.md](/home/clashuser/export/codex-managed-agent/task-plans/board-interaction-quality-task-plan.md#L1) 是否已经满足，或者只点出最后一个剩余的 board-quality 缺口。

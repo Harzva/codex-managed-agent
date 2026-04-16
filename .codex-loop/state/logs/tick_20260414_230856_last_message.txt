@@ -1,0 +1,7 @@
+完成了一个有边界的 `cross-path-unified-management` Task 2 slice：host state 现在会把 active workspace roots 一起发进 payload 了。
+
+改动落在 [state-sync.js](/home/clashuser/export/codex-managed-agent/src/host/state-sync.js#L146) 和 [state-sync.js](/home/clashuser/export/codex-managed-agent/src/host/state-sync.js#L303)。这轮只补了 `workspaceRoots` 的读取和透传，成功、失败、异常三条 `state` 路径都会带上这份 active-workspace root metadata；没有提前展开任何新的 filtering UI。`ACTIVE_PLAN.md` 已经把下一步收敛到“基于 `workspaceRoots` 加一个 bounded active-workspace filter entrypoint”，见 [ACTIVE_PLAN.md](/home/clashuser/export/codex-managed-agent/.claude/plans/ACTIVE_PLAN.md#L17)。新 note 在 [evolution-2026-04-15-cross-path-workspace-roots-state.md](/home/clashuser/export/codex-managed-agent/.claude/plans/loloop/evolution-2026-04-15-cross-path-workspace-roots-state.md#L1)。
+
+验证已完成：`node --check src/host/state-sync.js`、`npm run package` 都通过，并重新生成了 [codex-managed-agent-0.0.3.vsix](/home/clashuser/export/codex-managed-agent/codex-managed-agent-0.0.3.vsix)。相关代码、active plan、note 和 VSIX 已同步到 `/home/clashuser/hzh/work_bo/codex_manager/vscode-extension`。
+
+下一轮 handoff 保持同一 track 且不扩张：只做一个 bounded Task 2 slice，基于 `workspaceRoots` 加一个 active-workspace filter entrypoint，不先展开更大的 filtering 或 board behavior。

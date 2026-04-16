@@ -1,0 +1,5 @@
+读取最新 evolution note 后，当前状态已经明确：Milestone 4 处于 active，本轮只做了 thread-row loop-status scanning 的 exit review，没有改代码。review 结论是这条可见性路径现在已经够用：thread rows 能扫到 compact loop state，而更丰富的 log/result 细节仍然留在大卡片里。下一个最小缺口转到了 linked-vs-running distinction：`linked` 线程在 explorer 里仍然会并进 generic idle group。
+
+active plan 已更新，并把当前 slice 收敛到“给 explorer 增加一个 dedicated linked-thread group”，见 [active-codex-managed-agent-roadmap.md](/home/clashuser/export/codex-managed-agent/.claude/plans/active-codex-managed-agent-roadmap.md#L96)。新的 evolution note 已写入 [evolution-2026-04-14-m4-loop-status-scan-exit-review.md](/home/clashuser/export/codex-managed-agent/.claude/plans/loloop/evolution-2026-04-14-m4-loop-status-scan-exit-review.md#L1)。
+
+本轮没有代码变化，所以没有运行打包；我已把更新后的 plan 和 evolution note 同步到 `/home/clashuser/hzh/work_bo/codex_manager/vscode-extension`。下一轮 handoff 保持最小范围：只给 explorer 加一个 dedicated linked-thread group，不扩到更大的 status redesign。

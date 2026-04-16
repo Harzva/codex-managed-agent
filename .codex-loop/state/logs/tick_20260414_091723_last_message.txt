@@ -1,0 +1,5 @@
+本轮完成了一个最小的 size-semantics clarity 修复：在现有 board summary copy 里显式加入了 `T / S / M / L` 的密度说明，分别对应 `T focus, S progress, M preview, L full detail`，这样用户不再需要靠试错理解卡片尺寸语义。改动在 [src/webview-template.js](/home/clashuser/export/codex-managed-agent/src/webview-template.js#L5811)。
+
+active plan 已更新，Milestone 2 现在是 `exit confirmation pending`，当前 slice 收敛到最后一次 Milestone 2 exit confirmation，见 [active-codex-managed-agent-roadmap.md](/home/clashuser/export/codex-managed-agent/.claude/plans/active-codex-managed-agent-roadmap.md#L25)。新的 evolution note 已写入 [evolution-2026-04-14-m2-size-semantics-ui-clarity.md](/home/clashuser/export/codex-managed-agent/.claude/plans/loloop/evolution-2026-04-14-m2-size-semantics-ui-clarity.md#L1)。
+
+验证已完成：`node --check src/webview-template.js` 通过，`npm run package` 通过，并成功生成 `codex-managed-agent-0.0.2.vsix`。变更也已同步到 `/home/clashuser/hzh/work_bo/codex_manager/vscode-extension`。下一轮 handoff 保持最小范围：只做一次 Milestone 2 exit confirmation，决定是正式关闭 Milestone 2，还是明确点出最后一个剩余缺口。

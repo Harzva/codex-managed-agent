@@ -1,0 +1,5 @@
+本轮完成了一个最小的 `Needs Human` 可见性推进：collapsed 状态下现在会保留一条摘要文案，所以 urgent 数量仍然清晰可见，而无需重新展开 compact dock。实现落在 [src/webview-template.js](/home/clashuser/export/codex-managed-agent/src/webview-template.js#L1694) 和 [src/webview-template.js](/home/clashuser/export/codex-managed-agent/src/webview-template.js#L5095)。
+
+active plan 已更新，Milestone 2 新增了这条已完成项，并把当前 slice 收敛到“降低 compact `Needs Human` 的视觉竞争”，见 [active-codex-managed-agent-roadmap.md](/home/clashuser/export/codex-managed-agent/.claude/plans/active-codex-managed-agent-roadmap.md#L25)。新的 evolution note 已写入 [evolution-2026-04-14-m2-needs-human-collapsed-summary.md](/home/clashuser/export/codex-managed-agent/.claude/plans/loloop/evolution-2026-04-14-m2-needs-human-collapsed-summary.md#L1)。
+
+验证已完成：`node --check src/webview-template.js` 通过，`npm run package` 通过，并成功生成 `codex-managed-agent-0.0.2.vsix`。变更也已同步到 `/home/clashuser/hzh/work_bo/codex_manager/vscode-extension`。下一轮 handoff 继续保持最小范围：只处理 compact `Needs Human` 的视觉干扰，不扩到其他交互面。

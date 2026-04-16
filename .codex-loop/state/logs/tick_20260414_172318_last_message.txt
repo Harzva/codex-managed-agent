@@ -1,0 +1,28 @@
+完成了一次有边界的 `cma-codex-communication-optimization` Task 1 slice：`sendPrompt` 现在会先走本地 optimistic queued cue，不再为了显示“已排队”立刻触发一次全量 dashboard refresh。
+
+改动落点：
+- host 侧增加了轻量 prompt-queue 消息和确认清理逻辑：
+  - [src/host/auto-continue.js](/home/clashuser/export/codex-managed-agent/src/host/auto-continue.js#L241)
+  - [src/host/state-sync.js](/home/clashuser/export/codex-managed-agent/src/host/state-sync.js#L90)
+  - [src/panel.js](/home/clashuser/export/codex-managed-agent/src/panel.js#L69)
+- webview 侧增加了本地 `pendingPromptState`，并把 `Prompt Queued` / `Prompt Failed` cue 接到 thread rows、running cards 和 spotlight：
+  - [src/webview-template.js](/home/clashuser/export/codex-managed-agent/src/webview-template.js#L3781)
+  - [src/webview-template.js](/home/clashuser/export/codex-managed-agent/src/webview-template.js#L5400)
+  - [src/webview-template.js](/home/clashuser/export/codex-managed-agent/src/webview-template.js#L5586)
+  - [src/webview-template.js](/home/clashuser/export/codex-managed-agent/src/webview-template.js#L6983)
+
+计划文件已更新：
+- [task-plans/cma-codex-communication-optimization-task-plan.md](/home/clashuser/export/codex-managed-agent/task-plans/cma-codex-communication-optimization-task-plan.md#L1) 现在是 `Status: active`，并且只勾掉了 `show queued immediately after sendPrompt`
+- [ACTIVE_PLAN.md](/home/clashuser/export/codex-managed-agent/.claude/plans/ACTIVE_PLAN.md#L1) 已把下一 slice 收敛到 `auto-continue` 的 optimistic queued state
+- 新 evolution note：
+  - [evolution-2026-04-15-cma-sendprompt-optimistic-queued.md](/home/clashuser/export/codex-managed-agent/.claude/plans/loloop/evolution-2026-04-15-cma-sendprompt-optimistic-queued.md#L1)
+
+验证已完成：
+- `node --check src/webview-template.js`
+- `node --check src/host/auto-continue.js`
+- `node --check src/host/state-sync.js`
+- `node --check src/panel.js`
+- `npm run package`
+- 重新生成了 [codex-managed-agent-0.0.3.vsix](/home/clashuser/export/codex-managed-agent/codex-managed-agent-0.0.3.vsix)
+
+相关代码、计划文件、note 和 VSIX 已同步到 `/home/clashuser/hzh/work_bo/codex_manager/vscode-extension`。下一轮 handoff 保持同一轨道且不扩张：只把同样的 local queued-state 模式补到 `auto-continue`，不要顺手扩成更大的 refresh-path 重构。

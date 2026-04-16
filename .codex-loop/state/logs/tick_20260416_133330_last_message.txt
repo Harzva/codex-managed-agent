@@ -1,0 +1,1 @@
+I’m going to add a small vocabulary section to the multi-agent coordination plan and close only Task 1, since this slice defines assignment, ownership, handoff, and waiting without introducing UI or runtime behavior.

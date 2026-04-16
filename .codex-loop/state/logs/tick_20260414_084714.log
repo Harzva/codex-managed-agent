@@ -1,0 +1,2 @@
+2026-04-14T08:47:17.052420Z  WARN codex_core::plugins::manifest: ignoring interface.defaultPrompt: prompt must be at most 128 characters path=/home/clashuser/.codex/.tmp/plugins/plugins/build-ios-apps/.codex-plugin/plugin.json
+2026-04-14T08:47:17.052869Z  WARN codex_core::plugins::manifest: ignoring interface.defaultPrompt: prompt must be at most 128 characters path=/home/clashuser/.codex/.tmp/plugins/plugins/life-science-research/.codex-plugin/plugin.json

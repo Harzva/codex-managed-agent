@@ -1,0 +1,5 @@
+读取最新 evolution note 后，当前状态仍然明确：Milestone 2 已完成，本轮 active milestone 是 Milestone 3，所以这次只做了 topic-map/thread-list linkage 的 exit review，没有继续加新交互。review 结论是这条链路现在已经覆盖了 click-to-filter、reload-safe `topicFocus` 校验、显式 clear-focus，以及 active-node 高亮，足够先收口。
+
+active plan 已更新，并把当前 slice 收敛到“给 weekly report surface 增加一条 concise next-action cue”，见 [active-codex-managed-agent-roadmap.md](/home/clashuser/export/codex-managed-agent/.claude/plans/active-codex-managed-agent-roadmap.md#L75)。新的 evolution note 已写入 [evolution-2026-04-14-m3-topic-map-linkage-exit-review.md](/home/clashuser/export/codex-managed-agent/.claude/plans/loloop/evolution-2026-04-14-m3-topic-map-linkage-exit-review.md#L1)。
+
+本轮没有代码变化，所以没有运行打包；我已把更新后的 plan 和 evolution note 同步到 `/home/clashuser/hzh/work_bo/codex_manager/vscode-extension`。下一轮 handoff 保持最小范围：只给 weekly report 增加一条简洁的 next-action cue，不扩到别的 insights surface。

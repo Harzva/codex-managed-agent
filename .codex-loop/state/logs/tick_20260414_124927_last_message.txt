@@ -1,0 +1,7 @@
+完成了一次有边界的 `prompt-rule-memo-cards` Task 2 review，没有加新代码。
+
+结论是：`Rule -> ROADMAP.md` 已经足够证明 repo-file quick-open 这条 source-integration 路径可用，所以下一个最小 slice 不该跳去造新的 `prompt.md`。更合理的下一个 loop-local source 是 [ACTIVE_PLAN.md](/home/clashuser/export/codex-managed-agent/.claude/plans/ACTIVE_PLAN.md#L1)，因此我把当前 slice 收敛为“让 `Memo` card quick-open `.claude/plans/ACTIVE_PLAN.md`”，见 [ACTIVE_PLAN.md](/home/clashuser/export/codex-managed-agent/.claude/plans/ACTIVE_PLAN.md#L11)。
+
+新的 evolution note 在 [evolution-2026-04-14-prompt-rule-memo-task2-review.md](/home/clashuser/export/codex-managed-agent/.claude/plans/loloop/evolution-2026-04-14-prompt-rule-memo-task2-review.md#L1)。这轮没有代码变化，所以没有运行打包。plan 和 note 已同步到 `/home/clashuser/hzh/work_bo/codex_manager/vscode-extension`。
+
+下一轮 handoff 保持同一轨道且不扩张：只实现一个 `Memo` card 打开 [ACTIVE_PLAN.md](/home/clashuser/export/codex-managed-agent/.claude/plans/ACTIVE_PLAN.md#L1) 的 quick-open 路径，不扩到 prompt-file 创建、编辑能力或多源整合。

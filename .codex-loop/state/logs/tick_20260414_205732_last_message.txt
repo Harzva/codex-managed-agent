@@ -1,0 +1,11 @@
+完成了一个有边界的 `codex-loop-control-surface` Task 2 slice：`Loop Daemon` 卡片现在会显示一条 compact recent-log tail preview，不用离开 managed surface 也能先看一眼最新日志尾巴。
+
+实现很窄：
+- host 侧复用了 file-tail 读取，把最新一条 tail line 放进 daemon state，[state-sync.js](/home/clashuser/export/codex-managed-agent/src/host/state-sync.js#L104)
+- webview 侧只在现有 summary card 里加了一条紧凑 tail row，没有新面板，[webview-template.js](/home/clashuser/export/codex-managed-agent/src/webview-template.js#L765) 和 [webview-template.js](/home/clashuser/export/codex-managed-agent/src/webview-template.js#L6681)
+
+我已把 Task 2 第三项勾掉，见 [codex-loop-control-surface-task-plan.md](/home/clashuser/export/codex-managed-agent/task-plans/codex-loop-control-surface-task-plan.md#L29)，并把 [ACTIVE_PLAN.md](/home/clashuser/export/codex-managed-agent/.claude/plans/ACTIVE_PLAN.md#L17) 切到 Task 2 review。新的 evolution note 在 [evolution-2026-04-15-loop-control-compact-tail-preview.md](/home/clashuser/export/codex-managed-agent/.claude/plans/loloop/evolution-2026-04-15-loop-control-compact-tail-preview.md#L1)。
+
+验证已完成：`node --check src/host/auto-continue.js`、`node --check src/host/state-sync.js`、`node --check src/webview-template.js`、`npm run package` 都通过，并重新生成了 [codex-managed-agent-0.0.3.vsix](/home/clashuser/export/codex-managed-agent/codex-managed-agent-0.0.3.vsix)。代码、task-plan、active plan、note 和 VSIX 已同步到 `/home/clashuser/hzh/work_bo/codex_manager/vscode-extension`。
+
+下一轮 handoff 保持同一轨道且不扩张：只做一次 Task 2 review，确认 loop daemon surface 现在是否已经足够关闭 watch/tail gap，然后再决定是否进入 card-level controls。

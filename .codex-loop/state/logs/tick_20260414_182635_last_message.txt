@@ -1,0 +1,9 @@
+完成了一次有边界的 `cma-codex-communication-optimization` Task 3 slice：`renameThread()` 现在走 bounded single-thread title patch，不再在成功后触发 full refresh。
+
+改动在 [lifecycle.js](/home/clashuser/export/codex-managed-agent/src/host/lifecycle.js#L7) 和 [webview-template.js](/home/clashuser/export/codex-managed-agent/src/webview-template.js#L3855)。host 侧会把新标题补进 `panel.lastPayload` 并发送 `threadTitlePatched`；webview 侧只 patch 当前 payload 和 title DOM slots，覆盖 thread rows、spotlight 和 running cards，只有 slot 缺失时才 fallback 到 full render。对应的 Task 3 单线程 refresh-reduction 项我已经勾掉，见 [cma-codex-communication-optimization-task-plan.md](/home/clashuser/export/codex-managed-agent/task-plans/cma-codex-communication-optimization-task-plan.md#L1)。
+
+`ACTIVE_PLAN.md` 保持在下一步 audit，见 [ACTIVE_PLAN.md](/home/clashuser/export/codex-managed-agent/.claude/plans/ACTIVE_PLAN.md#L1)。新的 evolution note 已写入 [evolution-2026-04-15-cma-rename-thread-single-thread-patch.md](/home/clashuser/export/codex-managed-agent/.claude/plans/loloop/evolution-2026-04-15-cma-rename-thread-single-thread-patch.md#L1)。
+
+验证已完成：`node --check src/host/lifecycle.js`、`node --check src/webview-template.js`、`npm run package` 都通过，并重新生成了 [codex-managed-agent-0.0.3.vsix](/home/clashuser/export/codex-managed-agent/codex-managed-agent-0.0.3.vsix)。代码、task-plan、active plan、note 和 VSIX 已同步到 `/home/clashuser/hzh/work_bo/codex_manager/vscode-extension`。
+
+下一轮 handoff 保持同一轨道且不扩张：只做一次 Task 3 audit，识别 `renameThread()` 之后下一个最小的 refresh-heavy mutation path，不进入 batch lifecycle actions。

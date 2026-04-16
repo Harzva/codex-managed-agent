@@ -1,0 +1,9 @@
+完成了一个有边界的 `prompt-rule-memo-cards` slice：现有 memory shell 现在不再显示 placeholder 文案，而是显示真实文件来源的 title、summary、source path 和 linked/missing 状态。
+
+实现落点在 [state-sync.js](/home/clashuser/export/codex-managed-agent/src/host/state-sync.js#L80) 和 [webview-template.js](/home/clashuser/export/codex-managed-agent/src/webview-template.js#L4171)。host 侧新增了一个很小的 `memoryCards` payload，读取 `plan.md`、`ROADMAP.md` 和 `.claude/plans/ACTIVE_PLAN.md`；webview 侧仍复用原来的 shell layout，只把三张卡换成 file-backed metadata。对应的 source-integration 第一项我已经勾掉，见 [prompt-rule-memo-cards-task-plan.md](/home/clashuser/export/codex-managed-agent/task-plans/prompt-rule-memo-cards-task-plan.md#L1)。
+
+我已更新 [ACTIVE_PLAN.md](/home/clashuser/export/codex-managed-agent/.claude/plans/ACTIVE_PLAN.md#L1)，把下一步收敛到一次 Task 2 audit。新的 evolution note 在 [evolution-2026-04-15-prompt-rule-memo-file-backed-metadata.md](/home/clashuser/export/codex-managed-agent/.claude/plans/loloop/evolution-2026-04-15-prompt-rule-memo-file-backed-metadata.md#L1)。
+
+验证已完成：`node --check src/host/state-sync.js`、`node --check src/webview-template.js`、`npm run package` 都通过，并重新生成了 [codex-managed-agent-0.0.3.vsix](/home/clashuser/export/codex-managed-agent/codex-managed-agent-0.0.3.vsix)。代码、task-plan、active plan、note 和 VSIX 已同步到 `/home/clashuser/hzh/work_bo/codex_manager/vscode-extension`。
+
+下一轮 handoff 保持同一 track 且不扩张：只做一次 Task 2 audit，识别 file-backed metadata 之后下一个最小的 source-integration gap，不进入 editing flow 或更大的 memory workflow work。

@@ -1,0 +1,13 @@
+完成了一次有边界的 `cma-codex-communication-optimization` Task 3 audit，没有加新代码。
+
+结论是：`copyText()` 之后，local-only action 层已经基本清干净了。依据当前实现：
+- [runCommandInTerminal()](/home/clashuser/export/codex-managed-agent/src/panel.js#L155) 只发 terminal，不 refresh
+- [openLogFile()](/home/clashuser/export/codex-managed-agent/src/host/lifecycle.js#L37) 不 refresh
+- [openRepoFile()](/home/clashuser/export/codex-managed-agent/src/host/lifecycle.js#L49) 不 refresh
+- `openExternal` 也不走 dashboard refresh
+
+所以 Task 3 的下一个最小 gap 已经不再是 local-feedback 动作，而是 single-thread mutation： [renameThread()](/home/clashuser/export/codex-managed-agent/src/host/lifecycle.js#L63)。它只改一个 thread title，但成功和失败路径都 still fall back 到 `panel.refresh(...)`。
+
+我已更新 [ACTIVE_PLAN.md](/home/clashuser/export/codex-managed-agent/.claude/plans/ACTIVE_PLAN.md#L1)，把当前 slice 收敛到“只处理 `renameThread()` 的 bounded single-thread update path”。新的 evolution note 在 [evolution-2026-04-15-cma-task3-second-audit.md](/home/clashuser/export/codex-managed-agent/.claude/plans/loloop/evolution-2026-04-15-cma-task3-second-audit.md#L1)。
+
+这轮是 review-only，没有代码变化，所以没有运行打包。更新后的 active plan 和新 note 已同步到 `/home/clashuser/hzh/work_bo/codex_manager/vscode-extension`。下一轮 handoff 保持同一轨道且不扩张：只 patch `renameThread()`，不要顺手扩到 batch lifecycle actions 或更大的 render-reduction work。

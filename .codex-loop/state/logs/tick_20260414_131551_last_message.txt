@@ -1,0 +1,7 @@
+完成了一次有边界的 `no-editor-first-workflows` Task 1 review，没有加新代码。
+
+结论是 Task 1 现在可以先收口。结合上轮修复，running board cards 已经具备最小的 routine control set：prompt send 通过现有 quick composer 留在卡片内，Codex jump 仍在卡片 action rail 上，loop controls 也仍然在卡片内可用。因此这轮没有继续补第二个 card-level 操作，而是把 active slice 切到 Task 2 的 runtime/log visibility 审计，见 [ACTIVE_PLAN.md](/home/clashuser/export/codex-managed-agent/.claude/plans/ACTIVE_PLAN.md#L11)。
+
+新的 evolution note 已写入 [evolution-2026-04-14-no-editor-task1-review.md](/home/clashuser/export/codex-managed-agent/.claude/plans/loloop/evolution-2026-04-14-no-editor-task1-review.md#L1)。这轮没有代码变化，所以没有运行打包；更新后的 plan 和新 note 已同步到 `/home/clashuser/hzh/work_bo/codex_manager/vscode-extension`。
+
+下一轮 handoff 保持同一轨道且不扩张：只做一次 Task 2 audit，找出第一个最小的 runtime/log visibility gap，判断当前哪些常见检查仍然被迫跳到 cards/drawer 之外。

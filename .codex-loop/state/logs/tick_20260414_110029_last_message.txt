@@ -1,0 +1,5 @@
+按你要求的顺序读取后，这轮只完成了一个最小的 Milestone 5 README 文档切片：在 [README.md](/home/clashuser/export/codex-managed-agent/README.md#L87) 的 `Package as VSIX` 和 `Publish to Marketplace` 区域补上了对 [SMOKE_CHECKLIST.md](/home/clashuser/export/codex-managed-agent/SMOKE_CHECKLIST.md#L1) 的显式入口，这样主安装/发布路径现在能直接发现验证清单。
+
+`ACTIVE_PLAN.md` 已更新，当前 slice 收敛到下一步的 Milestone 5 audit：继续检查剩余的 release/doc 路径，找出 smoke-checklist discoverability 之后的下一个最小缺口，见 [ACTIVE_PLAN.md](/home/clashuser/export/codex-managed-agent/.claude/plans/ACTIVE_PLAN.md#L12)。新的 evolution note 已写入 [evolution-2026-04-14-m5-readme-smoke-entry.md](/home/clashuser/export/codex-managed-agent/.claude/plans/loloop/evolution-2026-04-14-m5-readme-smoke-entry.md#L1)。
+
+本轮没有代码变化，所以没有运行打包。我已将 [README.md](/home/clashuser/export/codex-managed-agent/README.md#L87)、[ACTIVE_PLAN.md](/home/clashuser/export/codex-managed-agent/.claude/plans/ACTIVE_PLAN.md#L1) 和新 note 同步到 `/home/clashuser/hzh/work_bo/codex_manager/vscode-extension`。下一轮 handoff 保持最小范围：只做一次剩余 Milestone 5 release/doc audit，确定下一个最小的 publishable-product gap，而不是直接扩到更大的 release workflow 重写。

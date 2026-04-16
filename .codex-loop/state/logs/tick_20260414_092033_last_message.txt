@@ -1,0 +1,7 @@
+**Finding**
+
+Milestone 2 can close. Against `ROADMAP.md`, the remaining gap from the prior exit review was explicit `T / S / M / L` semantics, and that is now covered. I marked Milestone 2 complete and promoted Milestone 3 to active status in [active-codex-managed-agent-roadmap.md](/home/clashuser/export/codex-managed-agent/.claude/plans/active-codex-managed-agent-roadmap.md#L25).
+
+I also wrote the new evolution note at [evolution-2026-04-14-m2-exit-confirmed.md](/home/clashuser/export/codex-managed-agent/.claude/plans/loloop/evolution-2026-04-14-m2-exit-confirmed.md#L1), which records the closure decision and narrows the next slice to a Milestone 3 persistence audit.
+
+This turn did not change code, so I did not run packaging. I synced the updated plan and evolution note to `/home/clashuser/hzh/work_bo/codex_manager/vscode-extension`. Next handoff stays narrow: move to Milestone 3 and audit current insight/report persistence paths to identify the first smallest reliability gap.

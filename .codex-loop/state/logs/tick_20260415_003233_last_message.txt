@@ -1,0 +1,9 @@
+完成了一个有边界的 `prompt-rule-memo-cards` Task 1 slice：memory panel 里的 prompt/rule/memo 现在以明确的 first-class card identity 呈现出来了。
+
+改动只在 [webview-template.js](/home/clashuser/export/codex-managed-agent/src/webview-template.js#L3742) 和 [webview-template.js](/home/clashuser/export/codex-managed-agent/src/webview-template.js#L4170)。我把 section note 从未来时改成了现在时，并把 card kicker / meta 里的 generic `prompt/rule/memo` 改成了明确的 `Prompt Card`、`Rule Card`、`Memo Card`。这样 Task 1 的两项都可以收口，所以 [prompt-rule-memo-cards-task-plan.md](/home/clashuser/export/codex-managed-agent/task-plans/prompt-rule-memo-cards-task-plan.md#L1) 现在已经是 `Status: complete`。
+
+我已更新 [ACTIVE_PLAN.md](/home/clashuser/export/codex-managed-agent/.claude/plans/ACTIVE_PLAN.md#L1)，把下一步收敛到这条 track 的 exit review。新的 evolution note 在 [evolution-2026-04-15-prompt-rule-memo-card-identity.md](/home/clashuser/export/codex-managed-agent/.claude/plans/loloop/evolution-2026-04-15-prompt-rule-memo-card-identity.md#L1)。
+
+验证已完成：`node --check src/webview-template.js` 和 `npm run package` 都通过，并重新生成了 [codex-managed-agent-0.0.3.vsix](/home/clashuser/export/codex-managed-agent/codex-managed-agent-0.0.3.vsix)。代码、task-plan、active plan、note 和 VSIX 已同步到 `/home/clashuser/hzh/work_bo/codex_manager/vscode-extension`。
+
+下一轮 handoff 保持同一 roadmap track 且不扩张：只做一次 `task-plans/prompt-rule-memo-cards-task-plan.md` 的 exit review，确认这条 track 可以正式关闭，再决定下一个 follow-on track。

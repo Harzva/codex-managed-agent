@@ -1,0 +1,13 @@
+完成了一个有边界的 `codex-loop-control-surface` Task 4 slice：extension 现在有了一个 bounded restart-loop path。
+
+这轮只补了 `restart`，不碰 fresh start：
+- host 侧新增了 `buildLoopDaemonCommand()` 复用当前 daemon 的 thread / interval 配置，[lifecycle.js](/home/clashuser/export/codex-managed-agent/src/host/lifecycle.js#L36)
+- `Restart Loop` 会先走 stop，再等待当前 `daemon.pid` 消失后重放 daemon command
+- panel / message 通路接上了这个动作，[panel.js](/home/clashuser/export/codex-managed-agent/src/panel.js#L210) [panel-view.js](/home/clashuser/export/codex-managed-agent/src/host/panel-view.js#L101)
+- `Loop Daemon` summary card 现在有 `Restart Loop` 按钮，[webview-template.js](/home/clashuser/export/codex-managed-agent/src/webview-template.js#L6712) [webview-template.js](/home/clashuser/export/codex-managed-agent/src/webview-template.js#L7022)
+
+我已把 Task 4 的 `restart loop from the extension` 勾掉，见 [codex-loop-control-surface-task-plan.md](/home/clashuser/export/codex-managed-agent/task-plans/codex-loop-control-surface-task-plan.md#L42)。`ACTIVE_PLAN.md` 也已经切回下一步 Task 4 audit，见 [ACTIVE_PLAN.md](/home/clashuser/export/codex-managed-agent/.claude/plans/ACTIVE_PLAN.md#L17)。新的 evolution note 在 [evolution-2026-04-15-loop-control-restart-path.md](/home/clashuser/export/codex-managed-agent/.claude/plans/loloop/evolution-2026-04-15-loop-control-restart-path.md#L1)。
+
+验证已完成：`node --check src/host/lifecycle.js`、`src/host/panel-view.js`、`src/panel.js`、`src/webview-template.js` 都通过，`npm run package` 通过，并重新生成了 [codex-managed-agent-0.0.3.vsix](/home/clashuser/export/codex-managed-agent/codex-managed-agent-0.0.3.vsix)。代码、task-plan、active plan、note 和 VSIX 已同步到 `/home/clashuser/hzh/work_bo/codex_manager/vscode-extension`。
+
+下一轮 handoff 保持同一轨道且不扩张：只做一次 Task 4 audit，识别 `restart` 之后下一个最小的 runtime control gap，不进入 broader daemon-management redesign。

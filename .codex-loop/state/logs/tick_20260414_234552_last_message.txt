@@ -1,0 +1,7 @@
+完成了一次有边界的 `prompt-rule-memo-cards` re-entry audit，没有加新代码。
+
+这轮先把 [prompt-rule-memo-cards-task-plan.md](/home/clashuser/export/codex-managed-agent/task-plans/prompt-rule-memo-cards-task-plan.md#L1) 规范成当前仓库的执行格式：补上了 `Status: active`，并把任务项统一成 checkbox。审计结论也已经收敛：当前 memory shell 已经有 prompt/rule/memo 的独立视觉和 quick-open 按钮，但卡片内容还是 placeholder，所以第一个最小 slice 不是继续扩 UI，而是先把这三张卡接到真实文件元数据上。
+
+我已更新 [ACTIVE_PLAN.md](/home/clashuser/export/codex-managed-agent/.claude/plans/ACTIVE_PLAN.md#L1)，把当前 slice 收敛成“只替换 prompt/rule/memo shell 的 placeholder 内容为 file-backed metadata”。新的 evolution note 在 [evolution-2026-04-15-prompt-rule-memo-reentry-audit.md](/home/clashuser/export/codex-managed-agent/.claude/plans/loloop/evolution-2026-04-15-prompt-rule-memo-reentry-audit.md#L1)。这轮是 review-only，没有运行打包。相关 task-plan、active plan 和新 note 已同步到 `/home/clashuser/hzh/work_bo/codex_manager/vscode-extension`。
+
+下一轮 handoff 保持同一 track 且不扩张：只 patch prompt/rule/memo cards 的 file-backed metadata，不进入 editing flow、agent-card references 或更大的 memory workflow work。

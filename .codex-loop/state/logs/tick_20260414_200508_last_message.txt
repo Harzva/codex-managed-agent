@@ -1,0 +1,13 @@
+完成了一个有边界的 `codex-loop-control-surface` Task 1 slice：extension 里现在能直接看到 `codex-loop` daemon 是否在运行。
+
+改动落点：
+- host 侧读取 `.codex-loop/state` 并把最小 daemon state 带进 payload：[src/host/state-sync.js](/home/clashuser/export/codex-managed-agent/src/host/state-sync.js#L1)
+- webview 侧在 overview digest 增加了一个 `Loop Daemon` summary card：[src/webview-template.js](/home/clashuser/export/codex-managed-agent/src/webview-template.js#L6642)
+
+这轮只完成了 Task 1 的第一项，所以 [codex-loop-control-surface-task-plan.md](/home/clashuser/export/codex-managed-agent/task-plans/codex-loop-control-surface-task-plan.md#L1) 现在只勾掉了 `show daemon running state in the extension`。没有扩到 thread id、launcher、heartbeat detail，也没有碰 watch/tail 或 runtime controls。
+
+我已更新 [ACTIVE_PLAN.md](/home/clashuser/export/codex-managed-agent/.claude/plans/ACTIVE_PLAN.md#L1)，把下一步收敛到一次 Task 1 audit。新的 evolution note 在 [evolution-2026-04-15-loop-control-daemon-running-state.md](/home/clashuser/export/codex-managed-agent/.claude/plans/loloop/evolution-2026-04-15-loop-control-daemon-running-state.md#L1)。
+
+验证已完成：`node --check src/host/state-sync.js`、`node --check src/webview-template.js` 通过；`npm run package` 第一次遇到 `.codex-loop/` 变动导致的瞬时 VSIX file-stream race，第二次通过，并重新生成了 [codex-managed-agent-0.0.3.vsix](/home/clashuser/export/codex-managed-agent/codex-managed-agent-0.0.3.vsix)。代码、task-plan、active plan、note 和 VSIX 已同步到 `/home/clashuser/hzh/work_bo/codex_manager/vscode-extension`。
+
+下一轮 handoff 保持同一轨道且不扩张：只做一次 Task 1 audit，识别 daemon running-state 之后下一个最小的 loop-status metadata gap，不进入 watch/tail 或 runtime controls。

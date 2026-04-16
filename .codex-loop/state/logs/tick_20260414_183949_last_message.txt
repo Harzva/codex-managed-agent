@@ -1,0 +1,7 @@
+完成了一次有边界的 `cma-codex-communication-optimization` Task 3 audit，没有加新代码。
+
+审计结论是：`renameThread()` 之后，下一个最小的 refresh-heavy mutation 是 [showThreadInCodex()](/home/clashuser/export/codex-managed-agent/src/host/lifecycle.js#L120)。它只处理一个 thread，但当前成功和失败路径都还依赖 `panel.refresh(...)`，而且它的变更范围本质上还是单线程：`unarchive` + Codex editor open + link-state变化。所以这轮没有扩到 batch lifecycle actions，也没有扩到 panel boot path。
+
+我已更新 [ACTIVE_PLAN.md](/home/clashuser/export/codex-managed-agent/.claude/plans/ACTIVE_PLAN.md#L1)，把当前 slice 收敛成“只 patch `showThreadInCodex()` 的 bounded single-thread status/link update path”。新的 evolution note 在 [evolution-2026-04-15-cma-task3-third-audit.md](/home/clashuser/export/codex-managed-agent/.claude/plans/loloop/evolution-2026-04-15-cma-task3-third-audit.md#L1)。
+
+这轮是 review-only，没有运行打包。更新后的 active plan 和新 note 已同步到 `/home/clashuser/hzh/work_bo/codex_manager/vscode-extension`。下一轮 handoff 保持同一轨道且不扩张：只 patch `showThreadInCodex()`，不要顺手扩到 batch lifecycle actions 或更大的 render-reduction work。

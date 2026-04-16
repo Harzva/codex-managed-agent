@@ -1,0 +1,9 @@
+完成了一个有边界的 `codex-loop-control-surface` Task 2 slice：`Loop Daemon` 卡片现在多了一个 `Tail in Terminal` 动作，直接把最新 loop log 送进 `tail -f`。
+
+改动只落在 [webview-template.js](/home/clashuser/export/codex-managed-agent/src/webview-template.js#L4055) 和 [webview-template.js](/home/clashuser/export/codex-managed-agent/src/webview-template.js#L6672)。我加了一个很小的 `shellQuote()` helper 来安全引用日志路径，然后在现有 daemon 卡片动作区复用 `runCommandInTerminal` 通路生成 `tail -f <raw_log_path>`。没有扩到 embedded tail UI。对应的 Task 2 第二项现在已勾掉，见 [codex-loop-control-surface-task-plan.md](/home/clashuser/export/codex-managed-agent/task-plans/codex-loop-control-surface-task-plan.md#L29)。
+
+我已更新 [ACTIVE_PLAN.md](/home/clashuser/export/codex-managed-agent/.claude/plans/ACTIVE_PLAN.md#L17)，把下一步收敛到 compact recent-log tail 的审计。新的 evolution note 在 [evolution-2026-04-15-loop-control-tail-terminal-action.md](/home/clashuser/export/codex-managed-agent/.claude/plans/loloop/evolution-2026-04-15-loop-control-tail-terminal-action.md#L1)。
+
+验证已完成：`node --check src/webview-template.js`、`node --check src/host/state-sync.js`、`npm run package` 都通过，并重新生成了 [codex-managed-agent-0.0.3.vsix](/home/clashuser/export/codex-managed-agent/codex-managed-agent-0.0.3.vsix)。代码、task-plan、active plan、note 和 VSIX 已同步到 `/home/clashuser/hzh/work_bo/codex_manager/vscode-extension`。
+
+下一轮 handoff 保持同一轨道且不扩张：只做一次 Task 2 audit，识别 compact recent-log tail 的最小切口，不进入 runtime controls。

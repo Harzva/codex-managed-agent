@@ -1,0 +1,5 @@
+读取最新 evolution note 后，当前状态仍然在 Milestone 4，本轮只做了 degraded-state log-action 的 exit review，没有改代码。review 结论是这条 recovery path 现在已经够用：degraded 状态下不再需要手动复制纯文本日志路径。下一个最小缺口转到了 spotlight loop-state clarity，因为 selected-thread inspector 里还没有直接显示 compact auto-loop state。
+
+active plan 已更新，并把当前 slice 收敛到“给 spotlight surface 增加一个 compact auto-loop state metric”，见 [active-codex-managed-agent-roadmap.md](/home/clashuser/export/codex-managed-agent/.claude/plans/active-codex-managed-agent-roadmap.md#L96)。新的 evolution note 已写入 [evolution-2026-04-14-m4-degraded-log-exit-review.md](/home/clashuser/export/codex-managed-agent/.claude/plans/loloop/evolution-2026-04-14-m4-degraded-log-exit-review.md#L1)。
+
+本轮没有代码变化，所以没有运行打包；我已把更新后的 plan 和 evolution note 同步到 `/home/clashuser/hzh/work_bo/codex_manager/vscode-extension`。下一轮 handoff 保持最小范围：只给 spotlight 增加一个 compact auto-loop state metric，不扩到更大的 inspector redesign。

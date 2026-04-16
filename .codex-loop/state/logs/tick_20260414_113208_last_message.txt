@@ -1,0 +1,12 @@
+完成了一次有边界的 M2 Task 4 exit review，没有扩到新实现。
+
+结论是：`Needs Human` compactness 当前可以先收口。对照 [board-interaction-quality-task-plan.md](/home/clashuser/export/codex-managed-agent/task-plans/board-interaction-quality-task-plan.md#L1) 的 Task 4，当前 dock 已经具备：
+- bounded collapse / expand 行为
+- compact urgent cards 的标题可见
+- direct `Codex` jump action 可见且可用
+
+因此我没有继续给 `Needs Human` 做额外 polish，而是把 M2 的下一最小切片切到 Task 5 performance audit。更新已写入 [ACTIVE_PLAN.md](/home/clashuser/export/codex-managed-agent/.claude/plans/ACTIVE_PLAN.md#L1)，新的 evolution note 在 [evolution-2026-04-14-m2-needs-human-task4-exit-review.md](/home/clashuser/export/codex-managed-agent/.claude/plans/loloop/evolution-2026-04-14-m2-needs-human-task4-exit-review.md#L1)。
+
+这轮没有代码变化，所以没有运行打包。plan 和新 note 已同步到 `/home/clashuser/hzh/work_bo/codex_manager/vscode-extension`。
+
+下一轮 handoff 保持同一轨道且不扩张：只做一次 Milestone 2 Task 5 performance audit，检查 drag/resize 期间是否还存在不必要的 board-wide re-render；如果有，只修那个最小 render-path gap。

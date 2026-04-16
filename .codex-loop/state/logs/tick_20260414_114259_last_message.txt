@@ -1,0 +1,11 @@
+完成了一次有边界的 Milestone 3 Task 2 parity slice：keyword chips 现在也进入了现有的 `topicFocus` 导航链路，不再只是 display-only。
+
+实现落在 [src/webview-template.js](/home/clashuser/export/codex-managed-agent/src/webview-template.js#L820) 和 [src/webview-template.js](/home/clashuser/export/codex-managed-agent/src/webview-template.js#L3801)。这次改动做了两件事：
+- `renderKeywordChip()` 现在把 chip 渲染成带 `data-topic-node` / `data-topic-group="keyword"` / `data-topic-focus` 的 button，直接复用现有 click delegation
+- 补了最小的 hover / focus 样式，让 chips 明确表现为可点击导航入口
+
+`ACTIVE_PLAN.md` 已更新，当前 slice 收敛到下一步的 Task 2 exit review，见 [ACTIVE_PLAN.md](/home/clashuser/export/codex-managed-agent/.claude/plans/ACTIVE_PLAN.md#L1)。新的 evolution note 已写入 [evolution-2026-04-14-m3-keyword-chip-clickthrough.md](/home/clashuser/export/codex-managed-agent/.claude/plans/loloop/evolution-2026-04-14-m3-keyword-chip-clickthrough.md#L1)。
+
+验证已完成：`node --check src/webview-template.js` 通过，`npm run package` 通过，并生成了 `codex-managed-agent-0.0.2.vsix`。代码、plan 和 note 已同步到 `/home/clashuser/hzh/work_bo/codex_manager/vscode-extension`。
+
+下一轮 handoff 保持同一轨道且不扩张：只做一次 Milestone 3 Task 2 exit review，判断 topic map、word cloud 和 keyword chips 是否已经足够把 insight navigation 连接到真实工作入口；如果还有缺口，只点出那个最小剩余项。

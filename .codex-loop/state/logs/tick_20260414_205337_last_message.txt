@@ -1,0 +1,7 @@
+完成了一次有边界的 `codex-loop-control-surface` Task 2 audit，没有加新代码。
+
+结论是：Task 2 剩下的最小 compact-tail gap 不是新日志面板，而是先在现有 `Loop Daemon` 卡片里补一个 compact recent-log tail preview。理由很直接：host 侧已经有可复用的 file-tail 读取逻辑，daemon surface 也已经有稳定的 summary slot，所以先加一条短尾巴是更小、更稳的切口。这个收敛结果已经写进 [ACTIVE_PLAN.md](/home/clashuser/export/codex-managed-agent/.claude/plans/ACTIVE_PLAN.md#L17)。
+
+新的 evolution note 在 [evolution-2026-04-15-loop-control-task2-compact-tail-audit.md](/home/clashuser/export/codex-managed-agent/.claude/plans/loloop/evolution-2026-04-15-loop-control-task2-compact-tail-audit.md#L1)。这轮是 review-only，没有代码变化，所以没有运行打包。更新后的 active plan 和新 note 已同步到 `/home/clashuser/hzh/work_bo/codex_manager/vscode-extension`。
+
+下一轮 handoff 保持同一轨道且不扩张：只补一个 compact loop-log tail preview，复用 host 侧现成的 file-tail 读取，不进入新日志面板或 runtime controls。

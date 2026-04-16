@@ -1,0 +1,5 @@
+读取最新 evolution note 后，当前状态仍然明确：Milestone 2 已完成，本轮 active milestone 是 Milestone 3，所以这次只做了一次 fallback-disclosure exit review，没有继续加新 fallback 细节。review 结论是这条路径已经覆盖了 persisted reload fallback、session-cache reuse、source disclosure、freshness disclosure 和 stale wording，当前可以从“报告存活”转向下一个更小的导航缺口。
+
+active plan 已更新，Milestone 3 新增了这次 exit review，并把当前 slice 收敛到“给 topic-map-driven thread filtering 增加一个明确的 clear-focus affordance”，见 [active-codex-managed-agent-roadmap.md](/home/clashuser/export/codex-managed-agent/.claude/plans/active-codex-managed-agent-roadmap.md#L73)。新的 evolution note 已写入 [evolution-2026-04-14-m3-fallback-disclosure-exit-review.md](/home/clashuser/export/codex-managed-agent/.claude/plans/loloop/evolution-2026-04-14-m3-fallback-disclosure-exit-review.md#L1)。
+
+本轮没有代码变化，所以没有运行打包；我已把更新后的 plan 和 evolution note 同步到 `/home/clashuser/hzh/work_bo/codex_manager/vscode-extension`。下一轮 handoff 保持最小范围：只添加一个 topic-map focus 的显式清除入口，不扩到别的 insights 交互面。

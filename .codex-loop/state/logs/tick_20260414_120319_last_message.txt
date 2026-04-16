@@ -1,0 +1,9 @@
+完成了一次有边界的 cross-path Task 1 review，没有加新代码。
+
+结论是：Task 1 现在可以先收口。thread rows 和 spotlight 都已经有 compact root identity，同时完整路径仍然可见，所以 path-origin visibility 已经足够支撑下一步进入 cross-path filtering，而不需要继续把 path label 铺到更多 surface。相关实现位置在 [src/webview-template.js](/home/clashuser/export/codex-managed-agent/src/webview-template.js#L3957), [src/webview-template.js](/home/clashuser/export/codex-managed-agent/src/webview-template.js#L5211), [src/webview-template.js](/home/clashuser/export/codex-managed-agent/src/webview-template.js#L5236)。
+
+我已更新 [ACTIVE_PLAN.md](/home/clashuser/export/codex-managed-agent/.claude/plans/ACTIVE_PLAN.md#L1)，把当前 slice 切到 cross-path Task 2 audit。新的 evolution note 在 [evolution-2026-04-14-cross-path-task1-review.md](/home/clashuser/export/codex-managed-agent/.claude/plans/loloop/evolution-2026-04-14-cross-path-task1-review.md#L1)。
+
+这轮没有代码变化，所以没有运行打包。plan 和新 note 已同步到 `/home/clashuser/hzh/work_bo/codex_manager/vscode-extension`。
+
+下一轮 handoff 保持同一轨道且不扩张：只做一次 cross-path Task 2 audit，找出第一个最小的 filtering gap，不进入 cross-path board actions。

@@ -1,0 +1,5 @@
+本轮完成了一个最小的 board interaction guardrail：当拖拽手势起始于卡片内的按钮、输入框、下拉框、文本框或 resize handle 时，不再进入 board 拖拽，从而减少误触布局编辑。实现落在 [src/webview-template.js](/home/clashuser/export/codex-managed-agent/src/webview-template.js#L6077)。
+
+active plan 已更新，Milestone 2 新增了这条已完成项，并把当前 slice 收敛到“drag smoothness micro-polish”，见 [active-codex-managed-agent-roadmap.md](/home/clashuser/export/codex-managed-agent/.claude/plans/active-codex-managed-agent-roadmap.md#L25)。新的 evolution note 已写入 [evolution-2026-04-14-m2-board-drag-guardrail.md](/home/clashuser/export/codex-managed-agent/.claude/plans/loloop/evolution-2026-04-14-m2-board-drag-guardrail.md#L1)。
+
+验证已完成：`node --check src/webview-template.js` 通过，`npm run package` 通过，并成功生成 `codex-managed-agent-0.0.2.vsix`。变更也已同步到 `/home/clashuser/hzh/work_bo/codex_manager/vscode-extension`。下一轮 handoff 保持最小范围：只做一个 drag smoothness micro-polish，不扩到新的 surface 或新的交互模型。

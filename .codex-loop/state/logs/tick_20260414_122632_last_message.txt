@@ -1,0 +1,9 @@
+完成了一次有边界的 cross-path Task 3 review，没有加新代码。
+
+结论是：Task 3 现在可以先收口。统一 board 上，card 已经有 compact root cue，[src/webview-template.js](/home/clashuser/export/codex-managed-agent/src/webview-template.js#L5439)；board action rail 继续按 thread identity 工作，[src/webview-template.js](/home/clashuser/export/codex-managed-agent/src/webview-template.js#L5558)；background continue 也继续按每个 thread 自己的 `cwd` 执行，[auto-continue.js](/home/clashuser/export/codex-managed-agent/src/host/auto-continue.js#L251)。这意味着当前剩下的已经不是一个清晰的 Task 3 micro-gap，而是应该进入 track-level exit review。
+
+我已更新 [ACTIVE_PLAN.md](/home/clashuser/export/codex-managed-agent/.claude/plans/ACTIVE_PLAN.md#L11)，把当前 slice 切到 cross-path track exit review。新的 evolution note 在 [evolution-2026-04-14-cross-path-task3-review.md](/home/clashuser/export/codex-managed-agent/.claude/plans/loloop/evolution-2026-04-14-cross-path-task3-review.md#L1)。
+
+这轮没有代码变化，所以没有运行打包。plan 和新 note 已同步到 `/home/clashuser/hzh/work_bo/codex_manager/vscode-extension`。
+
+下一轮 handoff 保持同一轨道且不扩张：只做一次 cross-path unified-management exit review，判断 `task-plans/cross-path-unified-management-task-plan.md` 的 Tasks 1-3 是否已经满足；如果还差一点，只点出那个最小剩余 gap。

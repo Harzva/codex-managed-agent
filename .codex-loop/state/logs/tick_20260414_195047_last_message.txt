@@ -1,0 +1,12 @@
+完成了一个有边界的 `cma-codex-communication-optimization` Task 3 slice：`threadsPatched` 不再无条件 full rerender。
+
+改动在 [src/webview-template.js](/home/clashuser/export/codex-managed-agent/src/webview-template.js#L5694) 和 [src/webview-template.js](/home/clashuser/export/codex-managed-agent/src/webview-template.js#L7323)。这次只处理 batch patch 路径：
+- 抽出了 explorer-only thread guard 和 explorer list 局部重刷
+- 当所有 patched threads 都只影响 explorer surfaces，且没有 batch selection / pending batch 时，直接局部刷新 thread summary 和 thread lists
+- 只要涉及 selected、pinned、board-attached、running、spotlight 或 batch workflow surfaces，就继续 fallback 到 full render
+
+我已更新 [ACTIVE_PLAN.md](/home/clashuser/export/codex-managed-agent/.claude/plans/ACTIVE_PLAN.md#L1)，把下一步收敛回一次 Task 3 audit。新的 evolution note 在 [evolution-2026-04-15-cma-threads-patched-dom-sync.md](/home/clashuser/export/codex-managed-agent/.claude/plans/loloop/evolution-2026-04-15-cma-threads-patched-dom-sync.md#L1)。
+
+验证已完成：`node --check src/webview-template.js` 和 `npm run package` 都通过，并重新生成了 [codex-managed-agent-0.0.3.vsix](/home/clashuser/export/codex-managed-agent/codex-managed-agent-0.0.3.vsix)。代码、active plan、note 和 VSIX 已同步到 `/home/clashuser/hzh/work_bo/codex_manager/vscode-extension`。
+
+下一轮 handoff 保持同一轨道且不扩张：只做一次 Task 3 audit，识别 `threadsPatched` 之后下一个最小的 rerender-heavy mutation path，不进入 broader render-reduction work。

@@ -1,0 +1,7 @@
+按你要求的顺序读取后，状态没有变化：`ROADMAP.md` 仍把 Milestone 2 作为 top-level immediate focus，但 [board-interaction-quality-task-plan.md](/home/clashuser/export/codex-managed-agent/task-plans/board-interaction-quality-task-plan.md) 对应内容在 active plan 里已是 complete，所以本轮继续沿当前未完成的 Milestone 4 task-plan 执行一个最小切片，使用的是 [codex-visibility-control-task-plan.md](/home/clashuser/export/codex-managed-agent/task-plans/codex-visibility-control-task-plan.md)。
+
+本轮只完成了 `Task 2 — Hide from Codex` 的最小实现：drawer 里非 archived 线程原先的 archive 动作现在显式写成 `Hide from Codex`，[src/webview-template.js](/home/clashuser/export/codex-managed-agent/src/webview-template.js#L5499)。底层行为没有扩张，仍然复用现有 clean archive 路径，所以不会碰删除语义，也不会动 extension-side metadata。
+
+active plan 已更新，当前 slice 切到同一 task-plan 的下一个最小项：补一个 drawer-level visibility status metric，见 [active-codex-managed-agent-roadmap.md](/home/clashuser/export/codex-managed-agent/.claude/plans/active-codex-managed-agent-roadmap.md#L109)。新的 evolution note 已写入 [evolution-2026-04-14-m4-hide-from-codex-action.md](/home/clashuser/export/codex-managed-agent/.claude/plans/loloop/evolution-2026-04-14-m4-hide-from-codex-action.md#L1)。
+
+验证已完成：`node --check src/webview-template.js` 通过，`npm run package` 通过，并生成了 `codex-managed-agent-0.0.2.vsix`。变更和计划文件已同步到 `/home/clashuser/hzh/work_bo/codex_manager/vscode-extension`。下一轮 handoff 保持同一轨道且不扩张：只在 drawer 增加一个 visibility status metric，把 `visible / hidden / linked / focused` 状态显式化。

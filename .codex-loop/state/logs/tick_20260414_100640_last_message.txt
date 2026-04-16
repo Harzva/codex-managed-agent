@@ -1,0 +1,5 @@
+读取最新 evolution note 后，当前状态已经明确：Milestone 2 和 Milestone 3 都已完成，本轮 active milestone 是 Milestone 4，所以这次只做了一个 operational audit，没有改代码。审计结论是：host 端已经有 `armed / queued / running / failed / success` 的 auto-loop 状态数据，但这些状态目前只在更大的 board card 里看得到，compact thread-list scanning surface 还看不到，这是当前第一个最小的可靠性缺口。
+
+active plan 已更新，Milestone 4 现在记录了这次 audit finding，并把当前 slice 收敛到“给 thread rows 增加一个 compact auto-loop state badge”，见 [active-codex-managed-agent-roadmap.md](/home/clashuser/export/codex-managed-agent/.claude/plans/active-codex-managed-agent-roadmap.md#L82)。新的 evolution note 已写入 [evolution-2026-04-14-m4-operational-audit.md](/home/clashuser/export/codex-managed-agent/.claude/plans/loloop/evolution-2026-04-14-m4-operational-audit.md#L1)。
+
+本轮没有代码变化，所以没有运行打包；我已把更新后的 plan 和 evolution note 同步到 `/home/clashuser/hzh/work_bo/codex_manager/vscode-extension`。下一轮 handoff 保持最小范围：只给 thread rows 加一个 compact auto-loop state badge，不扩到更大的 status redesign。

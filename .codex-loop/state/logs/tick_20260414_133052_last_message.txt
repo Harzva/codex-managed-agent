@@ -1,0 +1,1 @@
+最新 anchor 已经明确：这一轮只需要做 Task 3 review，判断 fallback actions 现在是否已经够显式，不再继续发散。先补读最新 note，然后收口。

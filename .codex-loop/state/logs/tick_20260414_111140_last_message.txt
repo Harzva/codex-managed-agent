@@ -1,0 +1,5 @@
+按你要求的顺序读取后，这轮只完成了一次 Milestone 5 剩余 publishability audit，没有做代码改动。结论是：smoke checklist、README discoverability 和 changelog scaffold 现在都已经到位，下一最小缺口转到了 Marketplace metadata 质量，因为 [package.json](/home/clashuser/export/codex-managed-agent/package.json#L1) 目前仍然只用泛化的 `Other` 分类。
+
+我已把 active slice 收敛到下一步：精简地调整 `package.json` 的 marketplace metadata，使扩展不再只以 generic `Other` 出现，见 [ACTIVE_PLAN.md](/home/clashuser/export/codex-managed-agent/.claude/plans/ACTIVE_PLAN.md#L12)。新的 evolution note 已写入 [evolution-2026-04-14-m5-metadata-gap-audit.md](/home/clashuser/export/codex-managed-agent/.claude/plans/loloop/evolution-2026-04-14-m5-metadata-gap-audit.md#L1）。
+
+本轮没有代码变化，所以没有运行打包。我已将更新后的 [ACTIVE_PLAN.md](/home/clashuser/export/codex-managed-agent/.claude/plans/ACTIVE_PLAN.md#L1) 和新 note 同步到 `/home/clashuser/hzh/work_bo/codex_manager/vscode-extension`。下一轮 handoff 保持最小范围：只做一个 `package.json` metadata polish，不扩到更大的 Marketplace 或 release 流程文档。

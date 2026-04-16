@@ -1,0 +1,8 @@
+{
+  "launcher": "tmux",
+  "thread_mode": "forced_thread",
+  "tmux_session": "codex-loop-codex-managed-agent-77382836",
+  "workspace": "/home/clashuser/export/codex-managed-agent",
+  "prompt_file": "/home/clashuser/export/codex-managed-agent/.codex-loop/prompt.md",
+  "state_dir": "/home/clashuser/export/codex-managed-agent/.codex-loop/state"
+}

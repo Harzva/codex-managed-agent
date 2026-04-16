@@ -1,0 +1,7 @@
+完成了一个有边界的 `prompt-rule-memo-cards` Task 1 slice：新增了一个独立的 `Working Memory Cards` panel，并放入了 3 张 first-class 的 Prompt / Rule / Memo shell cards。它们现在已经在 UI 里作为独立 card type 存在，但还没有接任何 source integration。实现落点在 [src/webview-template.js](/home/clashuser/export/codex-managed-agent/src/webview-template.js#L1173), [src/webview-template.js](/home/clashuser/export/codex-managed-agent/src/webview-template.js#L3682), [src/webview-template.js](/home/clashuser/export/codex-managed-agent/src/webview-template.js#L3896) 和 [src/webview-template.js](/home/clashuser/export/codex-managed-agent/src/webview-template.js#L6316)。
+
+我已更新 [ACTIVE_PLAN.md](/home/clashuser/export/codex-managed-agent/.claude/plans/ACTIVE_PLAN.md#L11)，把下一步收敛到一次 Task 1 review，只判断这组 shell cards 是否已经和 agent cards 区分得足够清楚。新的 evolution note 在 [evolution-2026-04-14-prompt-rule-memo-shell.md](/home/clashuser/export/codex-managed-agent/.claude/plans/loloop/evolution-2026-04-14-prompt-rule-memo-shell.md#L1)。
+
+验证已完成：`node --check src/webview-template.js` 通过，`npm run package` 通过，并重新生成了 `codex-managed-agent-0.0.2.vsix`。代码、plan 和 note 已同步到 `/home/clashuser/hzh/work_bo/codex_manager/vscode-extension`。
+
+下一轮 handoff 保持同一轨道且不扩张：只做一次 Task 1 review，判断 Prompt / Rule / Memo shell 是否已经足够 distinct；如果还差一点，只补那个最小的 visual distinction gap。

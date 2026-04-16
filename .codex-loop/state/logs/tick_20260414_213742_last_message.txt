@@ -1,0 +1,7 @@
+完成了一次有边界的 `codex-loop-control-surface` Task 3 audit，没有加新代码。
+
+结论很直接：`10 min` preset bridge 已经把 host path、terminal bridge 和 spotlight entrypoint 都打通了，所以当前最小的剩余 interval-preset gap 不是新抽象，也不是 custom input，而是同一条路径上的 `20 min` sibling。这个收敛结果已经写进 [ACTIVE_PLAN.md](/home/clashuser/export/codex-managed-agent/.claude/plans/ACTIVE_PLAN.md#L17)。
+
+新的 evolution note 在 [evolution-2026-04-15-loop-control-task3-fourth-audit.md](/home/clashuser/export/codex-managed-agent/.claude/plans/loloop/evolution-2026-04-15-loop-control-task3-fourth-audit.md#L1)。这轮是 review-only，没有代码变化，所以没有运行打包。更新后的 active plan 和新 note 已同步到 `/home/clashuser/hzh/work_bo/codex_manager/vscode-extension`。
+
+下一轮 handoff 保持同一轨道且不扩张：只补 `20 min` preset sibling，不进入 custom input 或 full runtime actions。

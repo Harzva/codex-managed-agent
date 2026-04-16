@@ -1,0 +1,5 @@
+本轮完成了一个最小的 Milestone 3 disclosure 修复：`Usage Report` 现有说明行现在会明确区分当前显示的是 `live` insights、`persisted fallback` insights，还是 `session-cache` insights。实现分别落在 [server.js](/home/clashuser/export/codex-managed-agent/src/host/server.js#L27)、[insights.js](/home/clashuser/export/codex-managed-agent/src/webview/insights.js#L1) 和 [webview-template.js](/home/clashuser/export/codex-managed-agent/src/webview-template.js#L5580)。
+
+active plan 已更新，Milestone 3 新增了这条已完成项，并把当前 slice 收敛到“给 cached/persisted insights disclosure 再补一个 freshness cue”，见 [active-codex-managed-agent-roadmap.md](/home/clashuser/export/codex-managed-agent/.claude/plans/active-codex-managed-agent-roadmap.md#L64)。新的 evolution note 已写入 [evolution-2026-04-14-m3-insights-source-disclosure.md](/home/clashuser/export/codex-managed-agent/.claude/plans/loloop/evolution-2026-04-14-m3-insights-source-disclosure.md#L1)。
+
+验证已完成：`node --check src/webview-template.js` 和 `node --check src/host/server.js` 都通过，`npm run package` 通过，并成功生成 `codex-managed-agent-0.0.2.vsix`。变更也已同步到 `/home/clashuser/hzh/work_bo/codex_manager/vscode-extension`。下一轮 handoff 保持最小范围：只补一个 freshness cue，让用户大致判断 cached/persisted insights 有多旧。

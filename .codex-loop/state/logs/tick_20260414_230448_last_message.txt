@@ -1,0 +1,7 @@
+完成了一次有边界的 `cross-path-unified-management` Task 2 audit，没有加新代码。
+
+结论已经收敛：当前第一个最小的 filtering gap 不是再做一个新的 root filter，而是先把 active workspace roots 发进 payload。现在 webview 侧已经有稳定的 root filtering 路径，见 [webview-template.js](/home/clashuser/export/codex-managed-agent/src/webview-template.js#L5331)；host 侧也能拿到 VS Code 的 workspace folders，见 [server.js](/home/clashuser/export/codex-managed-agent/src/host/server.js#L115)。缺口只是这部分 workspace-root 信息还没有进入 extension state，所以还谈不上“filter by active workspace”。
+
+我已把这个结论写进 [ACTIVE_PLAN.md](/home/clashuser/export/codex-managed-agent/.claude/plans/ACTIVE_PLAN.md#L17)，当前 slice 已收敛成“先发 active workspace roots into host state”。新 note 在 [evolution-2026-04-15-cross-path-task2-first-audit.md](/home/clashuser/export/codex-managed-agent/.claude/plans/loloop/evolution-2026-04-15-cross-path-task2-first-audit.md#L1)。这轮是 audit-only，没有代码变化，所以没有重新打包。相关 active plan 和新 note 已同步到 `/home/clashuser/hzh/work_bo/codex_manager/vscode-extension`。
+
+下一轮 handoff 保持同一 track 且不扩张：只做一个 bounded Task 2 slice，把 active workspace roots 发进 host state，不先展开新的 filtering UI 或 board behavior。

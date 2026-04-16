@@ -1,0 +1,7 @@
+按你要求的顺序读取后，当前执行轨道仍然是 Milestone 4 的 [codex-visibility-control-task-plan.md](/home/clashuser/export/codex-managed-agent/task-plans/codex-visibility-control-task-plan.md)。`ROADMAP.md` 仍把 Milestone 2 当作顶层 immediate focus，但它在 active plan 里已经是 complete，所以这轮继续当前未完成的 visibility-control 任务，不回退到 board 轨道。
+
+本轮只完成了 `Task 3 — Visibility Feedback` 的一个最小 cross-surface 切片：thread rows 现在会为非默认状态显示一个 compact `Vis ...` cue，专门覆盖 `Hidden / Linked / Focused`，这样扫描列表时不必再先打开 drawer，[src/webview-template.js](/home/clashuser/export/codex-managed-agent/src/webview-template.js#L5099) [src/webview-template.js](/home/clashuser/export/codex-managed-agent/src/webview-template.js#L5130)。这轮没有把相同 cue 扩到 cards 或其他 surface。
+
+active plan 已更新，当前 slice 收敛到一次 visibility-control exit review，先判断 cards 是否还需要专门 cue，见 [ACTIVE_PLAN.md](/home/clashuser/export/codex-managed-agent/.claude/plans/ACTIVE_PLAN.md#L111)。新的 evolution note 已写入 [evolution-2026-04-14-m4-thread-row-visibility-cue.md](/home/clashuser/export/codex-managed-agent/.claude/plans/loloop/evolution-2026-04-14-m4-thread-row-visibility-cue.md#L1)。
+
+验证已完成：`node --check src/webview-template.js` 通过，`npm run package` 通过，并生成了 `codex-managed-agent-0.0.2.vsix`。代码、active plan 和新 note 已同步到 `/home/clashuser/hzh/work_bo/codex_manager/vscode-extension`。下一轮 handoff 保持同一轨道且不扩张：只做一次 visibility-control exit review，决定当前 `drawer + thread rows + explicit show/hide actions` 是否已经足够，还是还需要一个 card-level cue。

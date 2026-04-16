@@ -1,0 +1,5 @@
+按你要求的顺序读取后，这轮只完成了一个最小的 Milestone 5 README 文档切片：在 [README.md](/home/clashuser/export/codex-managed-agent/README.md#L113) 的 `Publish to Marketplace` 区域补上了对 [CHANGELOG.md](/home/clashuser/export/codex-managed-agent/CHANGELOG.md#L1) 的要求，并在 `Repository` 区域增加了一个直接的 `Release notes` 链接。
+
+`ACTIVE_PLAN.md` 已更新，当前 slice 收敛到下一步的 Milestone 5 audit：继续检查 changelog discoverability 之后还剩下什么最小的 publishable-product gap，见 [ACTIVE_PLAN.md](/home/clashuser/export/codex-managed-agent/.claude/plans/ACTIVE_PLAN.md#L12)。新的 evolution note 已写入 [evolution-2026-04-14-m5-readme-changelog-entry.md](/home/clashuser/export/codex-managed-agent/.claude/plans/loloop/evolution-2026-04-14-m5-readme-changelog-entry.md#L1)。
+
+本轮没有代码变化，所以没有运行打包。我已将 [README.md](/home/clashuser/export/codex-managed-agent/README.md#L113)、[ACTIVE_PLAN.md](/home/clashuser/export/codex-managed-agent/.claude/plans/ACTIVE_PLAN.md#L1) 和新 note 同步到 `/home/clashuser/hzh/work_bo/codex_manager/vscode-extension`。下一轮 handoff 保持最小范围：只做一次剩余 Milestone 5 release/doc audit，找出 changelog discoverability 之后的下一个最小 publishable-product gap。
