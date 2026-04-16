@@ -6,6 +6,12 @@ All notable release-facing changes to this extension should be recorded here.
 
 - Placeholder for the next packaged update.
 
+## 1.0.2
+
+- Promoted the extension package to the clean publish repository workflow.
+- Added the Codex runtime requirement note to the Marketplace README.
+- Excluded local recovery state, daemon metadata, VSIX artifacts, and generated caches from source control and packaged output.
+
 ## 0.0.3
 
 - Closed the `no-editor-first-workflows` follow-on track after making editor and terminal fallback actions explicit across board card, drawer, and spotlight surfaces.
