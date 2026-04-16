@@ -120,25 +120,60 @@ Source files for this diagram:
 
 ## Screenshots
 
-The screenshot workflow is now organized in five layers:
+These screenshots are checked into `docs/screenshots/` so they render correctly on GitHub without relying on external image hosts.
+
+### Overview
+
+<p align="center">
+  <img src="docs/screenshots/overview-1.png" alt="Codex-Managed-Agent Overview dashboard (variant 1)" width="49%" />
+  <img src="docs/screenshots/overview-2.png" alt="Codex-Managed-Agent Overview dashboard (variant 2)" width="49%" />
+</p>
+
+### Threads
+
+<p align="center">
+  <img src="docs/screenshots/threads-1.png" alt="Codex-Managed-Agent Threads explorer" width="49%" />
+  <img src="docs/screenshots/threads-2.png" alt="Codex-Managed-Agent Threads grouped list" width="49%" />
+</p>
+
+### Board
+
+<p align="center">
+  <img src="docs/screenshots/board-1.png" alt="Codex-Managed-Agent Board canvas" width="49%" />
+  <img src="docs/screenshots/board-2.png" alt="Codex-Managed-Agent Board tab groups" width="49%" />
+</p>
+
+### Loop daemons
+
+<p align="center">
+  <img src="docs/screenshots/loop-1.png" alt="Codex-Managed-Agent Loop daemons list" width="32%" />
+  <img src="docs/screenshots/loop-2.png" alt="Codex-Managed-Agent Loop daemon detail" width="32%" />
+  <img src="docs/screenshots/loop-3.png" alt="Codex-Managed-Agent Loop with terminal log tail" width="32%" />
+</p>
+
+### Insights
+
+<p align="center">
+  <img src="docs/screenshots/insights-1.png" alt="Codex-Managed-Agent Insights usage report" width="32%" />
+  <img src="docs/screenshots/insights-2.png" alt="Codex-Managed-Agent Insights topic map and vibe advice" width="32%" />
+  <img src="docs/screenshots/insights-3.png" alt="Codex-Managed-Agent Insights behavior signals and interaction heatmap" width="32%" />
+</p>
+
+### Extra dashboard capture
+
+<p align="center">
+  <img src="docs/screenshots/main-dashboard.png" alt="Codex-Managed-Agent dashboard capture" width="90%" />
+</p>
+
+### Screenshot workflow (for maintainers)
+
+If you are updating marketing screenshots or preparing a release, the capture workflow is organized in five layers:
 
 - capture inventory: [`SCREENSHOT_INVENTORY.md`](https://github.com/Harzva/codex-managed-agent/blob/HEAD/SCREENSHOT_INVENTORY.md)
 - execution checklist: [`docs/screenshots/CAPTURE_CHECKLIST.md`](https://github.com/Harzva/codex-managed-agent/blob/HEAD/docs/screenshots/CAPTURE_CHECKLIST.md)
 - UI preparation plan: [`docs/screenshots/RESOURCE_PLAN.md`](https://github.com/Harzva/codex-managed-agent/blob/HEAD/docs/screenshots/RESOURCE_PLAN.md)
 - shoot order: [`docs/screenshots/SCREENSHOT_SHOOT_ORDER.md`](https://github.com/Harzva/codex-managed-agent/blob/HEAD/docs/screenshots/SCREENSHOT_SHOOT_ORDER.md)
 - per-shot scene design: [`docs/screenshots/SCENE_DESIGN.md`](https://github.com/Harzva/codex-managed-agent/blob/HEAD/docs/screenshots/SCENE_DESIGN.md)
-
-Planned final image paths:
-
-- `docs/screenshots/main-dashboard.png`
-- `docs/screenshots/board-active-cards.png`
-- `docs/screenshots/needs-human-dock.png`
-- `docs/screenshots/docked-layout.png`
-
-Optional:
-
-- `docs/screenshots/insights-topic-map.png`
-- `docs/screenshots/inspector-detail.png`
 
 ## Installation
 
@@ -155,7 +190,7 @@ Publisher:
 ### Install from VSIX
 
 ```bash
-code --install-extension codex-managed-agent-1.0.2.vsix
+code --install-extension codex-managed-agent-1.0.3.vsix
 ```
 
 Or inside VS Code:
