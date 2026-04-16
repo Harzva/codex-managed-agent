@@ -110,6 +110,7 @@ Related plans:
 
 - `task-plans/codex-multi-agent-coordination-task-plan.md`
 - `task-plans/claude-codex-team-space-task-plan.md`
+- `task-plans/codex-team-mailbox-loop-task-plan.md`
 
 ### Priority 4 — Ecosystem Extensions
 
@@ -141,13 +142,9 @@ Core roadmap milestones are currently complete.
 
 Immediate follow-on track:
 
-- `task-plans/cma-codex-communication-optimization-task-plan.md`
-
-Next follow-on track after that:
-
-- `task-plans/codex-loop-control-surface-task-plan.md`
+- `task-plans/codex-team-mailbox-loop-task-plan.md`
 
 Current handoff state:
 
-- First complete the communication-optimization bounded slices.
-- Then open the loop-control-surface track so daemon status, watch/tail, and per-card interval controls move into the extension UI.
+- `task-plans/prompt-rule-memo-cards-task-plan.md` is complete.
+- Keep the mailbox loop track active first so team-mode planning, prompt alignment, and non-destructive defaults are stabilized before reopening broader coordination expansion.

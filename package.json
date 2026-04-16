@@ -2,11 +2,11 @@
   "name": "codex-managed-agent",
   "displayName": "Codex-Managed-Agent",
   "description": "Manage Codex agent threads inside VS Code with search, lifecycle actions, inspector views, and local dashboard integration.",
-  "version": "0.0.3",
+  "version": "1.0.2",
   "publisher": "harzva",
   "icon": "media/codex-agent.png",
   "license": "MIT",
-  "preview": true,
+  "preview": false,
   "repository": {
     "type": "git",
     "url": "https://github.com/Harzva/codex-managed-agent.git"
@@ -49,6 +49,7 @@
     "onCommand:codexAgent.openPanel",
     "onCommand:codexAgent.openPanelBeside",
     "onCommand:codexAgent.showSidebar",
+    "onCommand:codexAgent.newThreadInCodexSidebar",
     "onCommand:codexAgent.showBottomPanel",
     "onCommand:codexAgent.maximizeDashboard",
     "onCommand:codexAgent.movePanelToNewWindow",
@@ -80,6 +81,17 @@
           "type": "string",
           "default": "",
           "description": "Optional absolute path to the Codex Manager server root directory that contains the Python package folder `codex_manager/`."
+        },
+        "codexAgent.defaultSurface": {
+          "type": "string",
+          "enum": [
+            "left",
+            "bottom",
+            "editor",
+            "fullscreen"
+          ],
+          "default": "editor",
+          "description": "Preferred surface to open when the dashboard is first revealed."
         }
       }
     },
@@ -95,6 +107,10 @@
       {
         "command": "codexAgent.showSidebar",
         "title": "Codex-Managed-Agent: Show in Sidebar"
+      },
+      {
+        "command": "codexAgent.newThreadInCodexSidebar",
+        "title": "New Thread in Codex Sidebar"
       },
       {
         "command": "codexAgent.showBottomPanel",
@@ -154,20 +170,9 @@
       ]
     },
     "menus": {
-      "view/title": [
+      "editor/context": [
         {
-          "command": "codexAgent.refreshPanel",
-          "when": "view == codexAgent.sidebar || view == codexAgent.bottom",
-          "group": "navigation"
-        },
-        {
-          "command": "codexAgent.openPanel",
-          "when": "view == codexAgent.sidebar || view == codexAgent.bottom",
-          "group": "navigation"
-        },
-        {
-          "command": "codexAgent.maximizeDashboard",
-          "when": "view == codexAgent.bottom",
+          "command": "codexAgent.newThreadInCodexSidebar",
           "group": "navigation"
         }
       ]

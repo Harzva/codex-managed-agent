@@ -1,0 +1,109 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>Codex Thread Detail</title>
+    <style>
+      html, body { margin: 0; min-height: 100%; background: #07111f; color: #e7f1ff; }
+      body { font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; }
+      .boot-fallback {
+        max-width: 1200px;
+        margin: 0 auto;
+        padding: 24px 20px 8px;
+      }
+      .boot-fallback h1 {
+        margin: 0 0 8px;
+        font-size: 32px;
+      }
+      .boot-fallback p {
+        margin: 0;
+        color: #a9bdd7;
+      }
+      #boot_error {
+        display: none;
+        max-width: 1200px;
+        margin: 12px auto 0;
+        padding: 12px 20px;
+        white-space: pre-wrap;
+        color: #ffd5db;
+        background: rgba(128, 20, 41, 0.35);
+        border: 1px solid rgba(255, 124, 136, 0.35);
+        border-radius: 12px;
+      }
+    </style>
+    <link rel="stylesheet" href="/static/styles.css?v=20260413b" />
+  </head>
+  <body data-page="thread">
+    <div class="boot-fallback">
+      <h1>Codex Agent</h1>
+      <p>Loading thread detail...</p>
+    </div>
+    <div id="boot_error"></div>
+    <div class="site-shell">
+      <div class="ambient ambient-a"></div>
+      <div class="ambient ambient-b"></div>
+      <div class="grid-noise"></div>
+
+      <main class="page">
+        <section class="hero panel panel-hero detail-hero">
+          <div class="hero-copy">
+            <div class="eyebrow">Thread deep view</div>
+            <h1 id="thread_title">Thread</h1>
+            <p class="hero-text mono">thread_id: <span id="thread_id">{{ thread_id }}</span></p>
+            <p class="hero-text" id="thread_meta"></p>
+          </div>
+
+          <div class="hero-side">
+            <a class="btn btn-ghost" href="/">Back</a>
+            <button class="btn btn-primary" id="refresh" type="button">Refresh</button>
+            <label class="field field-sm">
+              <span>Log limit</span>
+              <select id="log_limit">
+                <option value="100">100</option>
+                <option value="200" selected>200</option>
+                <option value="500">500</option>
+                <option value="1000">1000</option>
+              </select>
+            </label>
+            <div class="hero-meta mono" id="dbmeta"></div>
+          </div>
+        </section>
+
+        <div class="err" id="err"></div>
+
+        <section class="detail-grid">
+          <div class="panel">
+            <div class="section-head">
+              <div>
+                <div class="section-title">Thread metadata</div>
+                <div class="section-sub" id="commands"></div>
+              </div>
+            </div>
+            <div id="thread_details"></div>
+          </div>
+
+          <div class="panel">
+            <div class="section-head">
+              <div>
+                <div class="section-title">Execution trace</div>
+                <div class="section-sub">Recent logs and live process signals.</div>
+              </div>
+            </div>
+            <div id="logs"></div>
+          </div>
+        </section>
+      </main>
+    </div>
+
+    <script>
+      window.addEventListener("error", function (event) {
+        var el = document.getElementById("boot_error");
+        if (!el) return;
+        el.style.display = "block";
+        el.textContent = "Frontend error:\\n" + (event.message || "unknown error");
+      });
+    </script>
+    <script src="/static/app.js?v=20260413b"></script>
+  </body>
+</html>

@@ -1,0 +1,233 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>Codex Agent</title>
+    <style>
+      html, body { margin: 0; min-height: 100%; background: #07111f; color: #e7f1ff; }
+      body { font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; }
+      .boot-fallback {
+        max-width: 1200px;
+        margin: 0 auto;
+        padding: 24px 20px 8px;
+      }
+      .boot-fallback h1 {
+        margin: 0 0 8px;
+        font-size: 36px;
+        line-height: 1.05;
+      }
+      .boot-fallback p {
+        margin: 0;
+        color: #a9bdd7;
+      }
+      #boot_error {
+        display: none;
+        max-width: 1200px;
+        margin: 12px auto 0;
+        padding: 12px 20px;
+        white-space: pre-wrap;
+        color: #ffd5db;
+        background: rgba(128, 20, 41, 0.35);
+        border: 1px solid rgba(255, 124, 136, 0.35);
+        border-radius: 12px;
+      }
+    </style>
+    <link rel="stylesheet" href="/static/styles.css?v=20260413b" />
+  </head>
+  <body data-page="index">
+    <div class="boot-fallback">
+      <h1>Codex Agent</h1>
+      <p>Booting UI...</p>
+    </div>
+    <div id="boot_error"></div>
+    <div class="site-shell">
+      <div class="ambient ambient-a"></div>
+      <div class="ambient ambient-b"></div>
+      <div class="grid-noise"></div>
+
+      <main class="page">
+        <section class="hero panel panel-hero">
+          <div class="hero-copy">
+            <div class="eyebrow">Local observability for Codex threads</div>
+            <h1>Codex Agent</h1>
+            <p class="hero-text">
+              Inspect threads in list or card view, watch active sessions breathe through live logs,
+              and clean up stale runs in batches without leaving the browser.
+            </p>
+          </div>
+
+          <div class="hero-side">
+            <div class="hero-chip">
+              <span class="hero-chip-label">Auto refresh</span>
+              <label class="switch">
+                <input id="autorefresh" type="checkbox" />
+                <span class="switch-track"></span>
+              </label>
+            </div>
+            <div class="hero-meta mono" id="meta"></div>
+            <div class="hero-meta mono" id="dbmeta"></div>
+          </div>
+        </section>
+
+        <section class="stats" id="stats"></section>
+
+        <section class="panel live-panel">
+          <div class="section-head">
+            <div>
+              <div class="section-title">Live Running Console</div>
+              <div class="section-sub">Server-sent event stream for running threads. No full-page refresh.</div>
+            </div>
+            <div class="live-meta mono" id="live_meta">stream idle</div>
+          </div>
+          <div class="live-console-head">
+            <div class="live-tabs" id="live_tabs"></div>
+            <div class="live-console-actions">
+              <button class="btn btn-ghost" id="live_pause" type="button">Pause</button>
+              <button class="btn btn-ghost" id="live_clear" type="button">Clear buffer</button>
+            </div>
+          </div>
+          <div class="live-grid live-grid-terminal">
+            <div class="live-terminal-wrap">
+              <div class="live-terminal" id="live_terminal"></div>
+            </div>
+            <div class="live-history-panel" id="live_history"></div>
+          </div>
+        </section>
+
+        <section class="panel control-panel">
+          <div class="control-row">
+            <label class="field">
+              <span>Search</span>
+              <input id="q" placeholder="title / id / cwd" />
+            </label>
+            <label class="field field-sm">
+              <span>Status</span>
+              <select id="status">
+                <option value="">All</option>
+                <option value="running">Running</option>
+                <option value="active">Active</option>
+                <option value="recent">Recent</option>
+                <option value="idle">Idle</option>
+                <option value="archived">Archived</option>
+              </select>
+            </label>
+            <label class="field field-sm">
+              <span>Archived</span>
+              <select id="archived">
+                <option value="">Any</option>
+                <option value="0">Live only</option>
+                <option value="1">Archived only</option>
+              </select>
+            </label>
+            <label class="field field-sm">
+              <span>Scope</span>
+              <select id="scope">
+                <option value="live">Default</option>
+                <option value="soft_deleted">Soft deleted</option>
+                <option value="all">All</option>
+              </select>
+            </label>
+            <label class="field field-sm">
+              <span>Sort</span>
+              <select id="sort">
+                <option value="updated_desc">Updated newest</option>
+                <option value="updated_asc">Updated oldest</option>
+                <option value="log_desc">Last log newest</option>
+                <option value="log_asc">Last log oldest</option>
+                <option value="created_desc">Created newest</option>
+                <option value="created_asc">Created oldest</option>
+              </select>
+            </label>
+            <label class="field field-xs">
+              <span>Limit</span>
+              <input id="limit" value="100" />
+            </label>
+            <label class="field field-xs">
+              <span>Offset</span>
+              <input id="offset" value="0" />
+            </label>
+            <button class="btn btn-primary" id="refresh">Refresh</button>
+          </div>
+
+          <div class="control-row control-row-bottom">
+            <div class="segmented" id="view_switch">
+              <button class="segmented-btn is-active" data-view="list" type="button">List</button>
+              <button class="segmented-btn" data-view="grid" type="button">Multi-view</button>
+            </div>
+
+            <div class="bulk-actions">
+              <label class="checkline">
+                <input id="pin_only" type="checkbox" />
+                <span>Pinned only</span>
+              </label>
+              <label class="field field-sm field-inline">
+                <span>Card size</span>
+                <input id="card_size" type="range" min="280" max="520" step="20" value="340" />
+              </label>
+            </div>
+
+            <div class="bulk-actions">
+              <button class="btn btn-ghost" id="select_visible" type="button">Select visible</button>
+              <button class="btn btn-ghost" id="clear_selected" type="button">Clear selection</button>
+              <button class="btn btn-ghost" id="archive_selected" type="button">Archive</button>
+              <button class="btn btn-ghost" id="soft_delete_selected" type="button">Soft delete</button>
+              <button class="btn btn-ghost" id="restore_selected" type="button">Restore</button>
+              <label class="checkline">
+                <input id="delete_files" type="checkbox" checked />
+                <span>Delete rollout files too</span>
+              </label>
+              <button class="btn btn-danger" id="delete_selected" type="button">Hard delete</button>
+            </div>
+          </div>
+
+          <div class="bulk-status" id="selection_status">0 selected</div>
+          <div class="err" id="err"></div>
+        </section>
+
+        <section class="view-stack">
+          <div class="panel" id="list_view">
+            <div class="section-head">
+              <div>
+                <div class="section-title">Thread list</div>
+                <div class="section-sub">Dense operational view for scanning lots of sessions quickly.</div>
+              </div>
+            </div>
+
+            <div class="table-wrap">
+              <table class="thread-table">
+                <thead>
+                  <tr>
+                    <th class="checkbox-col"><input id="select_all" type="checkbox" /></th>
+                    <th>Pin</th>
+                    <th>ID</th>
+                    <th>Status</th>
+                    <th>Title</th>
+                    <th>Process</th>
+                    <th>Updated</th>
+                    <th>Last log</th>
+                    <th>Logs</th>
+                    <th>Tokens</th>
+                  </tr>
+                </thead>
+                <tbody id="threads"></tbody>
+              </table>
+            </div>
+          </div>
+
+          <div class="cards-view hidden" id="grid_view"></div>
+        </section>
+      </main>
+    </div>
+
+    <script>
+      window.addEventListener("error", function (event) {
+        var el = document.getElementById("boot_error");
+        if (!el) return;
+        el.style.display = "block";
+        el.textContent = "Frontend error:\\n" + (event.message || "unknown error");
+      });
+    </script>
+    <script src="/static/app.js?v=20260413b"></script>
+  </body>
+</html>

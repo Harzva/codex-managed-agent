@@ -1,5 +1,7 @@
 # Prompt Rule Memo Cards Task Plan
 
+Status: complete
+
 ## Priority
 
 Priority 2
@@ -19,18 +21,18 @@ Turn the extension into a working memory system, not only a launcher.
 
 ### Task 1 — Card Types
 
-- define first-class card types for prompt, rule, memo
-- distinguish them visually from agent cards
+- [x] define first-class card types for prompt, rule, memo
+- [x] distinguish them visually from agent cards
 
 ### Task 2 — Source Integration
 
-- connect cards to files such as `prompt.md`, `ROADMAP.md`, and local notes
-- support lightweight editing or quick-open behavior
+- [x] connect cards to files such as `prompt.md`, `ROADMAP.md`, and local notes
+- [x] support lightweight editing or quick-open behavior
 
 ### Task 3 — Workflow Integration
 
-- allow agent cards to reference relevant prompt/rule/memo cards
-- surface the right context beside active work
+- [x] allow agent cards to reference relevant prompt/rule/memo cards
+- [x] surface the right context beside active work
 
 ## Exit Criteria
 

@@ -3,7 +3,6 @@ const childProcess = require("child_process");
 const fs = require("fs");
 const os = require("os");
 const path = require("path");
-const { ingestKnownCliUsageLogs } = require("./usage-ledger");
 
 function shortText(value, len = 120) {
   const text = String(value || "");
@@ -36,14 +35,6 @@ function readFileTail(filePath, maxBytes = 8192) {
 
 function saveAutoContinueConfigs(panel) {
   return panel.storage.update("codexAgent.autoContinueConfigs", panel.autoContinueConfigs);
-}
-
-function postAutoContinuePatch(panel, threadId) {
-  panel.postMessage({
-    type: "autoContinueConfigPatched",
-    threadId,
-    config: panel.enrichAutoContinueConfigs()[threadId] || null,
-  });
 }
 
 async function configureAutoContinue(panel, threadId, currentPrompt = "") {
@@ -99,7 +90,7 @@ async function configureAutoContinue(panel, threadId, currentPrompt = "") {
   await saveAutoContinueConfigs(panel);
   panel.lastActionNotice = `Auto loop armed for ${remaining} run(s)`;
   vscode.window.setStatusBarMessage(`Codex-Managed-Agent: ${panel.lastActionNotice}`, 2800);
-  postAutoContinuePatch(panel, threadId);
+  await panel.refresh({ silent: true });
 }
 
 async function setAutoContinue(panel, threadId, prompt, count) {
@@ -123,7 +114,7 @@ async function setAutoContinue(panel, threadId, prompt, count) {
   await saveAutoContinueConfigs(panel);
   panel.lastActionNotice = `Auto loop armed for ${nextCount} run(s)`;
   vscode.window.setStatusBarMessage(`Codex-Managed-Agent: ${panel.lastActionNotice}`, 2800);
-  postAutoContinuePatch(panel, threadId);
+  await panel.refresh({ silent: true });
 }
 
 async function clearAutoContinue(panel, threadId) {
@@ -132,7 +123,7 @@ async function clearAutoContinue(panel, threadId) {
   await saveAutoContinueConfigs(panel);
   panel.lastActionNotice = "Auto loop removed";
   vscode.window.setStatusBarMessage(`Codex-Managed-Agent: ${panel.lastActionNotice}`, 2200);
-  postAutoContinuePatch(panel, threadId);
+  await panel.refresh({ silent: true });
 }
 
 function findThreadContext(panel, threadId) {
@@ -232,17 +223,7 @@ function launchCodexExecResume(threadId, prompt, cwd, reason = "manual") {
   const logsDir = ensureDirSync(path.join(os.homedir(), ".codex-managed-agent", "logs"));
   const stamp = new Date().toISOString().replace(/[:.]/g, "-");
   const logPath = path.join(logsDir, `${safeFileSlug(threadId)}-${safeFileSlug(reason)}-${stamp}.log`);
-  const metaPath = `${logPath}.meta.json`;
   const out = fs.openSync(logPath, "a");
-  const startedAt = new Date().toISOString();
-  fs.writeFileSync(metaPath, `${JSON.stringify({
-    source: reason === "auto-loop" ? "auto_continue" : "manual_cli",
-    thread_id: threadId,
-    workspace: cwd,
-    started_at: startedAt,
-    command_kind: "codex.exec.resume",
-    log_path: logPath,
-  }, null, 2)}\n`, "utf8");
   const child = childProcess.spawn(
     "codex",
     ["exec", "resume", threadId, prompt, "--skip-git-repo-check", "--json"],
@@ -254,11 +235,6 @@ function launchCodexExecResume(threadId, prompt, cwd, reason = "manual") {
     },
   );
   child.unref();
-  setTimeout(() => {
-    try {
-      ingestKnownCliUsageLogs();
-    } catch {}
-  }, 1500);
   return { pid: child.pid, logPath };
 }
 
@@ -327,7 +303,6 @@ async function triggerAutoContinue(panel, threadId, config) {
     config.lastLaunchStatus = "failed";
     config.lastError = error instanceof Error ? error.message : String(error);
     await saveAutoContinueConfigs(panel);
-    postAutoContinuePatch(panel, threadId);
     panel.lastActionNotice = "Auto loop failed to queue";
     vscode.window.showWarningMessage(`Codex-Managed-Agent: ${panel.lastActionNotice}`);
     return false;
@@ -339,14 +314,12 @@ async function triggerAutoContinue(panel, threadId, config) {
     config.active = false;
   }
   await saveAutoContinueConfigs(panel);
-  postAutoContinuePatch(panel, threadId);
   panel.lastActionNotice = `Auto loop queued in background · ${config.remaining} left`;
   vscode.window.setStatusBarMessage(`Codex-Managed-Agent: ${panel.lastActionNotice}`, 3200);
   return true;
 }
 
 module.exports = {
-  readFileTail,
   saveAutoContinueConfigs,
   configureAutoContinue,
   setAutoContinue,

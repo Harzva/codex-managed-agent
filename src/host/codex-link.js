@@ -6,9 +6,34 @@ async function openInCodexEditor(threadId) {
   await vscode.commands.executeCommand("vscode.openWith", uri, "chatgpt.conversationEditor");
 }
 
+async function openNewCodexThread() {
+  let sidebarOpened = false;
+  let lastError;
+  try {
+    await vscode.commands.executeCommand("chatgpt.newChat");
+    return { ok: true, command: "chatgpt.newChat" };
+  } catch (error) {
+    lastError = error;
+  }
+  try {
+    await vscode.commands.executeCommand("chatgpt.openSidebar");
+    sidebarOpened = true;
+  } catch (error) {
+    lastError = error;
+  }
+  if (sidebarOpened) {
+    return { ok: true, command: "chatgpt.openSidebar" };
+  }
+  return {
+    ok: false,
+    command: undefined,
+    error: lastError instanceof Error ? lastError.message : String(lastError || "Failed to open Codex sidebar"),
+  };
+}
+
 async function revealInCodexSidebar(threadId) {
-  if (!threadId) return;
   await vscode.commands.executeCommand("chatgpt.openSidebar");
+  if (!threadId) return;
   const routeUri = vscode.Uri.parse(`vscode://openai.chatgpt/local/${encodeURIComponent(threadId)}`);
   await vscode.env.openExternal(routeUri);
 }
@@ -68,14 +93,13 @@ function isPassiveLinkedThread(thread, codexLinkState = getCodexLinkState()) {
   if (!threadId) return false;
   const openThreadIds = new Set(codexLinkState?.openThreadIds || []);
   const focusedThreadId = codexLinkState?.focusedThreadId;
-  const linked = openThreadIds.has(threadId) || focusedThreadId === threadId;
+  const sidebarThreadId = codexLinkState?.sidebarThreadId;
+  const linked = openThreadIds.has(threadId) || focusedThreadId === threadId || sidebarThreadId === threadId;
   if (!linked) return false;
 
   const corpus = getThreadLogCorpus(thread);
-  if (!corpus) return false;
-  const passiveRe = /(responses_websocket|sse::responses|stream_events_utils|trace_safe|log_only|tools::registry|op\.dispatch\.user_input|session_task\.turn|rpc\.method=\"thread\/resume\")/i;
-  const activeRe = /(apply_patch|update file|write file|create file|delete file|move to|pytest|npm run|build|compile|tool call|spawn|shell_snapshot|terminal|uvicorn|codex resume|search_query|web search|patch|refactor|implement|edit code)/i;
-  return passiveRe.test(corpus) && !activeRe.test(corpus);
+  const activeRe = /(apply_patch|exec_command|write_stdin|update file|write file|create file|delete file|move to|pytest|npm run|node --check|python3?|git |rg |sed |cat |build|compile|tool call|spawn|shell_snapshot|terminal|tmux|uvicorn|codex resume|search_query|web search|patch|refactor|implement|edit code)/i;
+  return !corpus || !activeRe.test(corpus);
 }
 
 function isEffectivelyRunningThread(thread, codexLinkState = getCodexLinkState()) {
@@ -85,6 +109,7 @@ function isEffectivelyRunningThread(thread, codexLinkState = getCodexLinkState()
 
 module.exports = {
   openInCodexEditor,
+  openNewCodexThread,
   revealInCodexSidebar,
   extractCodexThreadIdFromUri,
   extractCodexThreadIdFromTab,

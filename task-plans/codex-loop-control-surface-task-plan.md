@@ -1,6 +1,6 @@
 # Codex Loop Control Surface Task Plan
 
-Status: planned
+Status: complete
 
 ## Priority
 
@@ -22,29 +22,29 @@ Expose `codex-loop` as a first-class managed surface inside `Codex-Managed-Agent
 
 ### Task 1 — Loop Status Visibility
 
-- [ ] show daemon running state in the extension
-- [ ] show current thread id, launcher, and heartbeat metadata
-- [ ] show last tick summary and latest status from `.codex-loop/state`
+- [x] show daemon running state in the extension
+- [x] show current thread id, launcher, and heartbeat metadata
+- [x] show last tick summary and latest status from `.codex-loop/state`
 
 ### Task 2 — Watch and Tail Surfaces
 
-- [ ] expose the latest tick log path inside the UI
-- [ ] add quick watch / tail actions for loop logs
-- [ ] show a compact recent log tail without leaving the managed surface
+- [x] expose the latest tick log path inside the UI
+- [x] add quick watch / tail actions for loop logs
+- [x] show a compact recent log tail without leaving the managed surface
 
 ### Task 3 — Card-Level Loop Controls
 
-- [ ] add per-card loop enablement
-- [ ] support interval presets such as `10 min` and `20 min`
-- [ ] support a custom interval input
-- [ ] show whether a card is currently loop-managed
+- [x] add per-card loop enablement
+- [x] support interval presets such as `10 min` and `20 min`
+- [x] support a custom interval input
+- [x] show whether a card is currently loop-managed
 
 ### Task 4 — Runtime Control Actions
 
-- [ ] start loop from the extension
-- [ ] stop loop from the extension
-- [ ] restart loop from the extension
-- [ ] keep the UI state consistent when the daemon exits unexpectedly
+- [x] start loop from the extension
+- [x] stop loop from the extension
+- [x] restart loop from the extension
+- [x] keep the UI state consistent when the daemon exits unexpectedly
 
 ## Exit Criteria
 

@@ -1,0 +1,42 @@
+# CMA and Codex Interaction
+
+Current implementation diagram for how `Codex-Managed-Agent` talks to the local service, the Codex VS Code extension, and the `codex` CLI.
+
+```mermaid
+flowchart LR
+    user["User in VS Code"]
+    cma["CMA Dashboard Webview<br/>threads / board / inspector"]
+    host["CMA Extension Host<br/>VS Code API + local state"]
+    service["Local codex_manager Service<br/>HTTP API on 127.0.0.1:8787"]
+    cli["Codex CLI<br/>codex exec resume"]
+    codex["Codex VS Code Extension<br/>conversation editor + sidebar"]
+    tabs["VS Code Tab System<br/>tabGroups + URIs"]
+
+    user -->|"click / inspect / board actions"| cma
+    cma -->|"postMessage"| host
+
+    host -->|"GET / POST / rename / lifecycle"| service
+    service -->|"thread list / detail / status"| host
+    host -->|"state payload"| cma
+
+    host -->|"vscode.openWith(openai-codex://route/local/:threadId)"| codex
+    host -->|"chatgpt.openSidebar + vscode://openai.chatgpt/local/:threadId"| codex
+
+    host -->|"spawn background resume"| cli
+    cli -->|"resume existing thread by threadId"| codex
+
+    codex -->|"open conversation tabs"| tabs
+    tabs -->|"inspect openThreadIds + focusedThreadId"| host
+
+    host -.->|"effective link state"| cma
+
+    classDef cma fill:#17324d,stroke:#8dd8ff,color:#ffffff
+    classDef service fill:#183626,stroke:#54f2b0,color:#ffffff
+    classDef codex fill:#3a2a16,stroke:#ffd479,color:#ffffff
+    classDef infra fill:#2c263d,stroke:#c4a3ff,color:#ffffff
+
+    class cma,host cma
+    class service,cli service
+    class codex,tabs codex
+    class user infra
+```

@@ -2,13 +2,13 @@
   "version": "0.2.0",
   "configurations": [
     {
-      "name": "Run Codex Agent Extension",
+      "name": "Run Codex Agent Extension from extension/",
       "type": "extensionHost",
       "request": "launch",
       "args": [
-        "--extensionDevelopmentPath=${workspaceFolder}"
+        "--extensionDevelopmentPath=${workspaceFolder}",
+        "--disable-extension=harzva.codex-managed-agent"
       ]
     }
   ]
 }
-

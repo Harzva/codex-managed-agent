@@ -1,5 +1,7 @@
 # Codex Multi-Agent Coordination Task Plan
 
+Status: active
+
 ## Priority
 
 Priority 3
@@ -19,18 +21,18 @@ Support deliberate collaboration across multiple Codex threads.
 
 ### Task 1 — Coordination Model
 
-- define how work is assigned between threads
-- define what counts as ownership, handoff, and waiting
+- [ ] define how work is assigned between threads
+- [ ] define what counts as ownership, handoff, and waiting
 
 ### Task 2 — Shared Coordination UI
 
-- expose multi-thread coordination state clearly
-- prevent coordination state from collapsing into the board visuals
+- [ ] expose multi-thread coordination state clearly
+- [ ] prevent coordination state from collapsing into the board visuals
 
 ### Task 3 — Handoff Support
 
-- support explicit handoff cues
-- keep related threads linked as part of one larger work plan
+- [ ] support explicit handoff cues
+- [ ] keep related threads linked as part of one larger work plan
 
 ## Exit Criteria
 

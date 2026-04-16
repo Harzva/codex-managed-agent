@@ -3,33 +3,17 @@ const vscode = require("vscode");
 const { registerCommands } = require("./host/commands");
 const {
   getConfig,
-  postScanCodexSessions,
 } = require("./host/server");
 const {
   runLifecycleAction,
   copyText,
   openLogFile,
   openRepoFile,
-  createThread,
-  createLoopThread,
   renameThread,
   showThreadInCodex,
   editCardLabel,
-  setCardLabel,
   chooseBoardTab,
   createBoardTab,
-  batchSetBoardTab,
-  setLoopManagedThread,
-  runLoopIntervalPreset,
-  promptLoopIntervalPreset,
-  stopLoopDaemon,
-  startLoopDaemon,
-  restartLoopDaemon,
-  stopLoopDaemonAt,
-  startLoopDaemonAt,
-  restartLoopDaemonAt,
-  attachLoopTmux,
-  tailLoopLog,
 } = require("./host/lifecycle");
 const {
   openInCodexEditor,
@@ -38,7 +22,6 @@ const {
   isPassiveLinkedThread,
   isEffectivelyRunningThread,
 } = require("./host/codex-link");
-const { generateThreadVibeAdvice } = require("./host/thread-insight");
 const {
   saveAutoContinueConfigs,
   configureAutoContinue,
@@ -73,20 +56,6 @@ const {
   broadcastLinkState,
   refresh,
 } = require("./host/state-sync");
-const {
-  ingestKnownCliUsageLogs,
-  rebuildPersistedUsageReport,
-} = require("./host/usage-ledger");
-const {
-  initializeTeamSpace,
-  openTeamBrief,
-  assignTaskToThread,
-  claimTaskForThread,
-  heartbeatThread,
-  blockTaskForThread,
-  completeTaskForThread,
-  markStaleTeamTasks,
-} = require("./host/team-coordination");
 
 class CodexAgentPanel {
   constructor(extensionUri, storage) {
@@ -103,14 +72,8 @@ class CodexAgentPanel {
     this.lastSuccessfulRefreshAt = "";
     this.previousRunningIds = new Set();
     this.recentCompletions = [];
-    this.pendingNewAgentCards = [];
     this.optimisticQueuedPrompts = {};
     this.autoContinueConfigs = this.storage.get("codexAgent.autoContinueConfigs", {});
-    this.threadInsightJobs = {};
-    this.sidebarRedirectInFlight = false;
-    this.sidebarLinkedThreadId = undefined;
-    this.sidebarLinkedAt = "";
-    this.adviceOutputChannel = vscode.window.createOutputChannel("Codex-Managed-Agent Advice");
     this.codexTabWatcher = vscode.window.tabGroups.onDidChangeTabs(() => {
       this.broadcastLinkState();
     });
@@ -135,7 +98,6 @@ class CodexAgentPanel {
     this.codexTabWatcher?.dispose();
     this.codexTabGroupWatcher?.dispose();
     this.configWatcher?.dispose();
-    this.adviceOutputChannel?.dispose();
   }
 
   ensureRefreshLoop() {
@@ -210,12 +172,6 @@ class CodexAgentPanel {
     return openRepoFile(this, relativePath);
   }
 
-  async openExternalUrl(url) {
-    const target = String(url || "").trim();
-    if (!target) return;
-    await vscode.env.openExternal(vscode.Uri.parse(target));
-  }
-
   async runCommandInTerminal(command, label = "Command") {
     if (!command) return;
     const terminal = vscode.window.createTerminal({ name: "Codex-Managed-Agent" });
@@ -229,12 +185,12 @@ class CodexAgentPanel {
     return renameThread(this, threadId, currentTitle);
   }
 
-  async editCardLabel(threadId, currentLabel = "", currentTitle = "", suggestedLabel = "") {
-    return editCardLabel(this, threadId, currentLabel, currentTitle, suggestedLabel);
+  async showThreadInCodex(threadId, preferredTitle = "") {
+    return showThreadInCodex(this, threadId, preferredTitle);
   }
 
-  async setCardLabel(threadId, label = "") {
-    return setCardLabel(this, threadId, label);
+  async editCardLabel(threadId, currentLabel = "", currentTitle = "", suggestedLabel = "") {
+    return editCardLabel(this, threadId, currentLabel, currentTitle, suggestedLabel);
   }
 
   async chooseBoardTab(threadId, currentBoardTab = "", boardTabOrder = [], activeBoardTab = "all") {
@@ -243,66 +199,6 @@ class CodexAgentPanel {
 
   async createBoardTab(boardTabOrder = [], activeBoardTab = "all") {
     return createBoardTab(this, boardTabOrder, activeBoardTab);
-  }
-
-  async batchSetBoardTab(threadIds = [], activeBoardTab = "all", boardTabOrder = []) {
-    return batchSetBoardTab(this, threadIds, activeBoardTab, boardTabOrder);
-  }
-
-  async createThread() {
-    return createThread(this);
-  }
-
-  async createLoopThread() {
-    return createLoopThread(this);
-  }
-
-  async showThreadInCodex(threadId, preferredTitle = "") {
-    return showThreadInCodex(this, threadId, preferredTitle);
-  }
-
-  async setLoopManagedThread(threadId) {
-    return setLoopManagedThread(this, threadId);
-  }
-
-  async runLoopIntervalPreset(threadId, intervalMinutes) {
-    return runLoopIntervalPreset(this, threadId, intervalMinutes);
-  }
-
-  async promptLoopIntervalPreset(threadId) {
-    return promptLoopIntervalPreset(this, threadId);
-  }
-
-  async stopLoopDaemon() {
-    return stopLoopDaemon(this);
-  }
-
-  async startLoopDaemon() {
-    return startLoopDaemon(this);
-  }
-
-  async restartLoopDaemon() {
-    return restartLoopDaemon(this);
-  }
-
-  async stopLoopDaemonAt(stateDir) {
-    return stopLoopDaemonAt(this, stateDir);
-  }
-
-  async startLoopDaemonAt(options) {
-    return startLoopDaemonAt(this, options);
-  }
-
-  async restartLoopDaemonAt(options) {
-    return restartLoopDaemonAt(this, options);
-  }
-
-  async attachLoopTmux(sessionName) {
-    return attachLoopTmux(this, sessionName);
-  }
-
-  async tailLoopLog(filePath) {
-    return tailLoopLog(this, filePath);
   }
 
   async configureAutoContinue(threadId, currentPrompt = "") {
@@ -329,20 +225,6 @@ class CodexAgentPanel {
     return sendPromptToThread(this, threadId, prompt);
   }
 
-  async generateThreadVibeAdvice(threadId, force = false) {
-    try {
-      this.lastActionNotice = "Generating vibe advice...";
-      this.adviceOutputChannel?.show(true);
-      this.adviceOutputChannel?.appendLine(`\n[${new Date().toISOString()}] Requested Generate Vibe Advice for ${threadId}`);
-      vscode.window.setStatusBarMessage("Codex-Managed-Agent: Generating vibe advice...", 2500);
-      await generateThreadVibeAdvice(this, threadId, force);
-      vscode.window.setStatusBarMessage(`Codex-Managed-Agent: ${this.lastActionNotice || "Vibe advice updated"}`, 2600);
-    } catch (error) {
-      const detail = error instanceof Error ? error.message : String(error);
-      vscode.window.showWarningMessage(`Codex-Managed-Agent: Failed to generate vibe advice: ${detail}`);
-    }
-  }
-
   async triggerAutoContinue(threadId, config) {
     return triggerAutoContinue(this, threadId, config);
   }
@@ -353,7 +235,6 @@ class CodexAgentPanel {
       await openInCodexEditor(threadId);
       this.lastActionNotice = "Opened thread in Codex editor";
       vscode.window.setStatusBarMessage(`Codex-Managed-Agent: ${this.lastActionNotice}`, 2400);
-      this.broadcastLinkState();
     } catch (error) {
       const detail = error instanceof Error ? error.message : String(error);
       vscode.window.showErrorMessage(`Codex-Managed-Agent: Failed to open Codex editor: ${detail}`);
@@ -361,15 +242,11 @@ class CodexAgentPanel {
   }
 
   async revealInCodexSidebar(threadId) {
+    if (!threadId) return;
     try {
       await revealInCodexSidebar(threadId);
-      if (threadId) {
-        this.sidebarLinkedThreadId = threadId;
-        this.sidebarLinkedAt = new Date().toISOString();
-      }
-      this.lastActionNotice = threadId ? "Requested Codex sidebar route switch" : "Opened Codex sidebar";
+      this.lastActionNotice = "Requested Codex sidebar route switch";
       vscode.window.setStatusBarMessage(`Codex-Managed-Agent: ${this.lastActionNotice}`, 2400);
-      this.broadcastLinkState();
     } catch (error) {
       const detail = error instanceof Error ? error.message : String(error);
       vscode.window.showWarningMessage(`Codex-Managed-Agent: Could not steer Codex sidebar: ${detail}`);
@@ -377,15 +254,7 @@ class CodexAgentPanel {
   }
 
   getCodexLinkState() {
-    const linkState = getCodexLinkState();
-    const openThreadIds = new Set(linkState.openThreadIds || []);
-    if (this.sidebarLinkedThreadId) openThreadIds.add(this.sidebarLinkedThreadId);
-    return {
-      ...linkState,
-      openThreadIds: [...openThreadIds],
-      sidebarThreadId: this.sidebarLinkedThreadId,
-      sidebarLinkedAt: this.sidebarLinkedAt,
-    };
+    return getCodexLinkState();
   }
 
   isPassiveLinkedThread(thread, codexLinkState = this.getCodexLinkState()) {
@@ -406,74 +275,6 @@ class CodexAgentPanel {
 
   async openExternal() {
     return openExternal(this);
-  }
-
-  async initializeTeamSpace() {
-    return initializeTeamSpace(this);
-  }
-
-  async openTeamBrief() {
-    return openTeamBrief(this);
-  }
-
-  async assignTaskToThread(threadId, suggestedTitle = "") {
-    return assignTaskToThread(this, threadId, suggestedTitle);
-  }
-
-  async claimTaskForThread(threadId) {
-    return claimTaskForThread(this, threadId);
-  }
-
-  async heartbeatThread(threadId) {
-    return heartbeatThread(this, threadId);
-  }
-
-  async blockTaskForThread(threadId) {
-    return blockTaskForThread(this, threadId);
-  }
-
-  async completeTaskForThread(threadId) {
-    return completeTaskForThread(this, threadId);
-  }
-
-  async markStaleTeamTasks() {
-    return markStaleTeamTasks(this);
-  }
-
-  async generateUsageInsights() {
-    try {
-      this.lastActionNotice = "Generating usage insights...";
-      vscode.window.setStatusBarMessage("Codex-Managed-Agent: Generating usage insights...", 2200);
-      ingestKnownCliUsageLogs();
-      rebuildPersistedUsageReport();
-      this.lastActionNotice = "Usage insights regenerated";
-      await this.refresh({ silent: true });
-      vscode.window.setStatusBarMessage(`Codex-Managed-Agent: ${this.lastActionNotice}`, 2600);
-    } catch (error) {
-      const detail = error instanceof Error ? error.message : String(error);
-      vscode.window.showWarningMessage(`Codex-Managed-Agent: Failed to generate usage insights: ${detail}`);
-    }
-  }
-
-  async scanCodexSessions() {
-    try {
-      this.lastActionNotice = "Scanning Codex sessions...";
-      vscode.window.setStatusBarMessage("Codex-Managed-Agent: Scanning Codex sessions...", 2200);
-      const service = await this.ensureServer({ forceStart: true });
-      if (!service.ok) {
-        throw new Error(service.message || "Server not reachable");
-      }
-      const result = await postScanCodexSessions(service.baseUrl, 1000);
-      const imported = Number(result?.summary?.imported || 0);
-      this.lastActionNotice = imported
-        ? `Imported ${imported} Codex session${imported === 1 ? "" : "s"}`
-        : "No new Codex sessions found";
-      await this.refresh({ silent: true });
-      vscode.window.setStatusBarMessage(`Codex-Managed-Agent: ${this.lastActionNotice}`, 3000);
-    } catch (error) {
-      const detail = error instanceof Error ? error.message : String(error);
-      vscode.window.showWarningMessage(`Codex-Managed-Agent: Failed to scan Codex sessions: ${detail}`);
-    }
   }
 
   postMessage(payload) {

@@ -6,4 +6,9 @@ dist/
 coverage/
 .DS_Store
 
+.claude/
+.codex-loop/
+.recovery-backups/
 .codex-loop/state/
+*.pid
+*.log

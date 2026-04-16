@@ -1,9 +1,40 @@
 const vscode = require("vscode");
 
 const { getWebviewHtml } = require("../webview-template");
+const { openNewCodexThread } = require("./codex-link");
 
 function hasSurface(panel) {
   return Boolean(panel.panel || panel.sidebarView || panel.bottomView);
+}
+
+async function collapseSidebarIfNeeded(panel) {
+  if (!panel.sidebarView) return;
+  try {
+    await vscode.commands.executeCommand("workbench.action.closeSidebar");
+  } catch {
+    // ignore if the host cannot close the sidebar in the current layout
+  }
+}
+
+async function redirectSidebarToPreferredSurface(panel) {
+  if (panel.sidebarRedirectInFlight) return;
+  const preferred = String(vscode.workspace.getConfiguration("codexAgent").get("defaultSurface") || "fullscreen");
+  if (preferred === "left") return;
+  panel.sidebarRedirectInFlight = true;
+  try {
+    if (preferred === "bottom") {
+      await showBottomPanel(panel);
+      await collapseSidebarIfNeeded(panel);
+      return;
+    }
+    if (preferred === "editor") {
+      await focus(panel);
+      return;
+    }
+    await maximizeDashboard(panel);
+  } finally {
+    panel.sidebarRedirectInFlight = false;
+  }
 }
 
 function ensureRefreshLoop(panel) {
@@ -34,6 +65,9 @@ function attachWebview(panel, webview) {
     if (message.type === "reload") {
       await panel.refresh();
     }
+    if (message.type === "scanCodexSessions") {
+      await panel.scanCodexSessions();
+    }
     if (message.type === "startServer") {
       await panel.ensureServer({ forceStart: true });
       await panel.refresh();
@@ -45,12 +79,31 @@ function attachWebview(panel, webview) {
     if (message.type === "openExternal") {
       await panel.openExternal();
     }
+    if (message.type === "newThreadInCodexSidebar") {
+      const result = await openNewCodexThread();
+      if (result?.ok) {
+        panel.lastActionNotice = `Opened Codex sidebar via ${result.command}`;
+        vscode.window.setStatusBarMessage("Codex-Managed-Agent: opened new Codex sidebar thread", 3000);
+        await panel.refresh({ silent: true });
+      } else {
+        const detail = result?.error || "Codex sidebar command is not available.";
+        panel.lastActionNotice = `Could not open Codex sidebar thread: ${detail}`;
+        vscode.window.showWarningMessage(`Codex-Managed-Agent: ${panel.lastActionNotice}`);
+        await panel.refresh({ silent: true });
+      }
+    }
+    if (message.type === "initializeTeamSpace") {
+      await panel.initializeTeamSpace();
+    }
+    if (message.type === "openTeamBrief") {
+      await panel.openTeamBrief();
+    }
     if (message.type === "openPanel") {
       await panel.focus();
     }
     if (message.type === "openBeside") {
       panel.editorSurface = "editor";
-      createOrShow(panel, vscode.ViewColumn.Beside);
+      await panel.openBeside();
     }
     if (message.type === "moveToNewWindow") {
       await panel.moveToNewWindow();
@@ -83,8 +136,97 @@ function attachWebview(panel, webview) {
     if (message.type === "renameThread") {
       await panel.renameThread(message.threadId, message.currentTitle);
     }
+    if (message.type === "editCardLabel") {
+      await panel.editCardLabel(
+        message.threadId,
+        message.currentLabel || "",
+        message.currentTitle || "",
+        message.suggestedLabel || "",
+      );
+    }
+    if (message.type === "setCardLabel") {
+      await panel.setCardLabel(message.threadId, message.label || "");
+    }
+    if (message.type === "chooseBoardTab") {
+      await panel.chooseBoardTab(
+        message.threadId,
+        message.currentBoardTab || "",
+        Array.isArray(message.boardTabOrder) ? message.boardTabOrder : [],
+        message.activeBoardTab || "all",
+      );
+    }
+    if (message.type === "createBoardTab") {
+      await panel.createBoardTab(
+        Array.isArray(message.boardTabOrder) ? message.boardTabOrder : [],
+        message.activeBoardTab || "all",
+      );
+    }
+    if (message.type === "batchSetBoardTab") {
+      await panel.batchSetBoardTab(
+        Array.isArray(message.threadIds) ? message.threadIds : [],
+        message.activeBoardTab || "all",
+        Array.isArray(message.boardTabOrder) ? message.boardTabOrder : [],
+      );
+    }
+    if (message.type === "createThread") {
+      await panel.createThread();
+    }
+    if (message.type === "createLoopThread") {
+      await panel.createLoopThread();
+    }
     if (message.type === "showThreadInCodex") {
       await panel.showThreadInCodex(message.threadId, message.preferredTitle || "");
+    }
+    if (message.type === "assignTeamTask") {
+      await panel.assignTaskToThread(message.threadId, message.suggestedTitle || "");
+    }
+    if (message.type === "claimTeamTask") {
+      await panel.claimTaskForThread(message.threadId);
+    }
+    if (message.type === "heartbeatTeamTask") {
+      await panel.heartbeatThread(message.threadId);
+    }
+    if (message.type === "blockTeamTask") {
+      await panel.blockTaskForThread(message.threadId);
+    }
+    if (message.type === "completeTeamTask") {
+      await panel.completeTaskForThread(message.threadId);
+    }
+    if (message.type === "markStaleTeamTasks") {
+      await panel.markStaleTeamTasks();
+    }
+    if (message.type === "setLoopManagedThread") {
+      await panel.setLoopManagedThread(message.threadId);
+    }
+    if (message.type === "runLoopIntervalPreset") {
+      await panel.runLoopIntervalPreset(message.threadId, message.intervalMinutes);
+    }
+    if (message.type === "promptLoopIntervalPreset") {
+      await panel.promptLoopIntervalPreset(message.threadId);
+    }
+    if (message.type === "stopLoopDaemon") {
+      await panel.stopLoopDaemon();
+    }
+    if (message.type === "startLoopDaemon") {
+      await panel.startLoopDaemon();
+    }
+    if (message.type === "restartLoopDaemon") {
+      await panel.restartLoopDaemon();
+    }
+    if (message.type === "stopLoopDaemonAt") {
+      await panel.stopLoopDaemonAt(message.stateDir);
+    }
+    if (message.type === "startLoopDaemonAt") {
+      await panel.startLoopDaemonAt(message);
+    }
+    if (message.type === "restartLoopDaemonAt") {
+      await panel.restartLoopDaemonAt(message);
+    }
+    if (message.type === "attachLoopTmux") {
+      await panel.attachLoopTmux(message.sessionName);
+    }
+    if (message.type === "tailLoopLog") {
+      await panel.tailLoopLog(message.path);
     }
     if (message.type === "openInCodexEditor") {
       await panel.openInCodexEditor(message.threadId);
@@ -104,14 +246,30 @@ function attachWebview(panel, webview) {
     if (message.type === "sendPromptToThread") {
       await panel.sendPromptToThread(message.threadId, message.prompt);
     }
+    if (message.type === "generateThreadVibeAdvice") {
+      await panel.generateThreadVibeAdvice(message.threadId, Boolean(message.force));
+    }
     if (message.type === "openLogFile") {
       await panel.openLogFile(message.path);
     }
     if (message.type === "openRepoFile") {
       await panel.openRepoFile(message.path);
     }
+    if (message.type === "openExternalUrl") {
+      await panel.openExternalUrl(message.url);
+    }
+    if (message.type === "generateUsageInsights") {
+      await panel.generateUsageInsights();
+    }
+    if (message.type === "persistUiState") {
+      await panel.storage.update("codexAgent.persistedUiState", message.state || {});
+    }
   });
-  webview.html = getWebviewHtml(webview, panel.extensionUri);
+  webview.html = getWebviewHtml(
+    webview,
+    panel.extensionUri,
+    panel.storage.get("codexAgent.persistedUiState", {}),
+  );
 }
 
 function resolveSidebarView(panel, webviewView) {
@@ -119,6 +277,9 @@ function resolveSidebarView(panel, webviewView) {
   attachWebview(panel, webviewView.webview);
   ensureRefreshLoop(panel);
   panel.refresh({ silent: true });
+  setTimeout(() => {
+    redirectSidebarToPreferredSurface(panel);
+  }, 0);
   webviewView.onDidDispose(() => {
     if (panel.sidebarView === webviewView) panel.sidebarView = undefined;
   });
@@ -168,12 +329,14 @@ function createOrShow(panel, viewColumn = vscode.ViewColumn.One) {
 async function focus(panel) {
   panel.editorSurface = "editor";
   createOrShow(panel);
+  await collapseSidebarIfNeeded(panel);
   await panel.refresh({ silent: true });
 }
 
 async function openBeside(panel) {
-  panel.editorSurface = "editor";
+  panel.editorSurface = "right";
   createOrShow(panel, vscode.ViewColumn.Beside);
+  await collapseSidebarIfNeeded(panel);
   await panel.refresh({ silent: true });
 }
 
@@ -190,6 +353,7 @@ async function showBottomPanel(panel) {
 async function moveToNewWindow(panel) {
   panel.editorSurface = "editor";
   createOrShow(panel);
+  await collapseSidebarIfNeeded(panel);
   await vscode.commands.executeCommand("workbench.action.moveEditorToNewWindow");
   await panel.refresh({ silent: true });
 }
@@ -197,6 +361,7 @@ async function moveToNewWindow(panel) {
 async function maximizeDashboard(panel) {
   panel.editorSurface = "fullscreen";
   createOrShow(panel);
+  await collapseSidebarIfNeeded(panel);
   await vscode.commands.executeCommand("workbench.action.maximizeEditor");
   await panel.refresh({ silent: true });
 }

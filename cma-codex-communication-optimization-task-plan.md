@@ -1,6 +1,6 @@
 # CMA Codex Communication Optimization Task Plan
 
-Status: complete
+Status: active
 
 ## Priority
 
@@ -21,22 +21,22 @@ Reduce control latency and make Codex interaction feel immediate inside `Codex-M
 ### Task 1 — Optimistic Queued State
 
 - [x] show `queued` immediately after `sendPrompt`
-- [x] show `queued` immediately after `auto-continue` is armed or triggered
-- [x] replace the optimistic state with real result state when backend confirmation arrives
-- [x] keep failure fallback explicit when the backend call fails
+- [ ] show `queued` immediately after `auto-continue` is armed or triggered
+- [ ] replace the optimistic state with real result state when backend confirmation arrives
+- [ ] keep failure fallback explicit when the backend call fails
 
 ### Task 2 — Lightweight Codex Link Sync
 
-- [x] keep `open / focused / linked` state synced without forcing a full dashboard refresh
-- [x] avoid recomputing unrelated panes when only Codex tab state changes
-- [x] make board and thread list react consistently to link-state changes
+- [ ] keep `open / focused / linked` state synced without forcing a full dashboard refresh
+- [ ] avoid recomputing unrelated panes when only Codex tab state changes
+- [ ] make board and thread list react consistently to link-state changes
 
 ### Task 3 — Render and Refresh Reduction
 
-- [x] stop using full rerender for small card actions where a local patch is enough
-- [x] stop using full refresh for actions that only update one thread or one UI region
-- [x] separate card-level updates from board-level updates
-- [x] keep degraded-state recovery intact after the optimization pass
+- [ ] stop using full rerender for small card actions where a local patch is enough
+- [ ] stop using full refresh for actions that only update one thread or one UI region
+- [ ] separate card-level updates from board-level updates
+- [ ] keep degraded-state recovery intact after the optimization pass
 
 ## Exit Criteria
 
