@@ -367,20 +367,20 @@ function writeLoopManagedThread(panel, threadId, stateDir = loopStateDir(panel))
   return true;
 }
 
-function resolveCodexLoopAutomationScript() {
+function resolveCodexLoopStartScript() {
   const codexHome = process.env.CODEX_HOME
     ? path.resolve(process.env.CODEX_HOME)
     : path.join(os.homedir(), ".codex");
-  return path.join(codexHome, "skills", "codex-loop", "scripts", "codex_loop_automation.py");
+  return path.join(codexHome, "skills", "codex-loop", "scripts", "start_codex_loop.sh");
 }
 
 function buildLoopDaemonCommandForStateDir(panel, stateDir, workspacePath, promptPath, threadId, intervalMinutes) {
   const nextThreadId = String(threadId || "").trim();
   const nextInterval = Number.parseInt(String(intervalMinutes || "").trim(), 10);
   if (!nextThreadId || !Number.isInteger(nextInterval) || nextInterval <= 0) return "";
-  const scriptPath = resolveCodexLoopAutomationScript();
-  if (!fs.existsSync(scriptPath)) {
-    vscode.window.showWarningMessage(`Codex-Managed-Agent: codex-loop automation script not found: ${scriptPath}`);
+  const startScriptPath = resolveCodexLoopStartScript();
+  if (!fs.existsSync(startScriptPath)) {
+    vscode.window.showWarningMessage(`Codex-Managed-Agent: codex-loop start script not found: ${startScriptPath}`);
     return "";
   }
   const nextPromptPath = String(promptPath || "").trim();
@@ -394,19 +394,16 @@ function buildLoopDaemonCommandForStateDir(panel, stateDir, workspacePath, promp
     return "";
   }
   return [
-    "python3",
-    shellQuote(scriptPath),
-    "daemon",
-    "--workspace",
-    shellQuote(nextWorkspace),
-    "--prompt-file",
-    shellQuote(nextPromptPath),
-    "--state-dir",
-    shellQuote(stateDir),
-    "--thread-id",
-    shellQuote(nextThreadId),
-    "--interval-minutes",
-    String(nextInterval),
+    "CODEX_LOOP_WORKSPACE=" + shellQuote(nextWorkspace),
+    "CODEX_LOOP_PROMPT_FILE=" + shellQuote(nextPromptPath),
+    "CODEX_LOOP_STATE_DIR=" + shellQuote(stateDir),
+    "CODEX_LOOP_FORCE_THREAD_ID=" + shellQuote(nextThreadId),
+    "CODEX_LOOP_INTERVAL_MINUTES=" + shellQuote(String(nextInterval)),
+    "CODEX_LOOP_LAUNCHER=auto",
+    "CODEX_LOOP_REUSE_CURRENT_THREAD=0",
+    "CODEX_LOOP_PYTHON_BIN=python3",
+    "bash",
+    shellQuote(startScriptPath),
     "--dangerous",
   ].join(" ");
 }
@@ -450,7 +447,7 @@ async function startLoopDaemon(panel) {
   await panel.refresh({ silent: true });
   const command = buildLoopDaemonCommand(panel, nextThreadId, nextInterval);
   if (!command) return;
-  await panel.runCommandInTerminal(command, "Loop start");
+  await panel.runCommandInTerminal(command, "Loop detached start");
 }
 
 async function startLoopDaemonAt(panel, options = {}) {
@@ -466,7 +463,7 @@ async function startLoopDaemonAt(panel, options = {}) {
   if (!writeLoopManagedThread(panel, threadId, stateDir)) return;
   const command = buildLoopDaemonCommandForStateDir(panel, stateDir, workspacePath, promptPath, threadId, intervalMinutes);
   if (!command) return;
-  await panel.runCommandInTerminal(command, "Loop start");
+  await panel.runCommandInTerminal(command, "Loop detached start");
 }
 
 function patchThreadInPayload(panel, threadId, updates) {
@@ -872,7 +869,7 @@ async function runLoopIntervalPreset(panel, threadId, intervalMinutes) {
   await panel.refresh({ silent: true });
   const command = buildLoopDaemonCommand(panel, nextThreadId, nextInterval);
   if (!command) return;
-  await panel.runCommandInTerminal(command, `Loop ${nextInterval} min preset`);
+  await panel.runCommandInTerminal(command, `Loop detached ${nextInterval} min preset`);
 }
 
 async function promptLoopIntervalPreset(panel, threadId) {
@@ -929,7 +926,7 @@ async function restartLoopDaemon(panel) {
     "&&",
     startCommand,
   ].join(" ");
-  await panel.runCommandInTerminal(restartCommand, "Loop restart");
+  await panel.runCommandInTerminal(restartCommand, "Loop detached restart");
   panel.lastActionNotice = "Loop restart requested";
   vscode.window.setStatusBarMessage(`Codex-Managed-Agent: ${panel.lastActionNotice}`, 2600);
   await panel.refresh({ silent: true });
@@ -966,7 +963,7 @@ async function restartLoopDaemonAt(panel, options = {}) {
     "&&",
     startCommand,
   ].join(" ");
-  await panel.runCommandInTerminal(restartCommand, "Loop restart");
+  await panel.runCommandInTerminal(restartCommand, "Loop detached restart");
 }
 
 async function stopLoopDaemonAt(panel, stateDir) {
