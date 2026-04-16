@@ -241,10 +241,11 @@ Before calling a build release-ready, use:
 - [`SMOKE_CHECKLIST.md`](https://github.com/Harzva/codex-managed-agent/blob/HEAD/SMOKE_CHECKLIST.md)
 - [`CHANGELOG.md`](https://github.com/Harzva/codex-managed-agent/blob/HEAD/CHANGELOG.md)
 - [`SCREENSHOT_INVENTORY.md`](https://github.com/Harzva/codex-managed-agent/blob/HEAD/SCREENSHOT_INVENTORY.md)
+- [`docs/release-workflow.md`](https://github.com/Harzva/codex-managed-agent/blob/HEAD/docs/release-workflow.md)
 
 ## Current status
 
-This extension is still a preview build.
+This extension is published as a stable 1.x build.
 
 The current focus is to make it:
 
