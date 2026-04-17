@@ -120,50 +120,97 @@ Source files for this diagram:
 
 ## Screenshots
 
-These screenshots are checked into `docs/screenshots/` so they render correctly on GitHub without relying on external image hosts.
+Files live under `docs/screenshots/` so GitHub renders them without external image hosts. Each capture below is **one image per row** with a short caption.
 
 ### Overview
 
-<p align="center">
-  <img src="docs/screenshots/overview-1.png" alt="Codex-Managed-Agent Overview dashboard (variant 1)" width="49%" />
-  <img src="docs/screenshots/overview-2.png" alt="Codex-Managed-Agent Overview dashboard (variant 2)" width="49%" />
-</p>
+**Overview — Agent Task Summary & coordination queue**
+
+High-level counts (threads, board, tabs), the coordination queue (running / handoff / loop), and a snapshot strip for Threads, Board, Live, Inspector, Service, and Loop daemon.
+
+![Overview: Agent Task Summary and coordination queue](docs/screenshots/overview-1.png)
+
+**Overview — full dashboard layout**
+
+Same Agent Control Surface in a wider layout, including the footer branding strip so you can see the full visual chrome of the dashboard.
+
+![Overview: full Agent Control Surface layout](docs/screenshots/overview-2.png)
 
 ### Threads
 
-<p align="center">
-  <img src="docs/screenshots/threads-1.png" alt="Codex-Managed-Agent Threads explorer" width="49%" />
-  <img src="docs/screenshots/threads-2.png" alt="Codex-Managed-Agent Threads grouped list" width="49%" />
-</p>
+**Threads — Thread Explorer**
+
+Search, sort, filters, batch selection, and actions such as New Thread, Refresh, and Scan Sessions—built for scanning many threads without opening each conversation first.
+
+![Threads: Thread Explorer](docs/screenshots/threads-1.png)
+
+**Threads — grouped list**
+
+Threads grouped by status or workspace root; each row shows status, Inspector, Board, Codex, Pin, and token/size/cmd metadata at a glance.
+
+![Threads: grouped thread cards](docs/screenshots/threads-2.png)
 
 ### Board
 
-<p align="center">
-  <img src="docs/screenshots/board-1.png" alt="Codex-Managed-Agent Board canvas" width="49%" />
-  <img src="docs/screenshots/board-2.png" alt="Codex-Managed-Agent Board tab groups" width="49%" />
-</p>
+**Board — canvas**
+
+Board Canvas with cards for active work: size presets, Codex shortcut, status (e.g. IDLE / ATTACHED), and optional tab groups when you organize cards into colored rails.
+
+![Board: Board Canvas](docs/screenshots/board-1.png)
+
+**Board — tab groups**
+
+Board Tab Groups (e.g. custom tabs with counts) so you can split workstreams while keeping cards independent within each group.
+
+![Board: tab groups and filtered cards](docs/screenshots/board-2.png)
 
 ### Loop daemons
 
-<p align="center">
-  <img src="docs/screenshots/loop-1.png" alt="Codex-Managed-Agent Loop daemons list" width="32%" />
-  <img src="docs/screenshots/loop-2.png" alt="Codex-Managed-Agent Loop daemon detail" width="32%" />
-  <img src="docs/screenshots/loop-3.png" alt="Codex-Managed-Agent Loop with terminal log tail" width="32%" />
-</p>
+**Loop — daemon list**
+
+All discovered `codex-loop` workspaces in one list: RUNNING / STOPPED CLEANLY / EXITED UNEXPECTEDLY, with PID, interval, heartbeat, thread id, and quick actions (logs, prompt, tmux, start/stop).
+
+![Loop: daemon list across workspaces](docs/screenshots/loop-1.png)
+
+**Loop — daemon detail**
+
+Expanded view of a single daemon: path, metadata chips, last tick summary, and action buttons for recovery and inspection.
+
+![Loop: single daemon detail](docs/screenshots/loop-2.png)
+
+**Loop — with terminal log**
+
+Loop UI alongside integrated terminal (e.g. tailing `daemon_stdout.log`) so you can correlate UI state with live log lines.
+
+![Loop: daemon view with terminal log tail](docs/screenshots/loop-3.png)
 
 ### Insights
 
-<p align="center">
-  <img src="docs/screenshots/insights-1.png" alt="Codex-Managed-Agent Insights usage report" width="32%" />
-  <img src="docs/screenshots/insights-2.png" alt="Codex-Managed-Agent Insights topic map and vibe advice" width="32%" />
-  <img src="docs/screenshots/insights-3.png" alt="Codex-Managed-Agent Insights behavior signals and interaction heatmap" width="32%" />
-</p>
+**Insights — usage report**
 
-### Extra dashboard capture
+Token headline metrics, trend chart, and top threads by token usage so you can see where spend concentrates.
 
-<p align="center">
-  <img src="docs/screenshots/main-dashboard.png" alt="Codex-Managed-Agent dashboard capture" width="90%" />
-</p>
+![Insights: usage report and token trend](docs/screenshots/insights-1.png)
+
+**Insights — topic map & vibe advice**
+
+Topic Map (themes + threads) and Vibe Advice cards grounded in observed prompt and compaction signals.
+
+![Insights: topic map and vibe advice](docs/screenshots/insights-2.png)
+
+**Insights — behavior signals & heatmap**
+
+Behavior Signals (token pace, token mix, topic map, work rhythm) and Vibe Interaction heatmap from direct user inputs (see in-app basis text for counting rules).
+
+![Insights: behavior signals and interaction heatmap](docs/screenshots/insights-3.png)
+
+### Extra capture
+
+**Dashboard — alternate framing**
+
+Additional full-width dashboard capture for README / release notes.
+
+![Dashboard capture](docs/screenshots/main-dashboard.png)
 
 ### Screenshot workflow (for maintainers)
 
