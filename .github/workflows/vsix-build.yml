@@ -1,0 +1,168 @@
+name: VSIX Build
+
+on:
+  pull_request:
+    paths:
+      - "cma/**"
+      - ".github/workflows/vsix-build.yml"
+  push:
+    branches:
+      - main
+      - master
+    tags:
+      - "vsix-v*"
+    paths:
+      - "cma/**"
+      - ".github/workflows/vsix-build.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+defaults:
+  run:
+    working-directory: cma
+
+jobs:
+  package:
+    name: Build VSIX
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.meta.outputs.version }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: cma/package-lock.json
+
+      - name: Check Source Layout
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -f package.json
+          test -f extension.js
+          if [ ! -f src/panel.js ]; then
+            echo "::error file=cma/src/panel.js::Missing VSIX source. Restore cma/src before building a new VSIX."
+            exit 1
+          fi
+
+      - name: Read Package Version
+        id: meta
+        shell: bash
+        run: |
+          version="$(node -p "require('./package.json').version")"
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+
+      - name: Check VSIX Tag Version
+        if: startsWith(github.ref, 'refs/tags/vsix-v')
+        shell: bash
+        run: |
+          set -euo pipefail
+          tag_version="${GITHUB_REF_NAME#vsix-v}"
+          package_version="${{ steps.meta.outputs.version }}"
+          if [ "$tag_version" != "$package_version" ]; then
+            echo "::error::Tag vsix-v${tag_version} does not match extension package version ${package_version}."
+            exit 1
+          fi
+
+      - name: Configure GitHub Dependency URLs
+        shell: bash
+        run: |
+          git config --global url."https://github.com/".insteadOf "ssh://git@github.com/"
+          git config --global url."https://github.com/".insteadOf "git@github.com:"
+
+      - name: Install
+        run: npm ci
+
+      - name: Smoke Test
+        shell: bash
+        run: |
+          set -euo pipefail
+          tests=()
+          for file in \
+            src/host/node-backend/node-backend.test.js \
+            src/host/server.test.js \
+            src/host/extension-load-smoke.test.js
+          do
+            if [ -f "$file" ]; then
+              tests+=("$file")
+            fi
+          done
+          if [ "${#tests[@]}" -gt 0 ]; then
+            node --test "${tests[@]}"
+          else
+            echo "No VSIX smoke tests found; skipping."
+          fi
+
+      - name: Package VSIX
+        run: npm run publish:vsix
+
+      - name: Write Release Manifest
+        shell: bash
+        env:
+          PACKAGE_VERSION: ${{ steps.meta.outputs.version }}
+          REF_NAME: ${{ github.ref_name }}
+          SHA: ${{ github.sha }}
+          RUN_ID: ${{ github.run_id }}
+        run: |
+          node <<'NODE'
+          const fs = require("fs");
+          const manifest = {
+            product: "codex-managed-agent-vsix",
+            lane: "vsix",
+            packageVersion: process.env.PACKAGE_VERSION,
+            sourceDirectory: "cma",
+            refName: process.env.REF_NAME,
+            sha: process.env.SHA,
+            runId: process.env.RUN_ID,
+            generatedAt: new Date().toISOString(),
+          };
+          fs.mkdirSync("publisher", { recursive: true });
+          fs.writeFileSync(
+            `publisher/release-manifest-vsix-${process.env.PACKAGE_VERSION}.json`,
+            `${JSON.stringify(manifest, null, 2)}\n`,
+          );
+          NODE
+
+      - name: Upload VSIX Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: cma-vsix-${{ steps.meta.outputs.version }}
+          path: |
+            cma/publisher/codex-managed-agent-${{ steps.meta.outputs.version }}.vsix
+            cma/publisher/release-manifest-vsix-${{ steps.meta.outputs.version }}.json
+          if-no-files-found: error
+          retention-days: 14
+
+  release:
+    name: Publish VSIX Release
+    needs: package
+    if: startsWith(github.ref, 'refs/tags/vsix-v')
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Download VSIX Artifact
+        uses: actions/download-artifact@v4
+        with:
+          pattern: cma-vsix-*
+          path: release-assets
+          merge-multiple: true
+
+      - name: Publish GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          name: Codex Managed Agent VSIX ${{ github.ref_name }}
+          files: |
+            release-assets/*.vsix
+            release-assets/*.json
+          generate_release_notes: true

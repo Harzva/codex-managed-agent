@@ -1,0 +1,23 @@
+# Evolution Note
+
+- Plan used: `task-plans/00-roadmap/cma-reference-inspired-product-roadmap.md`
+- Bounded target: execute Phase 4 task `02-import-current` only, adding explicit current-auth import flow from managed UI action to `src/host/account-manager.js` import plumbing, with no backup/activation semantics changed.
+- Files changed:
+  - `src/host/account-manager.js`
+  - `src/panel.js`
+  - `src/host/panel-view.js`
+  - `src/webview-template.js`
+  - `task-plans/subtask_json/cma-reference-phase-04-account-vault-token-health.json`
+  - `task-plans/00-roadmap/cma-reference-inspired-product-roadmap.md`
+- Tests or checks run:
+  - `node --check src/host/account-manager.js`
+  - `node --check src/panel.js`
+  - `node --check src/host/panel-view.js`
+  - `node --check src/webview-template.js`
+- Risks or deferrals:
+  - This slice does not yet add token health validation/error states or backup-before-activation behavior; those remain in later tasks.
+  - Relay account import from arbitrary path is not yet implemented; remaining behavior stays pending in task `03-import-file`.
+  - No automated tests were added in this slice for import UI/file-system behavior.
+- Next handoff:
+  - Continue Phase 4 with `cma-reference-phase-04-account-vault-token-health`, slice `03-import-file`.
+  - Implement explicit path-based auth import and source-path recording for non-native auth files.

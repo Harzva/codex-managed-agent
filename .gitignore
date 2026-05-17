@@ -1,18 +1,35 @@
-node_modules/
-.vscode-test/
-out/
-dist/
-coverage/
-.DS_Store
-.recovery-backups/
-*.pid
-*.vsix
-*.log
-__pycache__/
-*.py[cod]
+# Local dependency and build output
+**/node_modules/
+**/dist/
+**/release/
+**/tmp/
+**/__pycache__/
+*.tsbuildinfo
+*.pyc
 
-# The export repository intentionally publishes CMA planning state.
-!.claude/
-!.claude/**
-!.codex-loop/
-!.codex-loop/**
+# Local agent/editor/runtime state
+**/.codex/
+**/.codex-team/
+**/.codex-loop*/
+**/.claude/
+**/.vscode/
+
+# Local research/reference material
+**/reference/**
+
+# Local release packages and partial exports
+extension/
+extension.zip
+*.vsix
+*.zip
+
+# Secrets and environment files
+.env
+.env.*
+*.env
+auth*.json
+
+# OS/editor noise
+.DS_Store
+Thumbs.db
+*.log

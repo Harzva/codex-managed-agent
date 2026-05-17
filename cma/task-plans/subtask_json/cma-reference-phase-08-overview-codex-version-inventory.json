@@ -1,0 +1,171 @@
+{
+  "schema_version": 1,
+  "id": "cma-reference-phase-08-overview-codex-version-inventory",
+  "title": "Overview Codex Version Inventory",
+  "status": "completed",
+  "source_plan": "task-plans/00-roadmap/cma-reference-inspired-product-roadmap.md",
+  "source_section": "Phase 8: Overview Codex Version Inventory",
+  "priority": "p0",
+  "inspired_by": ["local codex version mismatch incident", "reference/AIUsage"],
+  "scope": [
+    "Detect every Codex CLI executable visible to the current user.",
+    "Show which Codex executable is active for the current VS Code/user environment.",
+    "Explain version conflicts between user-level, system-level, workspace-local, and extension-bundled Codex binaries.",
+    "Surface upgrade guidance without mutating auth or installing packages automatically."
+  ],
+  "non_goals": [
+    "Do not auto-upgrade Codex from the Overview page.",
+    "Do not use sudo or modify /usr/bin/codex.",
+    "Do not hide older Codex versions; older versions are useful evidence.",
+    "Do not treat global npm, system package, and extension-bundled Codex as the same installation."
+  ],
+  "implementation_targets": [
+    "src/host/node-backend/server.js",
+    "src/host/server.js",
+    "src/webview/insights.js",
+    "src/webview/styles.js",
+    "src/webview/render-detail-regression.test.js"
+  ],
+  "tasks": [
+    {
+      "id": "01-detect-active-codex",
+      "title": "Detect active Codex executable",
+      "status": "done",
+      "details": "Resolve the active codex path using the same PATH/environment CMA uses for managed commands, then run `codex --version` and record path, version, and source."
+    },
+    {
+      "id": "02-inventory-all-codex",
+      "title": "Inventory all visible Codex versions",
+      "status": "done",
+      "details": "Collect `type -a codex`-style paths, common system/user paths, workspace node_modules installs, and VS Code bundled Codex paths; dedupe by realpath."
+    },
+    {
+      "id": "03-classify-sources",
+      "title": "Classify Codex install sources",
+      "status": "done",
+      "details": "Label each executable as user npm global, system npm global, workspace local, VS Code bundled, wrapper, symlink, or unknown."
+    },
+    {
+      "id": "04-overview-ui",
+      "title": "Render Overview version card",
+      "status": "done",
+      "details": "Add an Overview card showing active path/version, all discovered versions, and warnings when the active user version differs from system or bundled versions."
+    },
+    {
+      "id": "05-upgrade-guidance",
+      "title": "Show safe upgrade guidance",
+      "status": "done",
+      "details": "Display copyable user-level commands such as `npm config set prefix ~/.local`, `npm install -g @openai/codex@latest`, `hash -r`, and `codex --version`."
+    },
+    {
+      "id": "06-tests",
+      "title": "Add version inventory tests",
+      "status": "done",
+      "details": "Test path dedupe, active path selection, mixed 0.118/0.128 version rendering, and neutral handling when a path cannot execute."
+    }
+  ],
+  "implementation_notes": [
+    {
+      "date": "2026-05-07",
+      "slice": "01-detect-active-codex",
+      "summary": "Added Node backend helpers and route `/api/codex/active` to resolve `codex` path via `which`/`where`, run `codex --version` in process env, and return structured active-Codex metadata.",
+      "implementation_files": [
+        "src/host/node-backend/server.js",
+        "src/host/node-backend/parity-smoke.test.js",
+        "src/host/server.js"
+      ]
+    },
+    {
+      "date": "2026-05-07",
+      "slice": "02-inventory-all-codex",
+      "summary": "Added Node backend endpoint `/api/codex/inventory` and helpers to enumerate PATH/known Codex executable candidates, dedupe by realpath, probe `--version` for each, and return structured inventory items.",
+      "implementation_files": [
+        "src/host/node-backend/server.js",
+        "src/host/node-backend/parity-smoke.test.js"
+      ]
+    },
+    {
+      "date": "2026-05-07",
+      "slice": "03-classify-sources",
+      "summary": "Added install source classification to each Codex inventory item (`installSource` + `installSourceTags`) with symlink wrapper/system/user/workspace/bundled/unknown heuristics and preserved existing inventory structure.",
+      "implementation_files": [
+        "src/host/node-backend/server.js",
+        "src/host/node-backend/parity-smoke.test.js"
+      ]
+    },
+    {
+      "date": "2026-05-07",
+      "slice": "04-overview-ui",
+      "summary": "Added dashboard state wiring for Codex inventory (`/api/codex/inventory`) into `fetchDashboardState` and rendered an Overview summary card from `activeCodex` + `codexInventory` with discovered versions and PATH/conflict copy.",
+      "implementation_files": [
+        "src/host/server.js",
+        "src/webview-template.js"
+      ]
+    },
+    {
+      "date": "2026-05-07",
+      "slice": "05-upgrade-guidance",
+      "summary": "Added explicit safe upgrade guidance lines in the existing Overview Codex summary card with copyable user-level commands and terminal profile note, without automating any changes.",
+      "implementation_files": [
+        "src/webview-template.js"
+      ]
+    },
+    {
+      "date": "2026-05-07",
+      "slice": "06-tests",
+      "summary": "Added backend regression test for Codex inventory mixed active/stale versions and non-executable path behavior via `readCodexInventory` with a deterministic `spawnSync` stub.",
+      "implementation_files": [
+        "src/host/node-backend/parity-smoke.test.js"
+      ]
+    }
+  ],
+  "verification_results": [
+    {
+      "date": "2026-05-07",
+      "command": "node --check src/host/node-backend/server.js",
+      "result": "passed"
+    },
+    {
+      "date": "2026-05-07",
+      "command": "node --check src/host/node-backend/parity-smoke.test.js",
+      "result": "passed"
+    },
+    {
+      "date": "2026-05-07",
+      "command": "node --test src/host/node-backend/parity-smoke.test.js",
+      "result": "passed"
+    },
+    {
+      "date": "2026-05-07",
+      "command": "node --check src/host/server.js",
+      "result": "passed"
+    },
+    {
+      "date": "2026-05-07",
+      "command": "node --check src/webview-template.js",
+      "result": "passed"
+    },
+    {
+      "date": "2026-05-07",
+      "command": "node --test src/host/node-backend/parity-smoke.test.js",
+      "result": "passed"
+    }
+  ],
+  "acceptance": [
+    "Overview shows the active Codex path and version for the current user.",
+    "Overview shows all discovered Codex executables and their versions when executable.",
+    "The UI clearly distinguishes user-level `/home/clashuser/.local/bin/codex` from system-level `/usr/bin/codex` and VS Code bundled Codex.",
+    "A stale system Codex version does not appear as the active version when the user PATH activates a newer user-level Codex.",
+    "The UI provides safe upgrade guidance without running sudo or modifying auth files."
+  ],
+  "verification": [
+    "node --test src/webview/render-detail-regression.test.js",
+    "node --check src/webview-template.js",
+    "node --test src/host/node-backend/node-backend.test.js"
+  ],
+  "dependencies": [],
+  "blocks": [
+    "cma-reference-phase-04-account-vault-token-health",
+    "cma-reference-phase-06-team-worker-account-profiles"
+  ]
+}

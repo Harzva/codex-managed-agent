@@ -1,0 +1,4 @@
+interface:
+  display_name: "Codex Loop"
+  short_description: "Plan-driven recurring Codex loop skill."
+  default_prompt: "Use codex-loop to continue one bounded iteration, write an evolution note, and prepare the next handoff."

@@ -1,0 +1,190 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta
+      http-equiv="Content-Security-Policy"
+      content="default-src 'self'; img-src 'self' data:; style-src 'self'; script-src 'self';"
+    />
+    <title>Codex Managed Agent Desktop</title>
+    <link rel="stylesheet" href="./styles.css" />
+  </head>
+  <body>
+    <div class="app-shell">
+      <aside class="rail" aria-label="Primary navigation">
+        <div class="brand">
+          <img src="../assets/codex-agent.png" alt="" class="brand-mark" />
+          <div>
+            <div class="brand-title">CMA Desktop</div>
+            <div class="brand-subtitle">Local agent workbench</div>
+          </div>
+        </div>
+        <nav class="nav-stack">
+          <button class="nav-item active" type="button" data-view="overview">
+            <span class="nav-icon" aria-hidden="true">
+              <svg viewBox="0 0 24 24"><path d="M4 5h7v7H4zM13 5h7v4h-7zM13 11h7v8h-7zM4 14h7v5H4z"/></svg>
+            </span>
+            <span>Overview</span>
+          </button>
+          <button class="nav-item" type="button" data-view="threads">
+            <span class="nav-icon" aria-hidden="true">
+              <svg viewBox="0 0 24 24"><path d="M5 5h14v3H5zM5 10h14v3H5zM5 15h10v3H5z"/></svg>
+            </span>
+            <span>Threads</span>
+          </button>
+          <button class="nav-item" type="button" data-view="insights">
+            <span class="nav-icon" aria-hidden="true">
+              <svg viewBox="0 0 24 24"><path d="M5 19V9h3v10zM10.5 19V5h3v14zM16 19v-7h3v7z"/></svg>
+            </span>
+            <span>Insights</span>
+          </button>
+          <button class="nav-item" type="button" data-view="settings">
+            <span class="nav-icon" aria-hidden="true">
+              <svg viewBox="0 0 24 24"><path d="M11 3h2l.4 2.3a7 7 0 0 1 1.6.7l2-1.3 1.4 1.4-1.3 2c.3.5.5 1 .7 1.6L20 10v2l-2.2.4a7 7 0 0 1-.7 1.6l1.3 2-1.4 1.4-2-1.3a7 7 0 0 1-1.6.7L13 21h-2l-.4-2.2a7 7 0 0 1-1.6-.7l-2 1.3-1.4-1.4 1.3-2a7 7 0 0 1-.7-1.6L4 12v-2l2.2-.3c.2-.6.4-1.1.7-1.6l-1.3-2L7 4.7 9 6c.5-.3 1-.5 1.6-.7zM12 9a3 3 0 1 0 0 6 3 3 0 0 0 0-6z"/></svg>
+            </span>
+            <span>Settings</span>
+          </button>
+        </nav>
+        <div class="rail-footer">
+          <div class="mini-label">Backend</div>
+          <button class="backend-pill" id="backendPill" type="button">Starting</button>
+        </div>
+      </aside>
+
+      <main class="workspace">
+        <header class="topbar">
+          <div>
+            <h1 id="viewTitle">Overview</h1>
+            <p id="viewKicker">Local runtime state and session health.</p>
+          </div>
+          <div class="toolbar">
+            <button class="icon-button" id="openBackendButton" type="button" title="Open backend in browser" aria-label="Open backend in browser">
+              <svg viewBox="0 0 24 24"><path d="M14 4h6v6h-2V7.4l-7.3 7.3-1.4-1.4L16.6 6H14z"/><path d="M5 5h6v2H7v10h10v-4h2v6H5z"/></svg>
+            </button>
+            <button class="icon-button" id="refreshButton" type="button" title="Refresh" aria-label="Refresh">
+              <svg viewBox="0 0 24 24"><path d="M17.7 6.3A8 8 0 1 0 20 12h-2a6 6 0 1 1-1.8-4.2L13 11h8V3z"/></svg>
+            </button>
+          </div>
+        </header>
+
+        <section class="notice" id="notice" aria-live="polite"></section>
+
+        <section class="view active" id="overviewView" aria-labelledby="viewTitle">
+          <div class="metric-grid">
+            <article class="metric-card">
+              <div class="metric-label">Service</div>
+              <div class="metric-value" id="serviceStatus">Checking</div>
+              <div class="metric-note" id="serviceNote">Local backend probe pending</div>
+            </article>
+            <article class="metric-card">
+              <div class="metric-label">Codex CLI</div>
+              <div class="metric-value" id="codexStatus">Checking</div>
+              <div class="metric-note" id="codexNote">Version probe pending</div>
+            </article>
+            <article class="metric-card">
+              <div class="metric-label">Sessions</div>
+              <div class="metric-value" id="sessionCount">0</div>
+              <div class="metric-note" id="sessionNote">No scan yet</div>
+            </article>
+            <article class="metric-card">
+              <div class="metric-label">Running</div>
+              <div class="metric-value" id="runningCount">0</div>
+              <div class="metric-note">Detected from active Codex processes</div>
+            </article>
+          </div>
+
+          <div class="split-layout">
+            <section class="panel">
+              <div class="panel-head">
+                <h2>Recent Work</h2>
+                <button class="text-button" type="button" data-view-jump="threads">Open Threads</button>
+              </div>
+              <div class="compact-list" id="recentThreads"></div>
+            </section>
+            <section class="panel">
+              <div class="panel-head">
+                <h2>Runtime</h2>
+              </div>
+              <dl class="runtime-list" id="runtimeList"></dl>
+            </section>
+          </div>
+        </section>
+
+        <section class="view" id="threadsView" aria-label="Thread inventory">
+          <div class="filterbar">
+            <label class="search-box">
+              <span class="sr-only">Search threads</span>
+              <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M10.5 4a6.5 6.5 0 0 1 5.1 10.5l4 4-1.4 1.4-4-4A6.5 6.5 0 1 1 10.5 4m0 2a4.5 4.5 0 1 0 0 9 4.5 4.5 0 0 0 0-9z"/></svg>
+              <input id="threadSearch" type="search" autocomplete="off" placeholder="Search title, path, model, thread id" />
+            </label>
+            <div class="segmented" role="group" aria-label="Thread status filter">
+              <button class="segment active" type="button" data-filter="all">All</button>
+              <button class="segment" type="button" data-filter="running">Running</button>
+              <button class="segment" type="button" data-filter="recent">Recent</button>
+              <button class="segment" type="button" data-filter="archived">Archived</button>
+              <button class="segment" type="button" data-filter="soft_deleted">Deleted</button>
+            </div>
+          </div>
+          <div class="thread-board">
+            <div class="thread-list" id="threadList" role="list"></div>
+            <aside class="detail-panel" id="detailPanel" aria-label="Thread detail">
+              <div class="empty-detail">Select a thread to inspect the evidence.</div>
+            </aside>
+          </div>
+        </section>
+
+        <section class="view" id="insightsView" aria-label="Usage insights">
+          <div class="split-layout">
+            <section class="panel">
+              <div class="panel-head">
+                <h2>Usage Summary</h2>
+              </div>
+              <dl class="runtime-list" id="insightsSummary"></dl>
+            </section>
+            <section class="panel">
+              <div class="panel-head">
+                <h2>Activity</h2>
+              </div>
+              <div class="heatmap" id="heatmap"></div>
+            </section>
+          </div>
+        </section>
+
+        <section class="view" id="settingsView" aria-label="Desktop settings">
+          <section class="panel settings-panel">
+            <div class="panel-head">
+              <h2>Desktop Host</h2>
+              <button class="text-button" id="saveSettingsButton" type="button">Save & Restart Backend</button>
+            </div>
+            <div class="form-grid">
+              <label class="field">
+                <span>Backend host</span>
+                <input id="hostInput" type="text" spellcheck="false" />
+              </label>
+              <label class="field">
+                <span>Base port</span>
+                <input id="portInput" type="number" min="1" max="65535" />
+              </label>
+              <label class="field wide">
+                <span>Codex home</span>
+                <div class="inline-field">
+                  <input id="codexHomeInput" type="text" spellcheck="false" />
+                  <button class="icon-button" id="chooseCodexHomeButton" type="button" title="Choose Codex home" aria-label="Choose Codex home">
+                    <svg viewBox="0 0 24 24"><path d="M3 6h7l2 2h9v10a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></svg>
+                  </button>
+                </div>
+              </label>
+              <label class="field">
+                <span>Refresh seconds</span>
+                <input id="refreshSecondsInput" type="number" min="3" max="120" />
+              </label>
+            </div>
+            <div class="settings-foot" id="settingsFoot"></div>
+          </section>
+        </section>
+      </main>
+    </div>
+    <script src="./app.js"></script>
+  </body>
+</html>

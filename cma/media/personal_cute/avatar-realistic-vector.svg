@@ -1,0 +1,41 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024" role="img" aria-labelledby="title desc">
+  <title id="title">Semi realistic vector portrait</title>
+  <desc id="desc">Layered SVG portrait with natural proportions, short black hair, thick eyebrows, and calm expression.</desc>
+  <defs>
+    <radialGradient id="bg" cx="50%" cy="38%" r="70%">
+      <stop offset="0" stop-color="#f8faf8"/>
+      <stop offset="1" stop-color="#cfdad5"/>
+    </radialGradient>
+    <linearGradient id="skin" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#f4cfb5"/>
+      <stop offset=".58" stop-color="#eebf9f"/>
+      <stop offset="1" stop-color="#d99f81"/>
+    </linearGradient>
+    <linearGradient id="hair" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#2b2d2c"/>
+      <stop offset=".5" stop-color="#151615"/>
+      <stop offset="1" stop-color="#3c332c"/>
+    </linearGradient>
+    <filter id="shadow" x="-20%" y="-20%" width="140%" height="150%">
+      <feDropShadow dx="0" dy="24" stdDeviation="24" flood-color="#19241f" flood-opacity=".22"/>
+    </filter>
+  </defs>
+  <rect width="1024" height="1024" fill="url(#bg)"/>
+  <g filter="url(#shadow)">
+    <path fill="#2d4137" d="M199 1024c20-211 140-337 313-337s293 126 313 337z"/>
+    <path fill="#d79a7c" d="M421 650h182v126c-38 39-143 39-182 0z"/>
+    <path fill="url(#skin)" d="M297 340c0-154 85-259 215-259s215 105 215 259v111c0 166-84 276-215 276S297 617 297 451z"/>
+    <path fill="#d89b7d" d="M294 413c-66 11-64 113 4 145zm436 0-5 145c70-32 69-135 5-145z"/>
+    <path fill="url(#hair)" d="M273 350c7-178 120-297 265-281 123 13 201 105 214 277-69-58-130-83-219-82-102 1-180 28-260 86z"/>
+    <path fill="#111" opacity=".9" d="M326 306c56-84 127-128 213-133-47 42-110 81-213 133zm213-136c83-15 150 11 198 79-67-34-130-54-198-79z"/>
+    <path fill="#2c211e" d="M357 393c57-31 115-31 169-2l-14 28c-52-22-95-22-145 2zm156-2c57-30 121-28 176 5l-16 27c-51-25-96-27-148-4z"/>
+    <path fill="#171514" d="M412 470c24 18 54 18 78 0-9-13-21-19-39-19s-30 6-39 19zm126 0c25 18 56 18 81 0-9-13-22-19-40-19-19 0-32 6-41 19z"/>
+    <circle cx="452" cy="464" r="10" fill="#0e0e0e"/>
+    <circle cx="581" cy="464" r="10" fill="#0e0e0e"/>
+    <path fill="none" stroke="#b77760" stroke-width="12" stroke-linecap="round" d="M517 477c-18 48-21 79-2 103"/>
+    <path fill="#c58772" opacity=".55" d="M383 508c34 16 76 16 110 0-26 34-82 34-110 0zm143 0c35 16 78 16 113 0-29 35-85 35-113 0z"/>
+    <path fill="none" stroke="#8d5255" stroke-width="15" stroke-linecap="round" d="M447 623c43 28 95 29 136 0"/>
+    <path fill="#ebeff0" d="M360 741c43 76 94 114 153 114 58 0 109-38 152-114-87-46-219-46-305 0z"/>
+    <path fill="#3e5a4b" d="M243 1024c30-139 123-216 269-216s240 77 270 216z"/>
+  </g>
+</svg>

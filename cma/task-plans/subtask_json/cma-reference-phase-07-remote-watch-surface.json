@@ -1,0 +1,199 @@
+{
+  "schema_version": 1,
+  "id": "cma-reference-phase-07-remote-watch-surface",
+  "title": "Remote And Lightweight Watch Surface",
+  "status": "completed",
+  "source_plan": "task-plans/00-roadmap/cma-reference-inspired-product-roadmap.md",
+  "source_section": "Phase 7: Remote And Lightweight Watch Surface",
+  "priority": "p2",
+  "inspired_by": ["reference/codex_manager"],
+  "scope": [
+    "Design a CMA-native lightweight surface after local lifecycle/card semantics stabilize.",
+    "Expose watchlist, stop, resume, and conservative auto-continue controls with auth.",
+    "Enable auto-continue only after lifecycle inference, account health, and trace evidence are reliable.",
+    "Let the user configure a finite auto-continue count per watched thread or task.",
+    "Record remote/watch actions in trace evidence."
+  ],
+  "non_goals": [
+    "Do not expose write actions without authentication.",
+    "Do not launch remote/mobile before local lifecycle and account models are stable.",
+    "Do not auto-continue without explicit completed-turn evidence.",
+    "Do not allow silent unlimited auto-continue."
+  ],
+  "auto_continue_policy": {
+    "default_enabled": false,
+    "default_max_count": 0,
+    "requires_explicit_task_complete": true,
+    "requires_finite_count": true,
+    "advanced_unlimited_mode": "allowed_only_with_explicit_user_opt_in",
+    "stop_conditions": [
+      "remaining_count_reaches_zero",
+      "latest_turn_is_not_task_complete",
+      "token_or_account_health_blocks_work",
+      "quota_or_rate_limit_blocks_work",
+      "thread_is_running_or_queued",
+      "user_stops_auto_continue",
+      "resume_launch_fails",
+      "session_binding_is_missing_or_changed"
+    ],
+    "tracked_fields": [
+      "enabled",
+      "max_count",
+      "remaining_count",
+      "consumed_count",
+      "last_completed_turn_signature",
+      "last_launch_at",
+      "last_stop_reason"
+    ]
+  },
+  "implementation_targets": [
+    "src/host/server.js",
+    "src/host/panel-view.js",
+    "src/host/trace-core.js",
+    "src/webview/render-detail-regression.test.js"
+  ],
+  "tasks": [
+    {
+      "id": "01-watch-endpoint",
+      "title": "Define watch endpoint or webview route",
+      "status": "done",
+      "details": "Design local HTTP read-only watch endpoint or VS Code webview route."
+    },
+    {
+      "id": "02-watchlist",
+      "title": "Add watchlist for selected threads and tasks",
+      "status": "done",
+      "details": "Allow selected threads/tasks to appear in a lightweight watch surface."
+    },
+    {
+      "id": "03-auto-continue",
+      "title": "Add conservative auto-continue per watched item",
+      "status": "done",
+      "details": "Only trigger after explicit completed-turn evidence."
+    },
+    {
+      "id": "04-auto-continue-count",
+      "title": "Add auto-continue count controls",
+      "status": "done",
+      "details": "Expose max count, remaining count, consumed count, and reset action per watched thread or task."
+    },
+    {
+      "id": "05-persist-settings",
+      "title": "Persist auto-continue settings",
+      "status": "done",
+      "details": "Persist enabled, max_count, remaining_count, consumed_count, last completed turn signature, and stop reason."
+    },
+    {
+      "id": "06-stop-conditions",
+      "title": "Implement auto-continue stop conditions",
+      "status": "done",
+      "details": "Stop when count reaches zero, account health blocks work, latest turn is not task_complete, user stops it, or session binding changes."
+    },
+    {
+      "id": "07-controls",
+      "title": "Add stop and resume controls",
+      "status": "done",
+      "details": "Expose stop/resume controls with clear trace evidence."
+    },
+    {
+      "id": "08-auth-model",
+      "title": "Add auth/token model before non-local exposure",
+      "status": "done",
+      "details": "Require authentication for non-local write actions."
+    }
+  ],
+  "implementation_notes": [
+    {
+      "slice": "01-watch-endpoint",
+      "status": "done",
+      "summary": "Added a local read-only Node backend watch route at `GET /api/watch`, with `watch` advertised in `/api/health` capabilities. The route returns a constrained watch snapshot over live threads with lifecycle evidence, process summary, disabled-by-default finite auto-continue metadata, and read-only action flags that require auth before future write actions.",
+      "files": [
+        "src/host/node-backend/server.js",
+        "src/host/node-backend/parity-smoke.test.js"
+      ]
+    },
+    {
+      "slice": "02-watchlist",
+      "status": "done",
+      "summary": "Added local watchlist loading from `~/.codex-managed-agent/watchlist.json` and `readWatchlist` injection for tests. `GET /api/watch` now uses explicit `ids=` when supplied, otherwise filters to configured watched thread ids and reports watched task ids as currently unsupported until the task resolver/control slices land.",
+      "files": [
+        "src/host/node-backend/server.js",
+        "src/host/node-backend/parity-smoke.test.js"
+      ]
+    },
+    {
+      "slice": "03-auto-continue",
+      "status": "done",
+      "summary": "Added conservative read-only auto-continue state derivation for watched threads. A watched item is launchable only when explicitly enabled, has a finite positive count, has remaining count, and the current lifecycle evidence includes an explicit `event:task_complete` marker that has not already been consumed.",
+      "files": [
+        "src/host/node-backend/server.js",
+        "src/host/node-backend/parity-smoke.test.js"
+      ]
+    },
+    {
+      "slice": "04-auto-continue-count",
+      "status": "done",
+      "summary": "Added local count-control write path `POST /api/watch/auto-continue` for watched items. The route can set enabled state, prompt, max count, remaining count, consumed count, and reset count state while returning the updated watch snapshot.",
+      "files": [
+        "src/host/node-backend/server.js",
+        "src/host/node-backend/node-backend.test.js"
+      ]
+    },
+    {
+      "slice": "05-persist-settings",
+      "status": "done",
+      "summary": "Persisted watch auto-continue settings to `~/.codex-managed-agent/watchlist.json` with atomic writes and a local-request-only write guard. Added regression coverage for persisted count controls and reset behavior.",
+      "files": [
+        "src/host/node-backend/server.js",
+        "src/host/node-backend/node-backend.test.js"
+      ]
+    },
+    {
+      "slice": "06-stop-conditions",
+      "status": "done",
+      "summary": "Expanded watch auto-continue stop conditions into explicit `blocked_reason` values for user stop, launch failure, account/token blocks, quota/rate-limit blocks, missing/changed session binding, running/queued lifecycle, finite-count requirements, exhausted counts, missing `task_complete`, and already-consumed completed turns.",
+      "files": [
+        "src/host/node-backend/server.js",
+        "src/host/node-backend/node-backend.test.js"
+      ]
+    },
+    {
+      "slice": "07-controls",
+      "status": "done",
+      "summary": "Added local `POST /api/watch/control` stop/resume controls. Stop disables watched auto-continue with `user_stopped`, resume re-enables it with `user_resumed`, and both actions append durable JSONL trace evidence to `~/.codex-managed-agent/watch-actions.jsonl`.",
+      "files": [
+        "src/host/node-backend/server.js",
+        "src/host/node-backend/node-backend.test.js"
+      ]
+    },
+    {
+      "slice": "08-auth-model",
+      "status": "done",
+      "summary": "Added a watch write auth model: local writes remain allowed, while non-local write requests require a matching bearer token or `x-cma-watch-token` using `watchAuthToken`/`CMA_WATCH_AUTH_TOKEN`. This keeps remote write exposure blocked unless explicit auth is configured.",
+      "files": [
+        "src/host/node-backend/server.js",
+        "src/host/node-backend/node-backend.test.js"
+      ]
+    }
+  ],
+  "acceptance": [
+    "Remote/watch surface never exposes write actions without auth.",
+    "Auto-continue only triggers after explicit completed-turn evidence.",
+    "Auto-continue requires a finite count unless the user explicitly chooses an advanced unlimited mode.",
+    "The UI shows remaining auto-continue count before every launch.",
+    "Auto-continue stops with an explicit stop reason.",
+    "Stop/resume actions appear in trace.",
+    "Local watch model reuses lifecycle and account health primitives."
+  ],
+  "verification": [
+    "node --check src/host/node-backend/server.js",
+    "node --test src/host/node-backend/parity-smoke.test.js",
+    "node --test src/webview/render-detail-regression.test.js",
+    "node --check src/webview-template.js"
+  ],
+  "dependencies": [
+    "cma-reference-phase-01-lifecycle-inference",
+    "cma-reference-phase-06-team-worker-account-profiles"
+  ],
+  "blocks": []
+}

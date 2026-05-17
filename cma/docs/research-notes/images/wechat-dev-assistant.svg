@@ -1,0 +1,19 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1280" height="720" viewBox="0 0 1280 720">
+  <rect width="1280" height="720" fill="#ffffff"/>
+  <rect x="0" y="0" width="1280" height="96" fill="#f1fbf7"/>
+  <g font-family="Arial, sans-serif">
+    <circle cx="56" cy="48" r="17" fill="none" stroke="#111820" stroke-width="3"/>
+    <path d="M68 35l13-6-4 15" fill="none" stroke="#111820" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+    <text x="92" y="57" font-size="31" font-weight="700" fill="#111820">开发者智能助手</text>
+    <text x="350" y="57" font-size="20" fill="#8a969f">Beta</text>
+    <rect x="70" y="150" width="1140" height="510" rx="16" fill="#ffffff" stroke="#e1e8ee"/>
+    <text x="108" y="210" font-size="24" font-weight="700" fill="#1c2f3f">问题理解</text>
+    <text x="108" y="258" font-size="21" fill="#243746">用户询问公众号接口返回 48001，需确认账号是否具备发布能力权限集。</text>
+    <text x="108" y="332" font-size="24" font-weight="700" fill="#1c2f3f">问题解答</text>
+    <text x="108" y="382" font-size="21" fill="#243746">该账号不具备调用 freepublish_submit 的权限。</text>
+    <text x="108" y="426" font-size="21" fill="#243746">个人主体账号无法开通该发布能力；需要企业主体已认证账号。</text>
+    <text x="108" y="470" font-size="21" fill="#243746">替代方案是：API 创建草稿后，在公众号后台手动发布。</text>
+    <rect x="108" y="530" width="1000" height="70" rx="12" fill="#f3f8fc" stroke="#d6e5f0"/>
+    <text x="138" y="574" font-size="22" font-weight="700" fill="#2f6f95">价值：比通用文档更快收敛到账号主体与权限集边界。</text>
+  </g>
+</svg>

@@ -1,0 +1,14 @@
+reference/**
+bundled-skills/**/__pycache__/**
+bundled-skills/**/*.pyc
+.vscode/settings.json
+.vscode/*.local.json
+.codex/
+.codex-loop*/
+.codex-team/
+.claude/
+.env
+.env.*
+*.env
+!*.env.example
+*.zip

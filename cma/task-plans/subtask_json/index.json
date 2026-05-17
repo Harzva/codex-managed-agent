@@ -1,0 +1,48 @@
+{
+  "schema_version": 1,
+  "id": "cma-reference-inspired-roadmap-subtasks",
+  "title": "CMA Reference-Inspired Roadmap Subtask Index",
+  "source_plan": "task-plans/00-roadmap/cma-reference-inspired-product-roadmap.md",
+  "subtasks": [
+    {
+      "id": "cma-reference-phase-01-lifecycle-inference",
+      "path": "task-plans/subtask_json/cma-reference-phase-01-lifecycle-inference.json",
+      "priority": "p0"
+    },
+    {
+      "id": "cma-reference-phase-02-board-operational-language",
+      "path": "task-plans/subtask_json/cma-reference-phase-02-board-operational-language.json",
+      "priority": "p1"
+    },
+    {
+      "id": "cma-reference-phase-08-overview-codex-version-inventory",
+      "path": "task-plans/subtask_json/cma-reference-phase-08-overview-codex-version-inventory.json",
+      "priority": "p0"
+    },
+    {
+      "id": "cma-reference-phase-03-account-identity-hardening",
+      "path": "task-plans/subtask_json/cma-reference-phase-03-account-identity-hardening.json",
+      "priority": "p0"
+    },
+    {
+      "id": "cma-reference-phase-04-account-vault-token-health",
+      "path": "task-plans/subtask_json/cma-reference-phase-04-account-vault-token-health.json",
+      "priority": "p0"
+    },
+    {
+      "id": "cma-reference-phase-05-quota-rate-limit-awareness",
+      "path": "task-plans/subtask_json/cma-reference-phase-05-quota-rate-limit-awareness.json",
+      "priority": "p1"
+    },
+    {
+      "id": "cma-reference-phase-06-team-worker-account-profiles",
+      "path": "task-plans/subtask_json/cma-reference-phase-06-team-worker-account-profiles.json",
+      "priority": "p1"
+    },
+    {
+      "id": "cma-reference-phase-07-remote-watch-surface",
+      "path": "task-plans/subtask_json/cma-reference-phase-07-remote-watch-surface.json",
+      "priority": "p2"
+    }
+  ]
+}

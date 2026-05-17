@@ -1,0 +1,34 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-labelledby="title desc">
+  <title id="title">Circular AI persona badge</title>
+  <desc id="desc">Social avatar SVG badge with a clean virtual portrait and stylized geometric background.</desc>
+  <defs>
+    <clipPath id="clip">
+      <circle cx="256" cy="256" r="232"/>
+    </clipPath>
+    <filter id="softShadow" x="-20%" y="-20%" width="140%" height="140%">
+      <feDropShadow dx="0" dy="16" stdDeviation="18" flood-color="#18251f" flood-opacity=".22"/>
+    </filter>
+  </defs>
+  <rect width="512" height="512" fill="none"/>
+  <circle cx="256" cy="256" r="236" fill="#f3f0e9"/>
+  <g clip-path="url(#clip)">
+    <rect width="512" height="512" fill="#dce8e2"/>
+    <path fill="#90a996" d="M0 356c105-54 196-47 279 20 69 55 145 65 233 28v108H0z"/>
+    <path fill="#c7d8d0" d="M-50 99c91 37 188 43 291 18 111-26 214-11 321 45v-214H-50z"/>
+    <g filter="url(#softShadow)">
+      <path fill="#2d4037" d="M96 514c11-104 72-165 160-165s149 61 160 165z"/>
+      <path fill="#f0c8ad" d="M214 335h84v66c-19 18-65 18-84 0z"/>
+      <path fill="#f5d1ba" d="M151 195c0-72 44-122 105-122s105 50 105 122v56c0 75-44 126-105 126s-105-51-105-126z"/>
+      <path fill="#1f1e1d" d="M136 195c14-86 64-135 125-135 57 0 103 47 112 132-34-26-63-36-104-37-47-1-86 12-133 40z"/>
+      <path fill="#1f1e1d" d="M164 185c23-44 56-68 101-73-26 27-56 50-101 73z"/>
+      <path fill="#eab99e" d="M151 225c-30 7-30 58 2 75zm209 0-2 75c33-15 32-69 2-75z"/>
+      <path fill="#211f1d" d="M181 220c23-14 51-14 75-1l-7 13c-22-9-41-9-62 0zm80-1c24-13 54-12 78 2l-7 12c-22-9-42-10-64-1z"/>
+      <circle cx="213" cy="257" r="8" fill="#151515"/>
+      <circle cx="301" cy="257" r="8" fill="#151515"/>
+      <path fill="none" stroke="#bd856f" stroke-width="6" stroke-linecap="round" d="M257 262c-8 20-10 33-1 42"/>
+      <path fill="none" stroke="#9e5d61" stroke-width="8" stroke-linecap="round" d="M224 326c19 14 45 14 64 0"/>
+      <path fill="#edf0ee" d="M185 402c17 31 42 48 71 48s54-17 71-48c-39-23-103-23-142 0z"/>
+    </g>
+  </g>
+  <circle cx="256" cy="256" r="236" fill="none" stroke="#ffffff" stroke-width="10" opacity=".9"/>
+</svg>

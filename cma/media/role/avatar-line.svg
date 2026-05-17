@@ -1,0 +1,22 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-labelledby="title desc">
+  <title id="title">Minimal line portrait avatar</title>
+  <desc id="desc">Editable SVG portrait inspired by a young man with short black hair, thick eyebrows, calm eyes, and a simple shirt.</desc>
+  <rect width="512" height="512" fill="#7da08d"/>
+  <g fill="none" stroke="#151515" stroke-linecap="round" stroke-linejoin="round">
+    <path stroke-width="10" fill="#faf8f2" d="M166 212c0-84 51-139 94-139 55 0 96 54 96 140 0 78-40 141-95 141-57 0-95-63-95-142z"/>
+    <path stroke-width="10" fill="#3b2926" d="M154 185c14-77 60-120 111-120 61 0 98 44 105 108-34-13-57-21-95-18-48 3-74 21-121 30z"/>
+    <path stroke-width="7" d="M190 229c18-10 42-11 62-2"/>
+    <path stroke-width="7" d="M285 227c21-9 46-7 63 4"/>
+    <path stroke-width="8" d="M212 260c11 8 25 8 36 0"/>
+    <path stroke-width="8" d="M303 260c12 8 27 8 38 0"/>
+    <path stroke-width="6" d="M261 263c-7 18-10 32-5 42"/>
+    <path stroke-width="6" d="M226 326c18 14 50 15 70 0"/>
+    <path stroke-width="8" d="M156 244c-24 4-32 41 4 55"/>
+    <path stroke-width="8" d="M358 244c25 5 31 42-5 55"/>
+    <path stroke-width="10" d="M224 354v38"/>
+    <path stroke-width="10" d="M296 354v38"/>
+    <path stroke-width="10" fill="#f7f7f2" d="M151 445c12-52 51-74 105-74s94 22 106 74"/>
+    <path stroke-width="6" d="M188 450h138"/>
+  </g>
+  <path fill="#151515" d="M205 255a8 8 0 1 0 0-16 8 8 0 0 0 0 16zm105 0a8 8 0 1 0 0-16 8 8 0 0 0 0 16z"/>
+</svg>

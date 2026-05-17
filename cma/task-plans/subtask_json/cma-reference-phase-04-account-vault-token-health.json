@@ -1,0 +1,256 @@
+{
+  "schema_version": 1,
+  "id": "cma-reference-phase-04-account-vault-token-health",
+  "title": "Account Vault, Explicit Activation, And Token Health",
+  "status": "completed",
+  "source_plan": "task-plans/00-roadmap/cma-reference-inspired-product-roadmap.md",
+  "source_section": "Phase 4: Account Vault And Explicit Activation",
+  "priority": "p0",
+  "inspired_by": ["reference/codex-auto", "reference/AIUsage"],
+  "scope": [
+    "Store managed Codex auth profiles and activate them by global auth symlink.",
+    "Keep import and backup flows as migration or diagnostics paths.",
+    "Make token expiration and invalid credentials visible before activation.",
+    "Avoid silent replacement of native .codex/auth.json."
+  ],
+  "non_goals": [
+    "Do not implement automatic account rotation yet.",
+    "Do not launch Team workers through account overlays yet.",
+    "Do not copy one profile auth over another profile auth.",
+    "Do not overwrite native auth without explicit user action."
+  ],
+  "implementation_targets": [
+    "src/host/account-manager.js",
+    "src/host/panel-view.js",
+    "src/webview/actions.js",
+    "src/webview/styles.js",
+    "src/webview/render-detail-regression.test.js"
+  ],
+  "tasks": [
+    {
+      "id": "01-vault-schema",
+      "title": "Define vault layout and metadata schema",
+      "status": "done",
+      "details": "Define managed profile metadata, backup metadata, source path, managed path, fingerprint, and last activation fields."
+    },
+    {
+      "id": "02-import-current",
+      "title": "Import current auth",
+      "status": "done",
+      "details": "Import the current native Codex auth.json into a named managed profile."
+    },
+    {
+      "id": "03-import-file",
+      "title": "Import auth from path",
+      "status": "done",
+      "details": "Import another auth file after validation and source path recording."
+    },
+    {
+      "id": "04-activate-backup",
+      "title": "Activate profile by global auth symlink",
+      "status": "done",
+      "details": "Link global ~/.codex/auth.json to the selected managed profile auth.json; move aside existing unmanaged native auth before linking."
+    },
+    {
+      "id": "05-token-health",
+      "title": "Add token health states",
+      "status": "done",
+      "details": "Support ok, expiring_soon, expired, invalid, refresh_failed, rate_limited, and unknown."
+    },
+    {
+      "id": "06-refresh-before-activation",
+      "title": "Refresh before activation",
+      "status": "done",
+      "details": "Attempt refresh when refresh_token exists; keep current profile active if refresh succeeds."
+    },
+    {
+      "id": "07-refresh-failure",
+      "title": "Mark refresh failures safely",
+      "status": "done",
+      "details": "Mark refresh_failed without overwriting native auth, and show re-login or switch recommendation."
+    },
+    {
+      "id": "08-ui-actions",
+      "title": "Add account UI actions",
+      "status": "done",
+      "details": "Added the remaining visible account UI action controls: Open Source + Validate (renamed from Test) on per-account cards."
+    }
+  ],
+  "acceptance": [
+    "Activation updates the global auth symlink instead of copying profile auth.",
+    "Existing unmanaged native auth is preserved by moving it aside before linking.",
+    "UI shows exact global auth path and symlink target.",
+    "Invalid auth cannot replace the global auth link.",
+    "Expired or invalid tokens are visible as blocking account health states.",
+    "A failed token refresh never silently overwrites active auth."
+  ],
+  "implementation_notes": [
+    {
+      "date": "2026-05-07",
+      "slice": "01-vault-schema",
+      "summary": "Added vault contract constants and metadata templates in `src/host/account-manager.js`, including vault layout (`accounts`/`backups` and file names), token-health states, and profile/backup metadata schema shapes for future import/activation slices.",
+      "implementation_files": [
+        "src/host/account-manager.js"
+      ]
+    },
+    {
+      "date": "2026-05-07",
+      "slice": "02-import-current",
+      "summary": "Implemented explicit current-auth import flow by wiring a webview account import action to pass a user-provided profile name, creating `importCurrentAuthToProfile` on the panel host, and adding `importCurrentAuthAsProfile` in account-manager to import `~/.codex/auth.json` (and sibling `config.toml` when present) into managed vault metadata with source/auth path tracking.",
+      "implementation_files": [
+        "src/host/account-manager.js",
+        "src/panel.js",
+        "src/host/panel-view.js",
+        "src/webview-template.js"
+      ]
+    },
+    {
+      "date": "2026-05-07",
+      "slice": "03-import-file",
+      "summary": "Added explicit auth-file import workflow from UI (`importCodexAccountFromFile` message path) through to account-manager with auth JSON validation and optional config.toml import, including source-path capture in managed profile metadata via `sourceAuthPath`.",
+      "implementation_files": [
+        "src/host/account-manager.js",
+        "src/panel.js",
+        "src/host/panel-view.js",
+        "src/webview-template.js"
+      ]
+    },
+    {
+      "date": "2026-05-07",
+      "slice": "04-activate-backup",
+      "summary": "Implemented symlink activation in `activateAccountForCodex`: global `~/.codex/auth.json` is linked to the selected managed profile auth. Existing unmanaged native `auth.json` is moved aside to `accounts/<name>/backups/` with metadata before linking.",
+      "implementation_files": [
+        "src/host/account-manager.js"
+      ]
+    },
+    {
+      "date": "2026-05-07",
+      "slice": "05-token-health",
+      "summary": "Added bounded token health classification in `src/host/account-manager.js` by deriving `tokenHealth` from existing metadata and JWT/credential checks, and exposing it through `readAccountsForPayload` accountDetails.",
+      "implementation_files": [
+        "src/host/account-manager.js"
+      ]
+    },
+    {
+      "date": "2026-05-07",
+      "slice": "06-refresh-before-activation",
+      "summary": "Updated `activateAccountForCodex` preflight to refresh profiles that include refresh tokens before activation, block activation on non-skipped refresh failure, and persist token-health refresh results via `writeMeta` (`refresh_failed` / `refresh_succeeded`).",
+      "implementation_files": [
+        "src/host/account-manager.js"
+      ]
+    },
+    {
+      "date": "2026-05-07",
+      "slice": "07-refresh-failure",
+      "summary": "Handled refresh-failure blocking by persisting `refresh_failed` state and user-facing recommendation to re-login or switch profiles, returning `recommendation` on activation failure, and surfacing it in `activateCodexAccount` error UI without writing native auth.",
+      "implementation_files": [
+        "src/host/account-manager.js",
+        "src/host/panel-view.js"
+      ]
+    },
+    {
+      "date": "2026-05-07",
+      "slice": "08-ui-actions-open-source",
+      "summary": "Added an account card `Open Source` action in `src/webview-template.js` that appears for managed profiles with source auth path and dispatches a `openLocalFile` message to open the source auth json directly from the webview.",
+      "implementation_files": [
+        "src/webview-template.js"
+      ]
+    },
+    {
+      "date": "2026-05-07",
+      "slice": "08-ui-actions-validate-label",
+      "summary": "Renamed the existing account credential check button from `Test` to `Validate` while keeping the same `probeCodexAccount` message path, satisfying the Validate action requirement with no backend changes.",
+      "implementation_files": [
+        "src/webview-template.js"
+      ]
+    }
+  ],
+  "verification": [
+    "node --test src/webview/render-detail-regression.test.js",
+    "node --check src/webview-template.js"
+  ],
+  "verification_results": [
+    {
+      "date": "2026-05-07",
+      "command": "node --check src/host/account-manager.js",
+      "result": "passed"
+    },
+    {
+      "date": "2026-05-07",
+      "command": "node --check src/panel.js",
+      "result": "passed"
+    },
+    {
+      "date": "2026-05-07",
+      "command": "node --check src/host/panel-view.js",
+      "result": "passed"
+    },
+    {
+      "date": "2026-05-07",
+      "command": "node --check src/webview-template.js",
+      "result": "passed"
+    },
+    {
+      "date": "2026-05-07",
+      "command": "node -e \"JSON.parse(require('fs').readFileSync('task-plans/subtask_json/cma-reference-phase-04-account-vault-token-health.json','utf8'))\"",
+      "result": "passed"
+    },
+    {
+      "date": "2026-05-07",
+      "command": "node --check src/host/account-manager.js && node --check src/panel.js && node --check src/host/panel-view.js && node --check src/webview-template.js",
+      "result": "passed"
+    },
+    {
+      "date": "2026-05-07",
+      "command": "node --check src/host/account-manager.js",
+      "result": "passed"
+    },
+    {
+      "date": "2026-05-07",
+      "command": "node --check src/host/account-manager.js",
+      "result": "passed"
+    },
+    {
+      "date": "2026-05-07",
+      "command": "node --check src/host/account-manager.js",
+      "result": "passed"
+    },
+    {
+      "date": "2026-05-07",
+      "command": "node --check src/host/account-manager.js && node -e \"JSON.parse(require('fs').readFileSync('task-plans/subtask_json/cma-reference-phase-04-account-vault-token-health.json','utf8'))\"",
+      "result": "passed"
+    },
+    {
+      "date": "2026-05-07",
+      "command": "node --check src/host/account-manager.js && node --check src/host/panel-view.js",
+      "result": "passed"
+    },
+    {
+      "date": "2026-05-07",
+      "command": "node --check src/webview-template.js",
+      "result": "passed"
+    },
+    {
+      "date": "2026-05-07",
+      "command": "node --check src/webview-template.js && node -e \"JSON.parse(require('fs').readFileSync('task-plans/subtask_json/cma-reference-phase-04-account-vault-token-health.json','utf8'))\"",
+      "result": "passed"
+    },
+    {
+      "date": "2026-05-07",
+      "command": "node --check src/webview-template.js",
+      "result": "passed"
+    },
+    {
+      "date": "2026-05-07",
+      "command": "node --check src/webview-template.js && node -e \"JSON.parse(require('fs').readFileSync('task-plans/subtask_json/cma-reference-phase-04-account-vault-token-health.json','utf8'))\"",
+      "result": "passed"
+    }
+  ],
+  "dependencies": [
+    "cma-reference-phase-03-account-identity-hardening"
+  ],
+  "blocks": [
+    "cma-reference-phase-05-quota-rate-limit-awareness",
+    "cma-reference-phase-06-team-worker-account-profiles"
+  ]
+}

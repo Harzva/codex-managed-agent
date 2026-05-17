@@ -1,0 +1,6 @@
+{
+  "name": "codex-loop",
+  "title": "codex-loop",
+  "version": "1.0.0",
+  "description": "Plan-driven recurring iteration for Codex without a native /loop command."
+}

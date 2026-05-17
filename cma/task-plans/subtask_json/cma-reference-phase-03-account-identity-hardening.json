@@ -1,0 +1,149 @@
+{
+  "schema_version": 1,
+  "id": "cma-reference-phase-03-account-identity-hardening",
+  "title": "Codex Account Identity Hardening",
+  "status": "completed",
+  "source_plan": "task-plans/00-roadmap/cma-reference-inspired-product-roadmap.md",
+  "source_section": "Phase 3: Codex Account Identity Hardening",
+  "priority": "p0",
+  "inspired_by": ["reference/AIUsage"],
+  "scope": [
+    "Make Codex account identity path-aware.",
+    "Stop relying on email or account id for Codex dedupe.",
+    "Explain active auth source in the Accounts UI."
+  ],
+  "non_goals": [
+    "Do not implement account activation backup in this phase.",
+    "Do not implement automatic account rotation.",
+    "Do not query external quota APIs as a requirement."
+  ],
+  "implementation_targets": [
+    "src/host/account-manager.js",
+    "src/webview/actions.js",
+    "src/webview/styles.js",
+    "src/webview/render-detail-regression.test.js"
+  ],
+  "tasks": [
+    {
+      "id": "01-normalize-path",
+      "title": "Add normalized auth path utilities",
+      "status": "done",
+      "details": "Added path normalization helpers with trim/~/expansion, resolve, symlink-aware realpath fallback, and stable casing on Windows; wired helpers into auth/config source imports and active profile detection."
+    },
+    {
+      "id": "02-extend-records",
+      "title": "Extend account records",
+      "status": "done",
+      "details": "Added account payload identity fields (`sourceAuthPath`, `normalizedSourceAuthPath`, `managedAuthPath`, `credentialId`, `fingerprint`) and helper functions to derive identity values in `src/host/account-manager.js`."
+    },
+    {
+      "id": "03-duplicate-warnings",
+      "title": "Add duplicate warning logic",
+      "status": "done",
+      "details": "Warn on likely duplicates without merging accounts solely by email or account id."
+    },
+    {
+      "id": "04-ui-source-path",
+      "title": "Show source path and active state",
+      "status": "done",
+      "details": "Render enough source path detail for users to know what profile they will activate."
+    },
+    {
+      "id": "05-tests",
+      "title": "Test same email across auth paths",
+      "status": "done",
+      "details": "Ensure two Codex auth files with the same email can coexist."
+    }
+  ],
+  "implementation_notes": [
+    {
+      "date": "2026-05-07",
+      "slice": "01-normalize-path",
+      "summary": "Implemented `normalizeAuthPath` in `src/host/account-manager.js` with tilde expansion, absolute-path resolution, symlink realpath fallback, and Windows casing normalization. Applied it to account auth/config import sources and active auth-path checks in `detectActiveProfile`.",
+      "implementation_files": [
+        "src/host/account-manager.js"
+      ]
+    },
+    {
+      "date": "2026-05-07",
+      "slice": "02-extend-records",
+      "summary": "Extended `readAccountsForPayload` account details with source path and fingerprint metadata and added `getCredentialIdFromAuth` / `getAccountFingerprint` helpers in `src/host/account-manager.js`.",
+      "implementation_files": [
+        "src/host/account-manager.js"
+      ]
+    },
+    {
+      "date": "2026-05-07",
+      "slice": "03-duplicate-warnings",
+      "summary": "Added non-destructive duplicate identity warnings in `src/host/account-manager.js` by grouping account details by credential identity and source path; surfaced warning rows and duplicate badges in `src/webview-template.js` and styled them in `src/webview/styles.js`.",
+      "implementation_files": [
+        "src/host/account-manager.js",
+        "src/webview-template.js",
+        "src/webview/styles.js"
+      ]
+    },
+    {
+      "date": "2026-05-07",
+      "slice": "04-ui-source-path",
+      "summary": "Updated Accounts UI to surface per-account `sourceAuthPath` and explicit native active status in both the overview summary and the account list cards; added active-state source-path context in the overview hero and metadata.",
+      "implementation_files": [
+        "src/webview-template.js",
+        "src/webview/styles.js"
+      ]
+    },
+    {
+      "date": "2026-05-07",
+      "slice": "05-tests",
+      "summary": "Added regression coverage in `src/webview/render-detail-regression.test.js` for two configured accounts sharing `credentialId` but using different source auth paths; both render independent duplicate warnings and visible auth paths.",
+      "implementation_files": [
+        "src/webview/render-detail-regression.test.js"
+      ]
+    }
+  ],
+  "acceptance": [
+    "Two Codex auth files with the same email can coexist.",
+    "Active account detection is path or fingerprint based.",
+    "UI shows enough source information to understand what will be activated.",
+    "Email and account_id are not sole Codex dedupe keys."
+  ],
+  "verification_results": [
+    {
+      "date": "2026-05-07",
+      "command": "node --check src/host/account-manager.js",
+      "result": "passed"
+    },
+    {
+      "date": "2026-05-07",
+      "command": "node --check src/host/account-manager.js",
+      "result": "passed"
+    },
+    {
+      "date": "2026-05-07",
+      "command": "node --check src/webview-template.js",
+      "result": "passed"
+    },
+    {
+      "date": "2026-05-07",
+      "command": "node --check src/webview/styles.js",
+      "result": "passed"
+    },
+    {
+      "date": "2026-05-07",
+      "command": "node --check src/webview-template.js",
+      "result": "passed"
+    },
+    {
+      "date": "2026-05-07",
+      "command": "node --test src/webview/render-detail-regression.test.js",
+      "result": "passed"
+    }
+  ],
+  "verification": [
+    "node --test src/webview/render-detail-regression.test.js",
+    "node --check src/webview-template.js"
+  ],
+  "dependencies": [],
+  "blocks": [
+    "cma-reference-phase-04-account-vault-token-health"
+  ]
+}

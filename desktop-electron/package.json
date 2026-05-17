@@ -1,0 +1,73 @@
+{
+  "name": "codex-managed-agent-desktop",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Cross-platform desktop shell for Codex-Managed-Agent with an isolated Electron host.",
+  "main": "dist/main.js",
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "start": "npm run build && electron .",
+    "dev": "npm run build && electron . --dev",
+    "test": "npm run build && node --test test/*.test.js",
+    "package:dir": "npm run build && electron-builder --dir",
+    "package:win": "npm run build && electron-builder --win nsis portable --x64",
+    "package:mac": "npm run build && electron-builder --mac dmg zip --universal",
+    "dist": "npm run build && electron-builder"
+  },
+  "keywords": [
+    "codex",
+    "electron",
+    "agent",
+    "desktop",
+    "dashboard"
+  ],
+  "author": "harzva",
+  "license": "MIT",
+  "devDependencies": {
+    "@types/node": "^25.8.0",
+    "electron": "^42.1.0",
+    "electron-builder": "^26.8.1",
+    "typescript": "^6.0.3"
+  },
+  "build": {
+    "appId": "dev.harzva.codex-managed-agent.desktop",
+    "productName": "Codex Managed Agent Desktop",
+    "directories": {
+      "output": "release"
+    },
+    "files": [
+      "dist/**/*",
+      "renderer/**/*",
+      "assets/**/*",
+      "vendor/**/*",
+      "package.json"
+    ],
+    "extraMetadata": {
+      "main": "dist/main.js"
+    },
+    "win": {
+      "signAndEditExecutable": false,
+      "target": [
+        {
+          "target": "nsis",
+          "arch": [
+            "x64"
+          ]
+        },
+        {
+          "target": "portable",
+          "arch": [
+            "x64"
+          ]
+        }
+      ]
+    },
+    "mac": {
+      "target": [
+        "dmg",
+        "zip"
+      ],
+      "category": "public.app-category.developer-tools"
+    }
+  }
+}

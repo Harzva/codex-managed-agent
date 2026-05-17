@@ -1,0 +1,34 @@
+flowchart TD
+    user["User clicks Run Snake Demo"]
+    webview["CMA Team UI"]
+    host["Extension Host Team Core"]
+    mailbox[".codex-team mailbox<br/>tasks agents events inbox"]
+    compiler["Prompt Compiler<br/>role protocol contract"]
+    cli["Dedicated Codex Worker<br/>codex exec --json"]
+    log["Run Log<br/>pid model progress errors"]
+    reconcile["Runtime Reconcile<br/>pid log progress errors"]
+    resolved["Resolve Thread ID<br/>session_meta"]
+    retry["Retry Same<br/>or Retry New Thread"]
+
+    user --> webview
+    webview -->|"postMessage"| host
+    host -->|"create task and agent"| mailbox
+    host -->|"compile task prompt"| compiler
+    compiler -->|"compiled prompt"| cli
+    cli --> log
+    log --> resolved
+    resolved --> reconcile
+    reconcile -->|"update task runtime"| mailbox
+    mailbox -->|"state payload"| webview
+    reconcile -->|"failed or blocked"| retry
+    retry -->|"resume same or spawn new"| cli
+
+    classDef ui fill:#17324d,stroke:#8dd8ff,color:#ffffff
+    classDef core fill:#183626,stroke:#54f2b0,color:#ffffff
+    classDef runtime fill:#3a2a16,stroke:#ffd479,color:#ffffff
+    classDef recovery fill:#3d2331,stroke:#ff8fb7,color:#ffffff
+
+    class user,webview ui
+    class host,mailbox,compiler,reconcile core
+    class cli,log,resolved runtime
+    class retry recovery

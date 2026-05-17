@@ -1,0 +1,37 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024" role="img" aria-labelledby="title desc">
+  <title id="title">Profile card vector portrait</title>
+  <desc id="desc">Professional profile avatar with glasses and casual green jacket.</desc>
+  <defs>
+    <linearGradient id="cardBg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#f4f1ea"/>
+      <stop offset=".52" stop-color="#dce5e0"/>
+      <stop offset="1" stop-color="#aebfb6"/>
+    </linearGradient>
+    <clipPath id="round">
+      <rect x="96" y="72" width="832" height="880" rx="72"/>
+    </clipPath>
+  </defs>
+  <rect width="1024" height="1024" fill="none"/>
+  <rect x="96" y="72" width="832" height="880" rx="72" fill="url(#cardBg)"/>
+  <g clip-path="url(#round)">
+    <circle cx="798" cy="156" r="118" fill="#ffffff" opacity=".42"/>
+    <circle cx="214" cy="202" r="80" fill="#91a99b" opacity=".35"/>
+    <path fill="#334a3f" d="M173 1011c30-213 154-337 339-337s309 124 339 337z"/>
+    <path fill="#d7a083" d="M416 640h193v117c-45 44-148 44-193 0z"/>
+    <path fill="#f0c5a9" d="M301 329c0-139 82-237 211-237 128 0 211 98 211 237v119c0 160-82 260-211 260-130 0-211-100-211-260z"/>
+    <path fill="#d59b7f" d="M300 407c-61 11-59 105 3 136zm423 0-4 136c65-30 64-127 4-136z"/>
+    <path fill="#171715" d="M276 339c12-166 110-278 241-278 127 0 216 101 231 276-75-51-145-73-237-72-95 1-171 25-235 74z"/>
+    <path fill="#26211f" d="M339 386c51-31 112-32 169-3l-17 29c-50-18-91-18-139 3zm169-3c58-29 120-28 174 5l-18 30c-48-23-91-24-143-4z"/>
+    <g fill="none" stroke="#161b1b" stroke-linejoin="round">
+      <rect x="326" y="424" width="158" height="94" rx="28" stroke-width="18"/>
+      <rect x="540" y="424" width="158" height="94" rx="28" stroke-width="18"/>
+      <path d="M484 471c18-12 38-12 56 0" stroke-width="16" stroke-linecap="round"/>
+    </g>
+    <circle cx="407" cy="471" r="11" fill="#111"/>
+    <circle cx="616" cy="471" r="11" fill="#111"/>
+    <path fill="none" stroke="#ba7d66" stroke-width="12" stroke-linecap="round" d="M513 489c-14 39-17 72-1 94"/>
+    <path fill="none" stroke="#905055" stroke-width="14" stroke-linecap="round" d="M446 623c43 27 91 27 133 0"/>
+    <path fill="#e9eceb" d="M369 736c42 65 90 97 143 97s101-32 143-97c-80-42-206-42-286 0z"/>
+    <path fill="#496553" d="M248 1011c32-128 123-198 264-198s232 70 264 198z"/>
+  </g>
+</svg>

@@ -1,0 +1,31 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-labelledby="title desc">
+  <title id="title">Flat portrait avatar with glasses</title>
+  <desc id="desc">Editable flat SVG portrait with short black hair, strong eyebrows, black-rim glasses, and muted green jacket.</desc>
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#eaf2ef"/>
+      <stop offset="1" stop-color="#c8d7d0"/>
+    </linearGradient>
+  </defs>
+  <rect width="512" height="512" fill="url(#bg)"/>
+  <circle cx="256" cy="252" r="174" fill="#f6f1e8"/>
+  <path fill="#24201f" d="M143 190c18-91 75-135 130-125 54 10 89 56 94 124-31-18-61-28-100-27-48 0-85 13-124 28z"/>
+  <path fill="#24201f" d="M158 178c23-31 48-48 78-52-21 23-45 36-78 52zm78-58c31-21 72-15 105 10-37-2-70 0-105-10z"/>
+  <path fill="#f2c7aa" d="M166 224c-22 6-24 51 4 65zm180 0 1 65c29-13 27-59-1-65z"/>
+  <path fill="#f4cfb5" d="M166 195c0-58 39-104 91-104 53 0 91 46 91 104v64c0 62-38 104-91 104-52 0-91-42-91-104z"/>
+  <path fill="#2a2321" d="M182 215c24-15 53-15 76-2l-5 13c-22-9-42-9-64 1zm75-2c25-12 54-11 77 4l-8 12c-22-11-42-12-64-3z"/>
+  <g fill="none" stroke="#16191a" stroke-width="11" stroke-linecap="round" stroke-linejoin="round">
+    <rect x="144" y="220" width="93" height="62" rx="19"/>
+    <rect x="275" y="220" width="93" height="62" rx="19"/>
+    <path d="M237 249c12-8 26-8 38 0"/>
+  </g>
+  <g fill="#141414">
+    <circle cx="198" cy="251" r="8"/>
+    <circle cx="314" cy="251" r="8"/>
+  </g>
+  <path fill="none" stroke="#c79678" stroke-width="6" stroke-linecap="round" d="M257 257c-9 20-11 34-1 45"/>
+  <path fill="none" stroke="#9d5f5f" stroke-width="7" stroke-linecap="round" d="M226 320c18 13 43 13 62 0"/>
+  <path fill="#2f4438" d="M115 512c9-83 62-130 141-130s132 47 141 130z"/>
+  <path fill="#445f50" d="M151 512c12-58 50-87 105-87s93 29 105 87z"/>
+  <path fill="#d8d6cf" d="M213 388c10 21 25 32 43 32s33-11 43-32c-26-9-60-9-86 0z"/>
+</svg>

@@ -1,0 +1,35 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024" role="img" aria-labelledby="title desc">
+  <title id="title">Fuller face app icon avatar</title>
+  <desc id="desc">Rounded app-style avatar with fuller face proportions and a small forehead mole.</desc>
+  <defs>
+    <linearGradient id="iconBg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#fbfaf4"/>
+      <stop offset=".52" stop-color="#dce4df"/>
+      <stop offset="1" stop-color="#789084"/>
+    </linearGradient>
+    <radialGradient id="glow" cx="30%" cy="18%" r="74%">
+      <stop offset="0" stop-color="#fff" stop-opacity=".78"/>
+      <stop offset=".72" stop-color="#fff" stop-opacity="0"/>
+    </radialGradient>
+    <filter id="depth" x="-20%" y="-20%" width="140%" height="150%">
+      <feDropShadow dx="0" dy="18" stdDeviation="20" flood-color="#111a16" flood-opacity=".28"/>
+    </filter>
+  </defs>
+  <rect width="1024" height="1024" rx="224" fill="url(#iconBg)"/>
+  <rect width="1024" height="1024" rx="224" fill="url(#glow)"/>
+  <g filter="url(#depth)">
+    <path fill="#24362f" d="M180 1032c27-212 150-336 332-336s305 124 332 336z"/>
+    <path fill="#dda285" d="M414 656h196v127c-43 42-153 42-196 0z"/>
+    <path fill="#f3c9ae" d="M286 344c0-151 88-252 226-252s226 101 226 252v112c0 170-88 280-226 280S286 626 286 456z"/>
+    <path fill="#171716" d="M262 350c14-176 120-286 262-281 130 4 214 98 234 268-72-47-145-68-224-67-104 3-188 30-272 80z"/>
+    <path fill="#d99b7e" d="M286 416c-67 12-65 117 4 149zm452 0-5 149c72-34 70-138 5-149z"/>
+    <path fill="#2c2420" d="M340 392c58-31 121-30 179 2l-17 27c-51-20-96-20-147 3zm174 2c59-31 123-29 179 5l-18 28c-51-24-96-25-149-4z"/>
+    <path fill="#101010" d="M399 475c27 19 60 19 87 0-10-15-24-23-44-23-19 0-33 8-43 23zm139 0c27 19 61 19 88 0-10-15-24-23-44-23-20 0-34 8-44 23z"/>
+    <circle cx="576" cy="318" r="9" fill="#5b4137"/>
+    <path fill="#e2aa8d" opacity=".5" d="M350 525c47 29 104 30 151 3-32 57-117 56-151-3zm173 3c49 27 107 24 153-6-35 60-124 61-153 6z"/>
+    <path fill="none" stroke="#b87862" stroke-width="13" stroke-linecap="round" d="M514 493c-16 44-19 78-1 102"/>
+    <path fill="none" stroke="#8d5053" stroke-width="16" stroke-linecap="round" d="M442 635c45 29 95 29 140 0"/>
+    <path fill="#e9eeec" d="M356 759c43 67 95 101 156 101s113-34 156-101c-85-45-227-45-312 0z"/>
+    <path fill="#415d4f" d="M226 1032c36-136 130-207 286-207s250 71 286 207z"/>
+  </g>
+</svg>

@@ -1,0 +1,24 @@
+# Evolution Note
+
+- Plan used: `task-plans/00-roadmap/cma-reference-inspired-product-roadmap.md`
+- Bounded target: execute Phase 4 task `03-import-file` by adding an explicit auth-file import message path and wiring UI prompts and validation for file-backed imports without changing activation/backup semantics.
+- Files changed:
+  - `src/host/account-manager.js`
+  - `src/panel.js`
+  - `src/host/panel-view.js`
+  - `src/webview-template.js`
+  - `task-plans/subtask_json/cma-reference-phase-04-account-vault-token-health.json`
+  - `task-plans/00-roadmap/cma-reference-inspired-product-roadmap.md`
+- Tests or checks run:
+  - `node --check src/host/account-manager.js`
+  - `node --check src/panel.js`
+  - `node --check src/host/panel-view.js`
+  - `node --check src/webview-template.js`
+  - `node -e "JSON.parse(require('fs').readFileSync('task-plans/subtask_json/cma-reference-phase-04-account-vault-token-health.json','utf8'))"`
+- Risks or deferrals:
+  - This adds explicit import-from-file UI and backend validation but does not yet handle automatic relay-only flow differences beyond optional config import.
+  - Existing `addCodexAccount` behavior still has no direct auth-path prompt in this slice.
+  - No regression/unit tests were added for the new message path in this pass.
+- Next handoff:
+  - Continue Phase 4 with `cma-reference-phase-04-account-vault-token-health`, slice `04-activate-backup`.
+  - Add backup-before-activation semantics and exact path reporting before activation writes native `~/.codex/auth.json`.

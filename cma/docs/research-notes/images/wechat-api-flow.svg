@@ -1,0 +1,33 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1280" height="720" viewBox="0 0 1280 720">
+  <rect width="1280" height="720" fill="#f6f8fb"/>
+  <text x="64" y="74" font-family="Arial, sans-serif" font-size="34" font-weight="700" fill="#1d3446">WeChat MP publishing pipeline</text>
+  <text x="64" y="112" font-family="Arial, sans-serif" font-size="18" fill="#587083">Sanitized notes from the CMA article publishing test</text>
+  <g font-family="Arial, sans-serif">
+    <rect x="74" y="174" width="208" height="110" rx="14" fill="#ffffff" stroke="#d6e2eb"/>
+    <text x="178" y="218" text-anchor="middle" font-size="22" font-weight="700" fill="#245f83">Markdown</text>
+    <text x="178" y="252" text-anchor="middle" font-size="15" fill="#587083">article.md</text>
+    <path d="M292 229H378" stroke="#2f6f95" stroke-width="5" stroke-linecap="round"/>
+    <path d="M366 214l18 15-18 15" fill="none" stroke="#2f6f95" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/>
+    <rect x="394" y="174" width="208" height="110" rx="14" fill="#ffffff" stroke="#d6e2eb"/>
+    <text x="498" y="218" text-anchor="middle" font-size="22" font-weight="700" fill="#245f83">HTML Preview</text>
+    <text x="498" y="252" text-anchor="middle" font-size="15" fill="#587083">local render</text>
+    <path d="M612 229H698" stroke="#2f6f95" stroke-width="5" stroke-linecap="round"/>
+    <path d="M686 214l18 15-18 15" fill="none" stroke="#2f6f95" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/>
+    <rect x="714" y="174" width="208" height="110" rx="14" fill="#ffffff" stroke="#d6e2eb"/>
+    <text x="818" y="218" text-anchor="middle" font-size="22" font-weight="700" fill="#245f83">Upload Cover</text>
+    <text x="818" y="252" text-anchor="middle" font-size="15" fill="#587083">requires IP whitelist</text>
+    <path d="M932 229H1018" stroke="#2f6f95" stroke-width="5" stroke-linecap="round"/>
+    <path d="M1006 214l18 15-18 15" fill="none" stroke="#2f6f95" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/>
+    <rect x="1034" y="174" width="208" height="110" rx="14" fill="#ffffff" stroke="#d6e2eb"/>
+    <text x="1138" y="218" text-anchor="middle" font-size="22" font-weight="700" fill="#245f83">Create Draft</text>
+    <text x="1138" y="252" text-anchor="middle" font-size="15" fill="#587083">works for personal MP</text>
+    <rect x="230" y="408" width="330" height="128" rx="16" fill="#eef7f2" stroke="#b9ddca"/>
+    <text x="395" y="452" text-anchor="middle" font-size="24" font-weight="700" fill="#237348">Works</text>
+    <text x="395" y="488" text-anchor="middle" font-size="18" fill="#35584a">access_token / material upload / draft</text>
+    <rect x="720" y="408" width="330" height="128" rx="16" fill="#fff3f1" stroke="#f0c4bc"/>
+    <text x="885" y="452" text-anchor="middle" font-size="24" font-weight="700" fill="#a2392d">Blocked</text>
+    <text x="885" y="488" text-anchor="middle" font-size="18" fill="#7b4b45">freepublish submit: 48001</text>
+    <path d="M560 472H710" stroke="#8aa1b3" stroke-width="4" stroke-dasharray="10 10"/>
+    <text x="640" y="620" text-anchor="middle" font-size="20" fill="#3d5263">Conclusion: automate up to draft, publish manually unless permission set 7 is granted.</text>
+  </g>
+</svg>

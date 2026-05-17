@@ -1,0 +1,24 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1280" height="720" viewBox="0 0 1280 720">
+  <rect width="1280" height="720" fill="#f6f8fb"/>
+  <text x="80" y="86" font-family="Arial, sans-serif" font-size="34" font-weight="700" fill="#1d3446">Permission boundary</text>
+  <text x="80" y="126" font-family="Arial, sans-serif" font-size="18" fill="#5d7283">Draft creation and public publishing are different permission layers.</text>
+  <g font-family="Arial, sans-serif">
+    <rect x="90" y="180" width="1100" height="92" rx="14" fill="#ffffff" stroke="#dbe4ec"/>
+    <text x="130" y="236" font-size="22" font-weight="700" fill="#273b4b">Capability</text>
+    <text x="520" y="236" font-size="22" font-weight="700" fill="#273b4b">Personal MP</text>
+    <text x="835" y="236" font-size="22" font-weight="700" fill="#273b4b">Certified enterprise MP / service account</text>
+    <rect x="90" y="286" width="1100" height="86" rx="12" fill="#ffffff" stroke="#e1e8ee"/>
+    <text x="130" y="338" font-size="20" fill="#273b4b">Get access token</text>
+    <text x="560" y="338" font-size="24" font-weight="700" fill="#237348">OK</text>
+    <text x="965" y="338" font-size="24" font-weight="700" fill="#237348">OK</text>
+    <rect x="90" y="386" width="1100" height="86" rx="12" fill="#ffffff" stroke="#e1e8ee"/>
+    <text x="130" y="438" font-size="20" fill="#273b4b">Upload cover and create draft</text>
+    <text x="560" y="438" font-size="24" font-weight="700" fill="#237348">OK</text>
+    <text x="965" y="438" font-size="24" font-weight="700" fill="#237348">OK</text>
+    <rect x="90" y="486" width="1100" height="86" rx="12" fill="#ffffff" stroke="#e1e8ee"/>
+    <text x="130" y="538" font-size="20" fill="#273b4b">freepublish_submit</text>
+    <text x="535" y="538" font-size="24" font-weight="700" fill="#b33b2e">48001</text>
+    <text x="850" y="538" font-size="20" fill="#273b4b">Requires permission set 7</text>
+    <text x="640" y="640" text-anchor="middle" font-size="20" fill="#3d5263">For personal accounts, the practical endpoint is draft automation plus manual publish.</text>
+  </g>
+</svg>

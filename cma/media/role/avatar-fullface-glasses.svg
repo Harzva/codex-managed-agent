@@ -1,0 +1,37 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024" role="img" aria-labelledby="title desc">
+  <title id="title">Fuller face glasses avatar</title>
+  <desc id="desc">Editable SVG portrait with black-rim glasses, fuller cheeks, and a small mole on the viewer-right upper forehead.</desc>
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#eef3ef"/>
+      <stop offset=".55" stop-color="#d3ddd7"/>
+      <stop offset="1" stop-color="#8ba093"/>
+    </linearGradient>
+    <filter id="shadow" x="-20%" y="-20%" width="140%" height="150%">
+      <feDropShadow dx="0" dy="20" stdDeviation="22" flood-color="#18241f" flood-opacity=".25"/>
+    </filter>
+  </defs>
+  <rect width="1024" height="1024" fill="url(#bg)"/>
+  <circle cx="774" cy="210" r="118" fill="#fff" opacity=".42"/>
+  <g filter="url(#shadow)">
+    <path fill="#2e4439" d="M178 1024c25-209 149-333 334-333s309 124 334 333z"/>
+    <path fill="#daa083" d="M414 650h196v130c-42 42-154 42-196 0z"/>
+    <path fill="#f1c8ad" d="M287 344c0-150 88-252 225-252s225 102 225 252v113c0 169-88 279-225 279S287 626 287 457z"/>
+    <path fill="#171716" d="M265 350c13-176 119-286 260-282 130 5 213 98 233 269-72-47-144-69-222-67-103 3-187 30-271 80z"/>
+    <path fill="#d99b7d" d="M286 416c-67 12-65 116 4 148zm452 0-5 148c72-33 70-137 5-148z"/>
+    <path fill="#2c2420" d="M340 391c57-31 120-30 178 1l-16 27c-51-19-96-19-146 3zm170 1c60-30 124-28 179 6l-18 28c-51-23-96-24-149-3z"/>
+    <g fill="none" stroke="#15191a" stroke-linejoin="round">
+      <rect x="328" y="429" width="165" height="96" rx="30" stroke-width="18"/>
+      <rect x="531" y="429" width="165" height="96" rx="30" stroke-width="18"/>
+      <path d="M493 477c13-10 25-14 38 0" stroke-width="16" stroke-linecap="round"/>
+    </g>
+    <circle cx="412" cy="475" r="10" fill="#090909"/>
+    <circle cx="615" cy="475" r="10" fill="#090909"/>
+    <circle cx="580" cy="318" r="9" fill="#5a4238"/>
+    <path fill="#e3aa8d" opacity=".45" d="M347 526c47 29 105 31 153 3-32 57-119 56-153-3zm176 3c48 27 107 24 153-6-35 59-124 61-153 6z"/>
+    <path fill="none" stroke="#b87862" stroke-width="13" stroke-linecap="round" d="M514 493c-15 44-18 77-1 102"/>
+    <path fill="none" stroke="#8d5053" stroke-width="16" stroke-linecap="round" d="M441 634c45 29 96 29 142 0"/>
+    <path fill="#e9eeec" d="M356 756c43 69 95 104 156 104s113-35 156-104c-85-44-227-44-312 0z"/>
+    <path fill="#496555" d="M230 1024c35-135 129-205 282-205s247 70 282 205z"/>
+  </g>
+</svg>

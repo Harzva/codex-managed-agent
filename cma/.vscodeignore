@@ -1,0 +1,17 @@
+.codex-loop*/**
+.codex-team/**
+.claude/**
+.recovery-backups/**
+.vscode/**
+*.vsix
+auth*.json
+reference/**
+docs/screenshots/**
+!docs/screenshots/
+!docs/screenshots/*.png
+docs/webview-template_backup.js
+bundled-skills/**/__pycache__/**
+bundled-skills/**/*.pyc
+prompt_ui.md
+todoprompt*.md
+task-plans/*migration-task-plan.md

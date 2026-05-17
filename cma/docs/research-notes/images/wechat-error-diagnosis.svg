@@ -1,0 +1,29 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1280" height="720" viewBox="0 0 1280 720">
+  <rect width="1280" height="720" fill="#ffffff"/>
+  <rect x="60" y="54" width="1160" height="612" rx="18" fill="#f7f9fb" stroke="#dbe4ec"/>
+  <text x="96" y="114" font-family="Arial, sans-serif" font-size="30" font-weight="700" fill="#1c2f3f">Sanitized API troubleshooting result</text>
+  <text x="96" y="152" font-family="Arial, sans-serif" font-size="18" fill="#6b7f90">The rid was checked in WeChat Developer Platform diagnostics.</text>
+  <g font-family="Arial, sans-serif" font-size="20">
+    <text x="96" y="222" font-weight="700" fill="#273b4b">Basic information</text>
+    <text x="96" y="270" fill="#5f7283">Account</text>
+    <text x="260" y="270" fill="#1d3446">Personal MP, AppID wx****4436</text>
+    <text x="96" y="314" fill="#5f7283">API</text>
+    <text x="260" y="314" fill="#1d3446">/cgi-bin/freepublish/submit</text>
+    <text x="96" y="358" fill="#5f7283">Feature</text>
+    <text x="260" y="358" fill="#1d3446">Submit draft for publishing</text>
+    <text x="96" y="424" font-weight="700" fill="#273b4b">Call analysis</text>
+    <text x="96" y="472" fill="#5f7283">Error code</text>
+    <text x="260" y="472" fill="#b33b2e" font-weight="700">48001</text>
+    <text x="96" y="516" fill="#5f7283">Description</text>
+    <text x="260" y="516" fill="#b33b2e" font-weight="700">api unauthorized</text>
+    <text x="96" y="560" fill="#5f7283">Meaning</text>
+    <text x="260" y="560" fill="#1d3446">Permission set 7 is not granted to this account.</text>
+  </g>
+  <rect x="795" y="210" width="352" height="300" rx="18" fill="#fff3f1" stroke="#efc3bb"/>
+  <text x="971" y="270" text-anchor="middle" font-family="Arial, sans-serif" font-size="26" font-weight="700" fill="#a2392d">Not an IP problem</text>
+  <text x="971" y="326" text-anchor="middle" font-family="Arial, sans-serif" font-size="18" fill="#724e49">access token and draft creation worked</text>
+  <text x="971" y="370" text-anchor="middle" font-family="Arial, sans-serif" font-size="18" fill="#724e49">submit and batchget both failed</text>
+  <text x="971" y="426" text-anchor="middle" font-family="Arial, sans-serif" font-size="20" font-weight="700" fill="#a2392d">Root cause</text>
+  <text x="971" y="464" text-anchor="middle" font-family="Arial, sans-serif" font-size="18" fill="#724e49">personal account cannot use</text>
+  <text x="971" y="494" text-anchor="middle" font-family="Arial, sans-serif" font-size="18" fill="#724e49">freepublish_submit</text>
+</svg>

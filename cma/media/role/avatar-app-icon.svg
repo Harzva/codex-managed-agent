@@ -1,0 +1,33 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024" role="img" aria-labelledby="title desc">
+  <title id="title">App icon portrait avatar</title>
+  <desc id="desc">Polished square SVG avatar icon with subtle depth and a realistic casual portrait feel.</desc>
+  <defs>
+    <linearGradient id="iconBg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#f7f7f3"/>
+      <stop offset=".44" stop-color="#d9e1dc"/>
+      <stop offset="1" stop-color="#7e998b"/>
+    </linearGradient>
+    <radialGradient id="shine" cx="32%" cy="18%" r="70%">
+      <stop offset="0" stop-color="#fff" stop-opacity=".8"/>
+      <stop offset=".72" stop-color="#fff" stop-opacity="0"/>
+    </radialGradient>
+    <filter id="depth" x="-20%" y="-20%" width="140%" height="150%">
+      <feDropShadow dx="0" dy="18" stdDeviation="18" flood-color="#0e1512" flood-opacity=".26"/>
+    </filter>
+  </defs>
+  <rect width="1024" height="1024" rx="224" fill="url(#iconBg)"/>
+  <rect width="1024" height="1024" rx="224" fill="url(#shine)"/>
+  <g filter="url(#depth)">
+    <path fill="#23352e" d="M194 1032c25-211 143-331 318-331s293 120 318 331z"/>
+    <path fill="#e0a286" d="M424 662h176v122c-41 37-135 37-176 0z"/>
+    <path fill="#f2c6aa" d="M307 342c0-150 82-248 205-248s205 98 205 248v101c0 156-82 260-205 260S307 599 307 443z"/>
+    <path fill="#e0a286" d="M307 409c-61 12-57 109 4 137zm410 0-4 137c65-30 63-126 4-137z"/>
+    <path fill="#171716" d="M284 346c8-166 103-276 234-276 119 0 201 91 222 252-71-38-139-56-207-55-87 1-169 27-249 79z"/>
+    <path fill="#2f2925" d="M353 388c55-31 111-31 166 0l-16 27c-49-20-91-20-138 2zm159 0c56-30 116-27 168 6l-17 27c-48-23-91-23-139-4z"/>
+    <path fill="#111" d="M407 474c25 18 56 18 80 0-9-15-22-23-40-23s-31 8-40 23zm130 0c25 18 57 18 82 0-9-15-23-23-41-23s-32 8-41 23z"/>
+    <path fill="none" stroke="#b97963" stroke-width="12" stroke-linecap="round" d="M514 490c-15 42-18 73-1 96"/>
+    <path fill="none" stroke="#8f5054" stroke-width="15" stroke-linecap="round" d="M449 628c41 26 87 26 127 0"/>
+    <path fill="#e9eeeb" d="M371 765c40 62 87 93 141 93s101-31 141-93c-79-43-203-43-282 0z"/>
+    <path fill="#435f50" d="M250 1032c35-132 123-200 262-200s227 68 262 200z"/>
+  </g>
+</svg>

@@ -1,0 +1,219 @@
+{
+  "name": "codex-managed-agent",
+  "displayName": "Codex-Managed-Agent",
+  "description": "Manage Codex agent threads inside VS Code with trace-backed inspector views, Markdown evidence exports, lifecycle actions, and local dashboard integration.",
+  "version": "1.0.37",
+  "publisher": "harzva",
+  "icon": "media/codex-agent.png",
+  "license": "MIT",
+  "preview": false,
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/Harzva/codex-managed-agent.git"
+  },
+  "homepage": "https://github.com/Harzva/codex-managed-agent",
+  "bugs": {
+    "url": "https://github.com/Harzva/codex-managed-agent/issues"
+  },
+  "galleryBanner": {
+    "color": "#08111f",
+    "theme": "dark"
+  },
+  "engines": {
+    "vscode": "^1.90.0"
+  },
+  "extensionKind": [
+    "workspace"
+  ],
+  "categories": [
+    "Visualization",
+    "Other"
+  ],
+  "keywords": [
+    "codex",
+    "agent",
+    "dashboard",
+    "thread-manager",
+    "trace",
+    "report",
+    "vscode",
+    "ai",
+    "observability",
+    "openai",
+    "chatgpt",
+    "llm",
+    "productivity",
+    "team",
+    "worker",
+    "multi-agent"
+  ],
+  "scripts": {
+    "validate:moa-dag": "node --test src/host/moa-core.test.js && node --test src/host/team-coordination.test.js && node --test src/webview/render-detail-regression.test.js",
+    "validate:role-plugins": "node --test --test-name-pattern \"role|organization template\" src/host/moa-core.test.js && node --test --test-name-pattern \"role|organization template\" src/host/team-coordination.test.js && node --test --test-name-pattern \"role|organization template\" src/webview/render-detail-regression.test.js",
+    "package": "node scripts/package-vsix.mjs",
+    "publish:vsix": "node scripts/package-vsix.mjs",
+    "publish:marketplace": "vsce publish"
+  },
+  "activationEvents": [
+    "onView:codexAgent.sidebar",
+    "onView:codexAgent.bottom",
+    "onCommand:codexAgent.openPanel",
+    "onCommand:codexAgent.openPanelBeside",
+    "onCommand:codexAgent.showSidebar",
+    "onCommand:codexAgent.newThreadInCodexSidebar",
+    "onCommand:codexAgent.showBottomPanel",
+    "onCommand:codexAgent.maximizeDashboard",
+    "onCommand:codexAgent.movePanelToNewWindow",
+    "onCommand:codexAgent.openExternal",
+    "onCommand:codexAgent.refreshPanel",
+    "onCommand:codexAgent.startServer"
+  ],
+  "main": "./extension.js",
+  "contributes": {
+    "configuration": {
+      "title": "Codex-Managed-Agent",
+      "properties": {
+        "codexAgent.baseUrl": {
+          "type": "string",
+          "default": "http://127.0.0.1:8787/",
+          "description": "Base URL for the running Codex-Managed-Agent web app."
+        },
+        "codexAgent.smartMode": {
+          "type": "boolean",
+          "default": false,
+          "description": "Enable API/model-aware status surfacing such as Codex usage-limit warnings. Keep disabled for local-only management actions."
+        },
+        "codexAgent.showExternalClaudeDaemons": {
+          "type": "boolean",
+          "default": false,
+          "description": "Show detected external Claude/claude-loop daemons in the Loop page for diagnostics. Disabled by default because CMA cannot safely manage those processes."
+        },
+        "codexAgent.defaultCodexModel": {
+          "type": "string",
+          "default": "",
+          "description": "Optional model name to pass to Codex CLI for Team dispatches and background prompts. Leave empty to use the user's Codex CLI default model."
+        },
+        "codexAgent.defaultSurface": {
+          "type": "string",
+          "enum": [
+            "left",
+            "bottom",
+            "editor",
+            "fullscreen"
+          ],
+          "default": "editor",
+          "description": "Preferred surface to open when the dashboard is first revealed."
+        },
+        "codexAgent.networkProbeTimeoutMs": {
+          "type": "number",
+          "default": 12000,
+          "description": "Timeout in milliseconds for CMA network probe buttons."
+        },
+        "codexAgent.clashControllerUrl": {
+          "type": "string",
+          "default": "http://127.0.0.1:9090",
+          "description": "Clash/Mihomo external controller URL used by the CMA proxy switcher. Change this if your controller uses a different local port."
+        },
+        "codexAgent.clashSecret": {
+          "type": "string",
+          "default": "",
+          "description": "Optional Clash/Mihomo external controller secret. Sent as a Bearer token by the extension host."
+        },
+        "codexAgent.clashRequestTimeoutMs": {
+          "type": "number",
+          "default": 8000,
+          "description": "Timeout in milliseconds for CMA Clash/Mihomo controller requests."
+        }
+      }
+    },
+    "commands": [
+      {
+        "command": "codexAgent.openPanel",
+        "title": "Codex-Managed-Agent: Open Dashboard"
+      },
+      {
+        "command": "codexAgent.openExternal",
+        "title": "Codex-Managed-Agent: Open in Browser"
+      },
+      {
+        "command": "codexAgent.showSidebar",
+        "title": "Codex-Managed-Agent: Show in Sidebar"
+      },
+      {
+        "command": "codexAgent.newThreadInCodexSidebar",
+        "title": "New Thread in Codex Sidebar"
+      },
+      {
+        "command": "codexAgent.showBottomPanel",
+        "title": "Codex-Managed-Agent: Show in Bottom Panel"
+      },
+      {
+        "command": "codexAgent.openPanelBeside",
+        "title": "Codex-Managed-Agent: Open to Side"
+      },
+      {
+        "command": "codexAgent.maximizeDashboard",
+        "title": "Codex-Managed-Agent: Full Screen"
+      },
+      {
+        "command": "codexAgent.movePanelToNewWindow",
+        "title": "Codex-Managed-Agent: Move to New Window"
+      },
+      {
+        "command": "codexAgent.refreshPanel",
+        "title": "Codex-Managed-Agent: Refresh Panel"
+      },
+      {
+        "command": "codexAgent.startServer",
+        "title": "Codex-Managed-Agent: Start Local Backend"
+      }
+    ],
+    "viewsContainers": {
+      "activitybar": [
+        {
+          "id": "codexManagedAgentSidebar",
+          "title": "Codex-Managed-Agent",
+          "icon": "media/codex-agent.svg"
+        }
+      ],
+      "panel": [
+        {
+          "id": "codexManagedAgentPanel",
+          "title": "Codex-Managed-Agent",
+          "icon": "media/codex-agent.svg"
+        }
+      ]
+    },
+    "views": {
+      "codexManagedAgentSidebar": [
+        {
+          "type": "webview",
+          "id": "codexAgent.sidebar",
+          "name": "Dashboard"
+        }
+      ],
+      "codexManagedAgentPanel": [
+        {
+          "type": "webview",
+          "id": "codexAgent.bottom",
+          "name": "Dashboard"
+        }
+      ]
+    },
+    "menus": {
+      "editor/context": [
+        {
+          "command": "codexAgent.newThreadInCodexSidebar",
+          "group": "navigation"
+        }
+      ]
+    }
+  },
+  "dependencies": {
+    "@openai/codex": "^0.125.0",
+    "codex-provider-sync": "github:Dailin521/codex-provider-sync"
+  },
+  "devDependencies": {
+    "@vscode/vsce": "^3.9.1"
+  }
+}

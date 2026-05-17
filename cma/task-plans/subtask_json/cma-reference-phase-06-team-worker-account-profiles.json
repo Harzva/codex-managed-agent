@@ -1,0 +1,211 @@
+{
+  "schema_version": 1,
+  "id": "cma-reference-phase-06-team-worker-account-profiles",
+  "title": "Team Worker Account Profiles",
+  "status": "completed",
+  "source_plan": "task-plans/00-roadmap/cma-reference-inspired-product-roadmap.md",
+  "source_section": "Phase 6: Team Worker Account Profiles",
+  "priority": "p1",
+  "inspired_by": ["reference/codex-auto"],
+  "scope": [
+    "Allow Team runs to select an account profile.",
+    "Preserve session binding when recovering a worker.",
+    "Record profile usage in trace evidence."
+  ],
+  "non_goals": [
+    "Do not add automatic account rotation by default.",
+    "Do not resume a guessed newest session.",
+    "Do not hide account profile selection inside advanced settings only."
+  ],
+  "implementation_targets": [
+    "src/host/team-coordination.js",
+    "src/host/team-coordination.test.js",
+    "src/host/moa-core.js",
+    "src/webview/render-detail-regression.test.js"
+  ],
+  "tasks": [
+    {
+      "id": "01-profile-selector",
+      "title": "Add account profile selector to worker draft",
+      "status": "done",
+      "details": "Allow Team orchestration drafts to bind workers to an account profile."
+    },
+    {
+      "id": "02-preflight",
+      "title": "Add account profile preflight",
+      "status": "done",
+      "details": "Validate selected account, CLI availability, token health, and workspace path."
+    },
+    {
+      "id": "03-run-metadata",
+      "title": "Record run metadata",
+      "status": "done",
+      "details": "Record profile id, auth source, token health, and session binding in run metadata."
+    },
+    {
+      "id": "04-recovery-guard",
+      "title": "Add session-bound recovery guard",
+      "status": "done",
+      "details": "Resume only the session id bound to the current worker run."
+    },
+    {
+      "id": "05-trace-evidence",
+      "title": "Add trace evidence for account profile usage",
+      "status": "done",
+      "details": "Emit trace events when a worker selects, validates, or switches account profile."
+    }
+  ],
+  "acceptance": [
+    "Team task evidence records which account profile was used.",
+    "Recovery does not guess from newest session.",
+    "User can inspect profile and run binding in the drawer.",
+    "Token health failures block worker launch with a clear reason."
+  ],
+  "verification": [
+    "node --test src/host/team-coordination.test.js",
+    "node --test src/webview/render-detail-regression.test.js",
+    "node --check src/webview-template.js"
+  ],
+  "dependencies": [
+    "cma-reference-phase-04-account-vault-token-health",
+    "cma-reference-phase-05-quota-rate-limit-awareness"
+  ],
+  "implementation_notes": [
+    {
+      "date": "2026-05-07",
+      "slice": "01-profile-selector",
+      "summary": "Preserved `account_profile_id` through Team orchestration worker draft normalization and DAG node conversion, passed it into codex worker launch metadata, and surfaced it on launched worker runtime records for run replay/review.",
+      "implementation_files": [
+        "src/host/moa-core.js",
+        "src/host/team-coordination.js",
+        "src/host/team-coordination.test.js"
+      ]
+    },
+    {
+      "date": "2026-05-07",
+      "slice": "01-profile-selector",
+      "summary": "Fixed scheduler launch payload to expose `account_profile_id` as a top-level field (`payload.account_profile_id`) while preserving existing nested `payload.node` usage so launch callbacks and test interceptors can consistently derive profile metadata.",
+      "implementation_files": [
+        "src/host/moa-core.js"
+      ]
+    },
+    {
+      "date": "2026-05-07",
+      "slice": "02-preflight",
+      "summary": "Added conservative Team launch preflight that rejects invalid workspaces and unknown/blocked account profiles before spawn, and validates codex CLI availability. Persisted launch blocker reasons now use preflight kind (`team_workspace_missing`, `team_workspace_invalid`, `team_account_profile_not_found`, `team_account_token_blocked`) when available. Added regression coverage for missing profile and blocked-token-health preflight in `src/host/team-coordination.test.js`.",
+      "implementation_files": [
+        "src/host/team-coordination.js",
+        "src/host/moa-core.js",
+        "src/host/team-coordination.test.js"
+      ]
+    },
+    {
+      "date": "2026-05-07",
+      "slice": "03-run-metadata",
+      "summary": "Persisted per-launch account metadata into DAG worker runtime and Team task runtime records: `account_profile_id`, normalized auth source path, token health, and a `session_binding` object keyed by run/node/thread. The Team launch wrapper now enriches launch results from account state while still enforcing preflight for injected worker launch stubs.",
+      "implementation_files": [
+        "src/host/team-coordination.js",
+        "src/host/moa-core.js",
+        "src/host/team-coordination.test.js"
+      ]
+    },
+    {
+      "date": "2026-05-07",
+      "slice": "04-recovery-guard",
+      "summary": "Hardened same-thread retry recovery to honor persisted session binding. When a prior run recorded `session_binding.worker_thread_id`, retry-in-same-thread now targets only that exact session and fails closed instead of falling back to `task.owner` or another available thread.",
+      "implementation_files": [
+        "src/host/team-coordination.js",
+        "src/host/team-coordination.test.js"
+      ]
+    },
+    {
+      "date": "2026-05-07",
+      "slice": "05-trace-evidence",
+      "summary": "Added dedicated Team trace evidence for account-profile usage during orchestration launch: successful account-bound workers emit `orchestration.account_profile_bound`, while account-profile preflight blocks emit `orchestration.account_profile_launch_blocked` with node id, profile id, auth-source path, token health, and session-binding payloads where available.",
+      "implementation_files": [
+        "src/host/team-coordination.js",
+        "src/host/team-coordination.test.js"
+      ]
+    }
+  ],
+  "verification_results": [
+    {
+      "date": "2026-05-07",
+      "command": "node --check src/host/moa-core.js",
+      "result": "passed"
+    },
+    {
+      "date": "2026-05-07",
+      "command": "node --check src/host/team-coordination.js",
+      "result": "passed"
+    },
+    {
+      "date": "2026-05-07",
+      "command": "node --test src/host/team-coordination.test.js --test-name-pattern \"persists account profile id on launched Team workers for draft-bound workers\"",
+      "result": "failed (missing top-level payload.account_profile_id in launch payload)"
+    },
+    {
+      "date": "2026-05-07",
+      "command": "node --test src/host/team-coordination.test.js --test-name-pattern \"persists account profile id on launched Team workers for draft-bound workers\"",
+      "result": "passed"
+    },
+    {
+      "date": "2026-05-07",
+      "command": "node --check src/host/moa-core.js",
+      "result": "passed"
+    },
+    {
+      "date": "2026-05-07",
+      "command": "node --check src/host/team-coordination.js",
+      "result": "passed"
+    },
+    {
+      "date": "2026-05-07",
+      "command": "node --test src/host/team-coordination.test.js --test-name-pattern \"blocks Team launch when selected account profile is not found\"",
+      "result": "passed"
+    },
+    {
+      "date": "2026-05-07",
+      "command": "node --test src/host/team-coordination.test.js --test-name-pattern \"blocks Team launch when selected account token health is blocked\"",
+      "result": "passed"
+    },
+    {
+      "date": "2026-05-07",
+      "command": "node --check src/host/moa-core.js",
+      "result": "passed"
+    },
+    {
+      "date": "2026-05-07",
+      "command": "node --check src/host/team-coordination.js",
+      "result": "passed"
+    },
+    {
+      "date": "2026-05-07",
+      "command": "node --test src/host/team-coordination.test.js --test-name-pattern \"persists account profile id on launched Team workers for draft-bound workers|blocks Team launch when selected account profile is not found|blocks Team launch when selected account token health is blocked\"",
+      "result": "passed"
+    },
+    {
+      "date": "2026-05-07",
+      "command": "node --check src/host/team-coordination.js",
+      "result": "passed"
+    },
+    {
+      "date": "2026-05-07",
+      "command": "node --test src/host/team-coordination.test.js --test-name-pattern \"same-thread retry preflight writes a failed task when owner thread is unresolved|same-thread retry refuses owner-thread fallback when a bound worker session is unavailable\"",
+      "result": "passed"
+    },
+    {
+      "date": "2026-05-07",
+      "command": "node --check src/host/team-coordination.js",
+      "result": "passed"
+    },
+    {
+      "date": "2026-05-07",
+      "command": "node --test src/host/team-coordination.test.js --test-name-pattern \"persists account profile id on launched Team workers for draft-bound workers|blocks Team launch when selected account profile is not found|blocks Team launch when selected account token health is blocked\"",
+      "result": "passed"
+    }
+  ],
+  "blocks": [
+    "cma-reference-phase-07-remote-watch-surface"
+  ]
+}

@@ -1,0 +1,25 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024" role="img" aria-labelledby="title desc">
+  <title id="title">Premium outline avatar</title>
+  <desc id="desc">Clean monochrome SVG avatar for icons, stickers, and engraving style uses.</desc>
+  <rect width="1024" height="1024" rx="180" fill="#f5f2ea"/>
+  <g fill="none" stroke="#171717" stroke-linecap="round" stroke-linejoin="round">
+    <path stroke-width="26" d="M312 406c-1-164 81-274 202-274 122 0 203 110 202 274"/>
+    <path stroke-width="28" d="M288 365c28-156 124-244 243-229 94 12 161 83 195 216-74-47-141-70-215-70-80 0-153 28-223 83z"/>
+    <path stroke-width="20" d="M341 420c51-31 112-32 165-4"/>
+    <path stroke-width="20" d="M518 416c56-28 116-26 168 7"/>
+    <path stroke-width="17" d="M397 493c26 21 61 21 88 0"/>
+    <path stroke-width="17" d="M548 493c28 22 64 21 91-1"/>
+    <path stroke-width="17" d="M516 500c-18 54-21 88-1 113"/>
+    <path stroke-width="18" d="M448 653c45 32 91 32 137 0"/>
+    <path stroke-width="24" d="M306 437c-66 6-71 118-2 150"/>
+    <path stroke-width="24" d="M716 437c69 8 72 119 2 150"/>
+    <path stroke-width="26" d="M418 709v86"/>
+    <path stroke-width="26" d="M608 709v86"/>
+    <path stroke-width="28" d="M226 1000c31-177 135-270 287-270s256 93 287 270"/>
+    <path stroke-width="22" d="M365 798c39 61 89 92 148 92 58 0 108-31 147-92"/>
+  </g>
+  <g fill="#171717">
+    <circle cx="444" cy="485" r="13"/>
+    <circle cx="588" cy="485" r="13"/>
+  </g>
+</svg>

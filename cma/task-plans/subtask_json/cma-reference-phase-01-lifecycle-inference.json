@@ -1,0 +1,80 @@
+{
+  "schema_version": 1,
+  "id": "cma-reference-phase-01-lifecycle-inference",
+  "title": "Thread Lifecycle Inference",
+  "status": "completed",
+  "source_plan": "task-plans/00-roadmap/cma-reference-inspired-product-roadmap.md",
+  "source_section": "Phase 1: Lifecycle Inference On Threads",
+  "priority": "p0",
+  "inspired_by": ["reference/codex_manager"],
+  "scope": [
+    "Parse bounded tail markers from Codex session JSONL.",
+    "Normalize lifecycle state and reason on thread summaries.",
+    "Render lifecycle state in Thread Explorer without loading full histories."
+  ],
+  "non_goals": [
+    "Do not infer completion from idle time alone.",
+    "Do not introduce Python or FastAPI runtime paths.",
+    "Do not redesign the full Board card UI in this phase."
+  ],
+  "implementation_targets": [
+    "src/host/node-backend/session-store.js",
+    "src/host/node-backend/node-backend.test.js",
+    "src/webview/thread-explorer.js",
+    "src/webview/render-detail-regression.test.js"
+  ],
+  "tasks": [
+    {
+      "id": "01-read-tail-events",
+      "title": "Add bounded session tail event reader",
+      "status": "done",
+      "details": "Read only a byte-limited and line-limited tail window from rollout JSONL for list rendering."
+    },
+    {
+      "id": "02-infer-lifecycle",
+      "title": "Add pure lifecycle inference helper",
+      "status": "done",
+      "details": "Infer running, queued, waiting, completed, needs_attention, aborted, or unknown from recent markers."
+    },
+    {
+      "id": "03-attach-summary",
+      "title": "Attach lifecycle to normalized thread summary",
+      "status": "done",
+      "details": "Expose lifecycle.state, lifecycle.reason, recent_markers, recent_tools, previews, and last_event_at."
+    },
+    {
+      "id": "04-render-explorer",
+      "title": "Render lifecycle in Thread Explorer",
+      "status": "done",
+      "details": "Show one state badge and one reason line without crowding quick actions."
+    },
+    {
+      "id": "05-tests",
+      "title": "Add lifecycle regression tests",
+      "status": "done",
+      "details": "Cover task_complete, open turn, tool call, tool output, aborted turn, final answer, and commentary stop."
+    }
+  ],
+  "acceptance": [
+    "Thread list does not require full history loads.",
+    "At least five lifecycle states are covered by tests.",
+    "Lifecycle reasons are visible and evidence-grounded.",
+    "Existing webview render-detail tests pass."
+  ],
+  "verification": [
+    "node --test src/host/node-backend/node-backend.test.js",
+    "node --test src/webview/render-detail-regression.test.js",
+    "node --check src/webview-template.js"
+  ],
+  "dependencies": [],
+  "blocks": [
+    "cma-reference-phase-02-board-operational-language"
+  ],
+  "completed_at": "2026-05-07",
+  "completion_notes": [
+    "Added bounded lifecycle inference from sampled Codex JSONL events.",
+    "Attached lifecycle to normalized thread summaries and thread details.",
+    "Rendered lifecycle state, reason, and recent tool chips in Thread Explorer.",
+    "Added direct lifecycle inference tests plus discovered rollout fixture assertions."
+  ]
+}

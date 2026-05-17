@@ -1,0 +1,31 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024" role="img" aria-labelledby="title desc">
+  <title id="title">Side lit vector portrait</title>
+  <desc id="desc">Moody vector portrait inspired by side-profile reference photos.</desc>
+  <defs>
+    <linearGradient id="night" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#111716"/>
+      <stop offset=".55" stop-color="#26332f"/>
+      <stop offset="1" stop-color="#5c6f65"/>
+    </linearGradient>
+    <linearGradient id="warmSkin" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0" stop-color="#c78668"/>
+      <stop offset=".5" stop-color="#f0c0a2"/>
+      <stop offset="1" stop-color="#f8d7bc"/>
+    </linearGradient>
+  </defs>
+  <rect width="1024" height="1024" fill="url(#night)"/>
+  <circle cx="763" cy="212" r="138" fill="#e8d8a8" opacity=".18"/>
+  <path fill="#0d0f0e" opacity=".38" d="M0 720c211-106 413-111 607-15 139 69 278 82 417 39v280H0z"/>
+  <g transform="translate(20 28)">
+    <path fill="#111" d="M194 1005c23-199 143-320 334-320 177 0 293 121 316 320z"/>
+    <path fill="#e4a98d" d="M432 640h171v120c-37 38-136 38-171 0z"/>
+    <path fill="url(#warmSkin)" d="M294 338c15-139 111-231 247-221 125 9 194 106 180 246l-10 99c-17 166-111 260-239 247-128-12-195-126-178-292z"/>
+    <path fill="#111" d="M279 342c28-172 150-275 299-243 98 21 163 96 174 210-45-22-88-35-142-39-112-9-215 16-331 72z"/>
+    <path fill="#22211f" d="M361 382c59-27 114-20 162 20l-20 24c-45-29-86-34-131-16zm163 23c50-18 99-10 146 23l-18 27c-43-25-77-29-115-15z"/>
+    <path fill="#111" d="M418 477c22 17 49 20 76 7-9-14-21-22-37-23-17-2-30 4-39 16zm121 15c24 19 53 21 80 6-9-14-22-22-40-24-18-1-31 5-40 18z"/>
+    <path fill="none" stroke="#a86653" stroke-width="12" stroke-linecap="round" d="M514 493c-19 48-25 81-9 105"/>
+    <path fill="none" stroke="#8b4d52" stroke-width="14" stroke-linecap="round" d="M433 635c42 27 92 32 136 11"/>
+    <path fill="#f6f7f4" d="M371 751c40 60 88 93 143 99 56 5 109-19 161-72-72-58-223-73-304-27z"/>
+    <path fill="#1b1b1b" d="M251 1005c31-123 122-188 268-174 142 14 223 95 252 174z"/>
+  </g>
+</svg>

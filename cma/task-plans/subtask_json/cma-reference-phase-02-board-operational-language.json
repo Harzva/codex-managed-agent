@@ -1,0 +1,151 @@
+{
+  "schema_version": 1,
+  "id": "cma-reference-phase-02-board-operational-language",
+  "title": "Board Card Operational Language",
+  "status": "completed",
+  "source_plan": "task-plans/00-roadmap/cma-reference-inspired-product-roadmap.md",
+  "source_section": "Phase 2: Board Card Operational Language",
+  "priority": "p1",
+  "inspired_by": ["reference/codex_manager"],
+  "scope": [
+    "Bring lifecycle state to running cards.",
+    "Make compact cards explain current work state.",
+    "Keep quick actions visible in compact and standard cards."
+  ],
+  "non_goals": [
+    "Do not remove existing card size controls.",
+    "Do not add dense dashboard panels inside cards.",
+    "Do not change Team task persistence."
+  ],
+  "implementation_targets": [
+    "src/webview/board.js",
+    "src/webview/styles.js",
+    "src/webview/render-detail-regression.test.js"
+  ],
+  "tasks": [
+    {
+      "id": "01-lifecycle-badge",
+      "title": "Add lifecycle badge and reason line",
+      "status": "done",
+      "details": "Render lifecycle state and reason on Board cards using concise language."
+    },
+    {
+      "id": "02-recent-tools",
+      "title": "Add recent tool chips",
+      "status": "done",
+      "details": "Show recent tools from lifecycle evidence when available."
+    },
+    {
+      "id": "03-quick-actions",
+      "title": "Keep Cmd/Cmp/Git quick actions visible",
+      "status": "done",
+      "details": "Wired board quick-action controls so compact titlebars and standard board top actions include Cmd/Cmp/Git/Codex/Terminal quick buttons with stable data attributes."
+    },
+    {
+      "id": "04-needs-attention",
+      "title": "Highlight needs_attention cards",
+      "status": "done",
+      "details": "Use needs_attention lifecycle state to visually identify handoff candidates."
+    },
+    {
+      "id": "05-overflow-checks",
+      "title": "Add card overflow checks",
+      "status": "done",
+      "details": "Protect compact card layout from overlapping badges, actions, and reason text."
+    }
+  ],
+  "acceptance": [
+    "A user can decide wait, inspect, continue, or intervene from the card alone.",
+    "No text overlap on compact cards.",
+    "Cmp 0 is visibly neutral and not styled like an error.",
+    "Lifecycle evidence links naturally to Inspector or Trace."
+  ],
+  "verification": [
+    "node --test src/webview/render-detail-regression.test.js",
+    "node --check src/webview-template.js"
+  ],
+  "dependencies": [
+    "cma-reference-phase-01-lifecycle-inference"
+  ],
+  "blocks": [],
+  "implementation_notes": [
+    {
+      "date": "2026-05-07",
+      "slice": "Board lifecycle strip",
+      "summary": "Added a lifecycle badge and concise reason line to board cards so compact and standard cards expose operational state from thread summaries."
+    },
+    {
+      "date": "2026-05-07",
+      "slice": "Board lifecycle recent tool chips",
+      "summary": "Added capped recent-tool chips to the board lifecycle strip from thread.lifecycle.recent_tools, with compact cards limited to two chips."
+    },
+    {
+      "date": "2026-05-07",
+      "slice": "Board quick actions visibility",
+      "summary": "Kept Cmd/Cmp/Git quick actions visible by integrating the board quick-action helper into compact titlebars and standard board top actions, and allowing action rows to wrap."
+    },
+    {
+      "date": "2026-05-07",
+      "slice": "Board needs_attention highlighting",
+      "summary": "Added needs_attention card marker (`needs-attention-card`) in board card rendering and a subtle card-level visual treatment for handoff candidates."
+    },
+    {
+      "date": "2026-05-07",
+      "slice": "Board compact overflow hardening",
+      "summary": "Added compact-card CSS constraints (min-width:0, ellipsis clipping, bounded strip width) to prevent title/name/tool/chase-row overflow and preserve badge/reason readability."
+    }
+  ],
+  "verification_results": [
+    {
+      "date": "2026-05-07",
+      "command": "node --test src/webview/render-detail-regression.test.js",
+      "result": "failed (web_search_call assertion in standard board output did not match expected truncation)",
+      "notes": "Expected compact-only truncation for recent tool chips; assertion was adjusted."
+    },
+    {
+      "date": "2026-05-07",
+      "command": "node --test src/webview/render-detail-regression.test.js",
+      "result": "passed"
+    },
+    {
+      "date": "2026-05-07",
+      "command": "node --check src/webview/render-detail-regression.test.js",
+      "result": "passed"
+    },
+    {
+      "date": "2026-05-07",
+      "command": "node --check src/webview-template.js",
+      "result": "passed"
+    },
+    {
+      "date": "2026-05-07",
+      "command": "node --test src/webview/render-detail-regression.test.js",
+      "result": "passed"
+    },
+    {
+      "date": "2026-05-07",
+      "command": "node --check src/webview-template.js",
+      "result": "passed"
+    },
+    {
+      "date": "2026-05-07",
+      "command": "node --check src/webview/actions.js",
+      "result": "passed"
+    },
+    {
+      "date": "2026-05-07",
+      "command": "node --check src/webview-template.js",
+      "result": "passed"
+    },
+    {
+      "date": "2026-05-07",
+      "command": "node --check src/webview/styles.js",
+      "result": "passed"
+    },
+    {
+      "date": "2026-05-07",
+      "command": "node --test src/webview/render-detail-regression.test.js",
+      "result": "passed"
+    }
+  ]
+}
