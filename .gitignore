@@ -3,6 +3,7 @@
 **/dist/
 **/release/
 **/tmp/
+cmabuild/
 **/__pycache__/
 *.tsbuildinfo
 *.pyc

@@ -27,7 +27,7 @@ const result =
   process.platform === "win32"
     ? spawnSync(
         process.env.ComSpec || "cmd.exe",
-        ["/d", "/s", "/c", `"${vsceBin}" package --out "${outputPath}"`],
+        ["/d", "/c", "call", vsceBin, "package", "--out", outputPath],
         { cwd: root, stdio: "inherit" },
       )
     : spawnSync(vsceBin, ["package", "--out", outputPath], {
