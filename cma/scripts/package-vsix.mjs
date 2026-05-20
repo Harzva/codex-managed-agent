@@ -8,6 +8,7 @@ import { fileURLToPath } from "node:url";
 const root = join(dirname(fileURLToPath(import.meta.url)), "..");
 const packageJson = JSON.parse(readFileSync(join(root, "package.json"), "utf8"));
 const publisherDir = join(root, "publisher");
+const target = readTarget(process.argv.slice(2));
 const vsceBin = join(
   root,
   "node_modules",
@@ -22,15 +23,24 @@ if (!existsSync(vsceBin)) {
 
 mkdirSync(publisherDir, { recursive: true });
 
-const outputPath = join("publisher", `codex-managed-agent-${packageJson.version}.vsix`);
+const outputName = target
+  ? `codex-managed-agent-${packageJson.version}-${target}.vsix`
+  : `codex-managed-agent-${packageJson.version}.vsix`;
+const outputPath = join("publisher", outputName);
+const packageArgs = ["package"];
+if (target) {
+  packageArgs.push("--target", target);
+}
+packageArgs.push("--out", outputPath);
+
 const result =
   process.platform === "win32"
     ? spawnSync(
         process.env.ComSpec || "cmd.exe",
-        ["/d", "/c", "call", vsceBin, "package", "--out", outputPath],
+        ["/d", "/c", "call", vsceBin, ...packageArgs],
         { cwd: root, stdio: "inherit" },
       )
-    : spawnSync(vsceBin, ["package", "--out", outputPath], {
+    : spawnSync(vsceBin, packageArgs, {
         cwd: root,
         stdio: "inherit",
       });
@@ -41,3 +51,26 @@ if (result.error) {
 }
 
 process.exit(result.status ?? 1);
+
+function readTarget(args) {
+  for (let index = 0; index < args.length; index += 1) {
+    const arg = String(args[index] || "");
+    if (arg === "--target") {
+      const value = String(args[index + 1] || "").trim();
+      if (!value) {
+        console.error("Missing VS Code target after --target.");
+        process.exit(1);
+      }
+      return value;
+    }
+    if (arg.startsWith("--target=")) {
+      const value = arg.slice("--target=".length).trim();
+      if (!value) {
+        console.error("Missing VS Code target after --target=.");
+        process.exit(1);
+      }
+      return value;
+    }
+  }
+  return "";
+}

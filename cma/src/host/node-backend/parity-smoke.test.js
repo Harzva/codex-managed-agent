@@ -3,6 +3,7 @@ const http = require("http");
 const childProcess = require("child_process");
 const fs = require("fs");
 const os = require("os");
+const path = require("path");
 const test = require("node:test");
 const { createNodeBackendServer, readCodexInventory } = require("./server");
 
@@ -291,22 +292,27 @@ test("fixture smoke covers Node backend parity endpoints", async () => {
 test("readCodexInventory captures mixed active/stale versions and unreadable paths", () => {
   const originalSpawnSync = childProcess.spawnSync;
   const originalRealpathSync = fs.realpathSync;
-  const localPath = `${os.homedir()}/.local/bin/codex`;
-  const userPath = "/usr/local/bin/codex";
-  const systemPath = "/usr/bin/codex";
-  const workspacePath = `${process.cwd()}/node_modules/.bin/codex`;
+  const lookupCommand = process.platform === "win32" ? "where" : "which";
+  const exeName = process.platform === "win32" ? "codex.cmd" : "codex";
+  const pathSep = process.platform === "win32" ? ";" : ":";
+  const localPath = process.platform === "win32"
+    ? path.join(os.homedir(), "AppData", "Roaming", "npm", "codex.cmd")
+    : `${os.homedir()}/.local/bin/codex`;
+  const userPath = process.platform === "win32" ? "C:\\Program Files\\Codex\\codex.exe" : "/usr/local/bin/codex";
+  const systemPath = process.platform === "win32" ? "C:\\ProgramData\\Codex\\codex.exe" : "/usr/bin/codex";
+  const workspacePath = path.join(process.cwd(), "node_modules", ".bin", exeName);
   const calls = [];
 
   childProcess.spawnSync = (command, args) => {
     calls.push({ command: String(command || ""), args: Array.isArray(args) ? args.slice() : [] });
-    if (command === "which") {
+    if (command === lookupCommand) {
       return {
         status: 0,
         stdout: `${userPath}\n${systemPath}\n${localPath}\n${workspacePath}\n`,
         stderr: "",
       };
     }
-    if (String(command).endsWith("/codex") && Array.isArray(args) && args[0] === "--version") {
+    if ([userPath, systemPath, localPath, workspacePath].includes(String(command)) && Array.isArray(args) && args[0] === "--version") {
       if (command === userPath) {
         return { status: 0, stdout: "codex 0.128.0", stderr: "", };
       }
@@ -323,7 +329,10 @@ test("readCodexInventory captures mixed active/stale versions and unreadable pat
   fs.realpathSync = (value) => String(value || "");
 
   try {
-    const inventory = readCodexInventory({ command: "codex", env: { PATH: "/usr/local/bin:/usr/bin:/home/user/.local/bin" } });
+    const inventory = readCodexInventory({
+      command: "codex",
+      env: { PATH: [path.dirname(userPath), path.dirname(systemPath), path.dirname(localPath)].join(pathSep) },
+    });
     assert.equal(inventory.ok, true);
     assert.equal(inventory.activePath, userPath);
     assert.equal(inventory.items.length >= 2, true);
@@ -336,7 +345,7 @@ test("readCodexInventory captures mixed active/stale versions and unreadable pat
     assert.equal(staleItemExists, true);
     assert.equal(activeItem.version, "0.128.0");
     assert.equal(unreadableItemExists, true);
-    assert.equal(calls.some((call) => call.command === "which"), true);
+    assert.equal(calls.some((call) => call.command === lookupCommand), true);
   } finally {
     childProcess.spawnSync = originalSpawnSync;
     fs.realpathSync = originalRealpathSync;

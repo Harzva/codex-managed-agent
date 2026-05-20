@@ -118,7 +118,12 @@ function normalizeOwnedPath(value) {
 }
 
 function normalizeRuntimePath(value) {
-  const text = normalizeWorkspacePath(value);
+  const raw = String(value || "").trim();
+  if (!raw) return "";
+  if (path.win32.isAbsolute(raw) || path.isAbsolute(raw)) {
+    return path.normalize(raw).replace(/[\\/]$/, "");
+  }
+  const text = normalizeWorkspacePath(raw);
   if (!text) return "";
   const normalized = path.posix.normalize(text);
   if (normalized === ".") return "";

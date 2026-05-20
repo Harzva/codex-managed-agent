@@ -304,7 +304,7 @@ test("syncCurrentCodexAuth imports current auth only when not already managed", 
   assert.equal(accountManager.loadAccountsState().accounts.filter((name) => name.startsWith("codex-current")).length, 1);
 });
 
-test("activateAccountForCodex symlinks global auth instead of copying account auth", async (t) => {
+test("activateAccountForCodex activates global auth with symlink or copy fallback", async (t) => {
   const home = withTempHome(t);
   const codexHome = path.join(home, ".codex");
   fs.mkdirSync(codexHome, { recursive: true });
@@ -319,11 +319,17 @@ test("activateAccountForCodex symlinks global auth instead of copying account au
 
   const result = await accountManager.activateAccountForCodex("work-a", codexHome);
   assert.equal(result.ok, true);
-  assert.equal(result.method, "symlink");
 
   const globalAuth = path.join(codexHome, "auth.json");
-  assert.equal(fs.lstatSync(globalAuth).isSymbolicLink(), true);
-  assert.equal(fs.realpathSync(globalAuth), path.join(home, ".codex-managed-agent", "accounts", "work-a", "auth.json"));
+  if (result.method === "symlink") {
+    assert.equal(fs.lstatSync(globalAuth).isSymbolicLink(), true);
+    assert.equal(fs.realpathSync(globalAuth), path.join(home, ".codex-managed-agent", "accounts", "work-a", "auth.json"));
+  } else {
+    assert.equal(result.method, "copy");
+    assert.equal(fs.lstatSync(globalAuth).isSymbolicLink(), false);
+    const copiedAuth = JSON.parse(fs.readFileSync(globalAuth, "utf8"));
+    assert.equal(copiedAuth.tokens.access_token, "work-a-access-token");
+  }
 
   const backupsDir = path.join(home, ".codex-managed-agent", "accounts", "work-a", "backups");
   const backupFiles = fs.readdirSync(backupsDir).filter((name) => name.endsWith(".json"));
@@ -359,16 +365,32 @@ test("activateAccountForCodex retargets an existing managed symlink without copy
   }
 
   fs.mkdirSync(codexHome, { recursive: true });
-  fs.symlinkSync(path.join(accountRoot, "work-b", "auth.json"), path.join(codexHome, "auth.json"));
+  const existingAuthPath = path.join(codexHome, "auth.json");
+  const workBAuthPath = path.join(accountRoot, "work-b", "auth.json");
+  let seededSymlink = false;
+  try {
+    fs.symlinkSync(workBAuthPath, existingAuthPath);
+    seededSymlink = true;
+  } catch (error) {
+    if (process.platform !== "win32") throw error;
+    fs.copyFileSync(workBAuthPath, existingAuthPath);
+  }
 
   const result = await accountManager.activateAccountForCodex("work-a", codexHome);
   assert.equal(result.ok, true);
-  assert.equal(result.method, "symlink");
 
   const globalAuth = path.join(codexHome, "auth.json");
-  assert.equal(fs.lstatSync(globalAuth).isSymbolicLink(), true);
-  assert.equal(fs.realpathSync(globalAuth), path.join(accountRoot, "work-a", "auth.json"));
-  assert.equal(fs.existsSync(path.join(accountRoot, "work-a", "backups")), false);
+  if (result.method === "symlink") {
+    assert.equal(fs.lstatSync(globalAuth).isSymbolicLink(), true);
+    assert.equal(fs.realpathSync(globalAuth), path.join(accountRoot, "work-a", "auth.json"));
+    assert.equal(fs.existsSync(path.join(accountRoot, "work-a", "backups")), false);
+  } else {
+    assert.equal(result.method, "copy");
+    assert.equal(fs.lstatSync(globalAuth).isSymbolicLink(), false);
+    const copiedAuth = JSON.parse(fs.readFileSync(globalAuth, "utf8"));
+    assert.equal(copiedAuth.tokens.access_token, "work-a-access-token");
+    assert.equal(seededSymlink, false);
+  }
 
   const workBAuth = JSON.parse(fs.readFileSync(path.join(accountRoot, "work-b", "auth.json"), "utf8"));
   assert.equal(workBAuth.tokens.access_token, "work-b-access-token");

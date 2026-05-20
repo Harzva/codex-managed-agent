@@ -1,7 +1,6 @@
 #!/usr/bin/env python3
 
 import argparse
-import fcntl
 import json
 import os
 import signal
@@ -10,6 +9,36 @@ import sys
 import time
 from datetime import datetime, timezone
 from pathlib import Path
+
+if os.name == "nt":
+    import msvcrt
+else:
+    import fcntl
+
+
+class LockUnavailable(Exception):
+    pass
+
+
+def try_lock_file(lock_file) -> None:
+    try:
+        if os.name == "nt":
+            msvcrt.locking(lock_file.fileno(), msvcrt.LK_NBLCK, 1)
+        else:
+            fcntl.flock(lock_file.fileno(), fcntl.LOCK_EX | fcntl.LOCK_NB)
+    except (BlockingIOError, OSError) as exc:
+        raise LockUnavailable() from exc
+
+
+def unlock_file(lock_file) -> None:
+    try:
+        if os.name == "nt":
+            lock_file.seek(0)
+            msvcrt.locking(lock_file.fileno(), msvcrt.LK_UNLCK, 1)
+        else:
+            fcntl.flock(lock_file.fileno(), fcntl.LOCK_UN)
+    except (BlockingIOError, OSError):
+        pass
 
 
 def utc_now():
@@ -423,8 +452,9 @@ def run_tick(args):
     lock_path = state_dir / "tick.lock"
     lock_file = lock_path.open("w", encoding="utf-8")
     try:
-        fcntl.flock(lock_file.fileno(), fcntl.LOCK_EX | fcntl.LOCK_NB)
-    except BlockingIOError:
+        try_lock_file(lock_file)
+    except LockUnavailable:
+        lock_file.close()
         return 3
 
     prompt = ensure_prompt(prompt_path)
@@ -553,6 +583,8 @@ def run_tick(args):
         )
     summary = shorten_text(last_message or "No assistant summary was captured for this tick.")
     print_tick_banner(f"tick end | phase={finished_status['phase']} | returncode={returncode} | summary={summary}")
+    unlock_file(lock_file)
+    lock_file.close()
     return returncode
 
 

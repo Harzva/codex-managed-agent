@@ -23,16 +23,37 @@ concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
-defaults:
-  run:
-    working-directory: cma
-
 jobs:
   package:
-    name: Build VSIX
-    runs-on: ubuntu-latest
-    outputs:
-      version: ${{ steps.meta.outputs.version }}
+    name: Build VSIX (${{ matrix.target }})
+    runs-on: ${{ matrix.os }}
+    defaults:
+      run:
+        working-directory: cma
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - target: win32-x64
+            os: windows-latest
+            npm_platform: win32
+            npm_arch: x64
+            codex_package: "@openai/codex-win32-x64"
+          - target: linux-x64
+            os: ubuntu-latest
+            npm_platform: linux
+            npm_arch: x64
+            codex_package: "@openai/codex-linux-x64"
+          - target: darwin-arm64
+            os: macos-latest
+            npm_platform: darwin
+            npm_arch: arm64
+            codex_package: "@openai/codex-darwin-arm64"
+          - target: darwin-x64
+            os: macos-latest
+            npm_platform: darwin
+            npm_arch: x64
+            codex_package: "@openai/codex-darwin-x64"
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -45,101 +66,108 @@ jobs:
           cache-dependency-path: cma/package-lock.json
 
       - name: Check Source Layout
-        shell: bash
+        shell: pwsh
         run: |
-          set -euo pipefail
-          test -f package.json
-          test -f extension.js
-          if [ ! -f src/panel.js ]; then
-            echo "::error file=cma/src/panel.js::Missing VSIX source. Restore cma/src before building a new VSIX."
+          if (!(Test-Path package.json)) { throw "Missing package.json" }
+          if (!(Test-Path extension.js)) { throw "Missing extension.js" }
+          if (!(Test-Path src/panel.js)) {
+            Write-Error "::error file=cma/src/panel.js::Missing VSIX source. Restore cma/src before building a new VSIX."
             exit 1
-          fi
+          }
 
       - name: Read Package Version
         id: meta
-        shell: bash
+        shell: pwsh
         run: |
-          version="$(node -p "require('./package.json').version")"
-          echo "version=$version" >> "$GITHUB_OUTPUT"
+          $version = node -p "require('./package.json').version"
+          "version=$version" >> $env:GITHUB_OUTPUT
 
       - name: Check VSIX Tag Version
         if: startsWith(github.ref, 'refs/tags/vsix-v')
-        shell: bash
+        shell: pwsh
         run: |
-          set -euo pipefail
-          tag_version="${GITHUB_REF_NAME#vsix-v}"
-          package_version="${{ steps.meta.outputs.version }}"
-          if [ "$tag_version" != "$package_version" ]; then
-            echo "::error::Tag vsix-v${tag_version} does not match extension package version ${package_version}."
+          $tagVersion = "${{ github.ref_name }}".Substring("vsix-v".Length)
+          $packageVersion = "${{ steps.meta.outputs.version }}"
+          if ($tagVersion -ne $packageVersion) {
+            Write-Error "Tag vsix-v$tagVersion does not match extension package version $packageVersion."
             exit 1
-          fi
+          }
 
       - name: Configure GitHub Dependency URLs
-        shell: bash
+        shell: pwsh
         run: |
           git config --global url."https://github.com/".insteadOf "ssh://git@github.com/"
           git config --global url."https://github.com/".insteadOf "git@github.com:"
 
       - name: Install
+        env:
+          npm_config_platform: ${{ matrix.npm_platform }}
+          npm_config_arch: ${{ matrix.npm_arch }}
         run: npm ci
 
       - name: Smoke Test
-        shell: bash
+        shell: pwsh
         run: |
-          set -euo pipefail
-          tests=()
-          for file in \
-            src/host/node-backend/node-backend.test.js \
-            src/host/server.test.js \
-            src/host/extension-load-smoke.test.js
-          do
-            if [ -f "$file" ]; then
-              tests+=("$file")
-            fi
-          done
-          if [ "${#tests[@]}" -gt 0 ]; then
-            node --test "${tests[@]}"
-          else
-            echo "No VSIX smoke tests found; skipping."
-          fi
+          $tests = @(
+            "src/host/node-backend/node-backend.test.js",
+            "src/host/server.test.js",
+            "src/host/extension-load-smoke.test.js"
+          ) | Where-Object { Test-Path $_ }
+          if ($tests.Count -gt 0) {
+            node --test $tests
+          } else {
+            Write-Host "No VSIX smoke tests found; skipping."
+          }
+
+      - name: VSIX Matrix Smoke
+        shell: pwsh
+        run: |
+          @'
+          const assert = require("assert");
+          const { executableNames } = require("./src/host/platform-runtime");
+          const target = process.env.VSCODE_TARGET;
+          const names = executableNames("codex");
+          if (target.startsWith("win32")) {
+            assert(names.includes("codex.cmd"), "Windows target must probe codex.cmd");
+            assert(names.includes("codex.exe"), "Windows target must probe codex.exe");
+          } else {
+            assert(names.includes("codex"), "POSIX target must probe codex");
+          }
+          console.log(`inventory smoke ok for ${target}: ${names.join(", ")}`);
+          '@ | node -
+        env:
+          VSCODE_TARGET: ${{ matrix.target }}
 
       - name: Package VSIX
-        run: npm run publish:vsix
+        run: npm run publish:vsix:target -- --target ${{ matrix.target }}
 
       - name: Write Release Manifest
-        shell: bash
-        env:
-          PACKAGE_VERSION: ${{ steps.meta.outputs.version }}
-          REF_NAME: ${{ github.ref_name }}
-          SHA: ${{ github.sha }}
-          RUN_ID: ${{ github.run_id }}
+        shell: pwsh
         run: |
-          node <<'NODE'
-          const fs = require("fs");
-          const manifest = {
-            product: "codex-managed-agent-vsix",
-            lane: "vsix",
-            packageVersion: process.env.PACKAGE_VERSION,
-            sourceDirectory: "cma",
-            refName: process.env.REF_NAME,
-            sha: process.env.SHA,
-            runId: process.env.RUN_ID,
-            generatedAt: new Date().toISOString(),
-          };
-          fs.mkdirSync("publisher", { recursive: true });
-          fs.writeFileSync(
-            `publisher/release-manifest-vsix-${process.env.PACKAGE_VERSION}.json`,
-            `${JSON.stringify(manifest, null, 2)}\n`,
-          );
-          NODE
+          $version = "${{ steps.meta.outputs.version }}"
+          $manifest = [ordered]@{
+            product = "codex-managed-agent-vsix"
+            lane = "vsix"
+            packageVersion = $version
+            target = "${{ matrix.target }}"
+            runnerOs = "${{ runner.os }}"
+            codexBinaryPackage = "${{ matrix.codex_package }}"
+            sourceDirectory = "cma"
+            refName = "${{ github.ref_name }}"
+            sha = "${{ github.sha }}"
+            runId = "${{ github.run_id }}"
+            generatedAt = (Get-Date).ToUniversalTime().ToString("o")
+          } | ConvertTo-Json -Depth 8
+          New-Item -ItemType Directory -Force -Path publisher | Out-Null
+          Set-Content -Path "publisher/release-manifest-vsix-$version-${{ matrix.target }}.json" -Value $manifest -Encoding UTF8
 
       - name: Upload VSIX Artifact
         uses: actions/upload-artifact@v4
         with:
-          name: cma-vsix-${{ steps.meta.outputs.version }}
+          name: cma-vsix-${{ steps.meta.outputs.version }}-${{ matrix.target }}
           path: |
-            cma/publisher/codex-managed-agent-${{ steps.meta.outputs.version }}.vsix
-            cma/publisher/release-manifest-vsix-${{ steps.meta.outputs.version }}.json
+            cma/publisher/codex-managed-agent-${{ steps.meta.outputs.version }}-${{ matrix.target }}.vsix
+            cma/publisher/release-manifest-vsix-${{ steps.meta.outputs.version }}-${{ matrix.target }}.json
           if-no-files-found: error
           retention-days: 14
 
@@ -151,7 +179,7 @@ jobs:
     permissions:
       contents: write
     steps:
-      - name: Download VSIX Artifact
+      - name: Download VSIX Artifacts
         uses: actions/download-artifact@v4
         with:
           pattern: cma-vsix-*

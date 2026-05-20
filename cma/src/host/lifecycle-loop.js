@@ -5,6 +5,11 @@ const os = require("os");
 const path = require("path");
 
 const { openNewCodexThread } = require("./codex-link");
+const {
+  IS_WINDOWS,
+  quotePowerShell,
+  tailFileCommand,
+} = require("./platform-runtime");
 
 const DEFAULT_LOOP_ATTACH_INTERVAL_MINUTES = 1;
 
@@ -300,6 +305,10 @@ function resolveCodexLoopStartScript() {
   return path.join(resolveCodexHome(), "skills", "codex-loop", "scripts", "start_codex_loop.sh");
 }
 
+function resolveCodexLoopAutomationScript() {
+  return path.join(resolveCodexHome(), "skills", "codex-loop", "scripts", "codex_loop_automation.py");
+}
+
 function resolveCodexHome() {
   return process.env.CODEX_HOME
     ? path.resolve(process.env.CODEX_HOME)
@@ -420,6 +429,9 @@ function buildLoopDaemonCommandForStateDir(panel, stateDir, workspacePath, promp
   const nextInterval = parseLoopIntervalMinutes(intervalMinutes);
   const nextMaxTicks = parseLoopMaxTicks(maxTicks);
   if (!nextThreadId || !nextInterval) return "";
+  if (IS_WINDOWS) {
+    return buildWindowsLoopDaemonCommand(nextThreadId, promptPath, workspacePath, stateDir, nextInterval, nextMaxTicks);
+  }
   const startScriptPath = resolveCodexLoopStartScript();
   if (!fs.existsSync(startScriptPath)) {
     vscode.window.showWarningMessage(`Codex-Managed-Agent: codex-loop start script not found: ${startScriptPath}`);
@@ -452,6 +464,46 @@ function buildLoopDaemonCommandForStateDir(panel, stateDir, workspacePath, promp
     commandParts.splice(5, 0, "CODEX_LOOP_MAX_TICKS=" + shellQuote(String(nextMaxTicks)));
   }
   return commandParts.join(" ");
+}
+
+function buildWindowsLoopDaemonCommand(threadId, promptPath, workspacePath, stateDir, intervalMinutes, maxTicks) {
+  const scriptPath = resolveCodexLoopAutomationScript();
+  if (!fs.existsSync(scriptPath)) {
+    vscode.window.showWarningMessage(`Codex-Managed-Agent: codex-loop Python script not found: ${scriptPath}`);
+    return "";
+  }
+  const nextPromptPath = String(promptPath || "").trim();
+  if (!nextPromptPath || !fs.existsSync(nextPromptPath)) {
+    vscode.window.showWarningMessage(`Codex-Managed-Agent: codex-loop prompt file not found: ${promptPath}`);
+    return "";
+  }
+  const nextWorkspace = String(workspacePath || "").trim();
+  if (!nextWorkspace) {
+    vscode.window.showWarningMessage("Codex-Managed-Agent: missing loop workspace path");
+    return "";
+  }
+  const logDir = path.join(stateDir, "logs");
+  const stdoutPath = path.join(logDir, "daemon_stdout.log");
+  const stderrPath = path.join(logDir, "daemon_stderr.log");
+  const pidPath = path.join(stateDir, "daemon.pid");
+  const args = [
+    scriptPath,
+    "daemon",
+    "--workspace", nextWorkspace,
+    "--prompt-file", nextPromptPath,
+    "--state-dir", stateDir,
+    "--interval-minutes", String(intervalMinutes),
+    "--thread-id", threadId,
+    "--dangerous",
+  ];
+  if (maxTicks) args.splice(args.length - 1, 0, "--max-ticks", String(maxTicks));
+  const psArgs = "@(" + args.map(quotePowerShell).join(", ") + ")";
+  return [
+    `New-Item -ItemType Directory -Force -Path ${quotePowerShell(logDir)} | Out-Null`,
+    `Start-Process -WindowStyle Hidden -FilePath ${quotePowerShell("python")} -ArgumentList ${psArgs} -WorkingDirectory ${quotePowerShell(nextWorkspace)} -RedirectStandardOutput ${quotePowerShell(stdoutPath)} -RedirectStandardError ${quotePowerShell(stderrPath)}`,
+    "Start-Sleep -Seconds 1",
+    `Get-Content -LiteralPath ${quotePowerShell(pidPath)} -ErrorAction SilentlyContinue`,
+  ].join("; ");
 }
 
 function buildLoopDaemonCommand(panel, threadId, intervalMinutes) {
@@ -852,6 +904,10 @@ async function stopLoopDaemonAt(panel, stateDir) {
 }
 
 async function attachLoopTmux(panel, sessionName) {
+  if (IS_WINDOWS) {
+    vscode.window.showInformationMessage("Codex-Managed-Agent: tmux attach is only available on Linux/macOS. Use Open Log on Windows.");
+    return;
+  }
   const nextSession = String(sessionName || "").trim();
   if (!nextSession) {
     vscode.window.showWarningMessage("Codex-Managed-Agent: missing tmux session for loop daemon");
@@ -866,7 +922,7 @@ async function tailLoopLog(panel, filePath) {
     vscode.window.showWarningMessage("Codex-Managed-Agent: missing log path for loop daemon");
     return;
   }
-  await panel.runCommandInTerminal(`tail -f ${shellQuote(nextPath)}`, "Loop log tail");
+  await panel.runCommandInTerminal(tailFileCommand(nextPath), "Loop log tail");
 }
 
 const lifecycleLoop = {

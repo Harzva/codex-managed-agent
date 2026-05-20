@@ -5,12 +5,12 @@ const os = require("os");
 const path = require("path");
 
 const { postScanCodexSessions } = require("./server");
+const {
+  codexResumeCommand,
+  managedTerminalOptions,
+} = require("./platform-runtime");
 
 const DEFAULT_NEW_AGENT_PROMPT = "创建一个新agent。你是一个专业的agent，听从用户指令，先等待用户的具体任务，并保持简洁汇报。";
-
-function shellQuote(value) {
-  return "'" + String(value || "").replace(/'/g, "'\"'\"'") + "'";
-}
 
 function writeJson(filePath, payload) {
   fs.mkdirSync(path.dirname(filePath), { recursive: true });
@@ -307,12 +307,12 @@ async function resumeThreadBySessionId(panel) {
   if (!sessionId) return;
 
   const cwd = pickWorkspacePath(panel) || newAgentWorkspacePath();
-  const terminal = vscode.window.createTerminal({
+  const terminal = vscode.window.createTerminal(managedTerminalOptions({
     name: "Codex Resume",
     cwd,
-  });
+  }));
   terminal.show(true);
-  terminal.sendText(`codex resume ${shellQuote(sessionId)}`, true);
+  terminal.sendText(codexResumeCommand(sessionId), true);
   panel.selectedThreadId = sessionId;
   panel.lastActionNotice = `Resume command opened for ${sessionId}`;
   vscode.window.setStatusBarMessage(`Codex-Managed-Agent: ${panel.lastActionNotice}`, 3200);

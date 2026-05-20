@@ -82,6 +82,10 @@ function readJsonl(filePath) {
     .map((line) => JSON.parse(line));
 }
 
+function normalizePathForAssert(value) {
+  return path.normalize(String(value || ""));
+}
+
 function createTeamWorkspace(t) {
   const workspace = fs.mkdtempSync(path.join(os.tmpdir(), "cma-team-"));
   t.after(() => fs.rmSync(workspace, { recursive: true, force: true }));
@@ -847,14 +851,14 @@ test("persists account profile id on launched Team workers for draft-bound worke
   assert.equal(Array.isArray(task.runtime && task.runtime.launched_workers), true);
   assert.equal(task.runtime.launched_workers.length, 1);
   assert.equal(task.runtime.launched_workers[0].account_profile_id, accountProfileId);
-  assert.equal(task.runtime.launched_workers[0].account_auth_source_path, sourceAuthPath.replace(/\\/g, "/"));
+  assert.equal(normalizePathForAssert(task.runtime.launched_workers[0].account_auth_source_path), normalizePathForAssert(sourceAuthPath));
   assert.equal(task.runtime.launched_workers[0].account_token_health, "ok");
   assert.equal(task.runtime.launched_workers[0].session_binding.account_profile_id, accountProfileId);
   assert.equal(task.runtime.launched_workers[0].session_binding.run_id, saved.task.orchestration.dag_run_id);
 
   const dagRun = readJson(path.join(dagRunDir, "dag-run.json"), {});
   assert.equal(String(dagRun.nodes[0].worker_runtime && dagRun.nodes[0].worker_runtime.account_profile_id || ""), accountProfileId);
-  assert.equal(String(dagRun.nodes[0].worker_runtime && dagRun.nodes[0].worker_runtime.account_auth_source_path || ""), sourceAuthPath.replace(/\\/g, "/"));
+  assert.equal(normalizePathForAssert(dagRun.nodes[0].worker_runtime && dagRun.nodes[0].worker_runtime.account_auth_source_path), normalizePathForAssert(sourceAuthPath));
   assert.equal(String(dagRun.nodes[0].worker_runtime && dagRun.nodes[0].worker_runtime.account_token_health || ""), "ok");
   assert.equal(String(dagRun.nodes[0].worker_runtime && dagRun.nodes[0].worker_runtime.session_binding && dagRun.nodes[0].worker_runtime.session_binding.account_profile_id || ""), accountProfileId);
   assert.equal(String(dagRun.nodes[0].worker_runtime && dagRun.nodes[0].worker_runtime.session_binding && dagRun.nodes[0].worker_runtime.session_binding.run_id || ""), saved.task.orchestration.dag_run_id);
@@ -864,7 +868,7 @@ test("persists account profile id on launched Team workers for draft-bound worke
   const profileTrace = taskTrace.find((entry) => entry && entry.kind === "orchestration.account_profile_bound");
   assert.ok(profileTrace);
   assert.equal(String(profileTrace.payload && profileTrace.payload.account_profile_id || ""), accountProfileId);
-  assert.equal(String(profileTrace.payload && profileTrace.payload.account_auth_source_path || ""), sourceAuthPath.replace(/\\/g, "/"));
+  assert.equal(normalizePathForAssert(profileTrace.payload && profileTrace.payload.account_auth_source_path), normalizePathForAssert(sourceAuthPath));
   assert.equal(String(profileTrace.payload && profileTrace.payload.account_token_health || ""), "ok");
 });
 

@@ -98,6 +98,12 @@ const {
   CodexAgentBottomProvider,
 } = require("./host/panel-view");
 const {
+  IS_WINDOWS,
+  managedTerminalOptions,
+  quoteForTerminal,
+  terminalEnvSet,
+} = require("./host/platform-runtime");
+const {
   ensureServer,
   openExternal,
   postMessage,
@@ -323,9 +329,9 @@ class CodexAgentPanel {
         cwdSkipped = true;
       }
     }
-    const terminal = vscode.window.createTerminal(terminalOptions);
+    const terminal = vscode.window.createTerminal(managedTerminalOptions(terminalOptions));
     terminal.show(true);
-    terminal.sendText(String(command), true);
+    terminal.sendText(normalizeTerminalCommand(String(command)), true);
     this.lastActionNotice = cwdSkipped
       ? `${label} sent to terminal; skipped missing cwd`
       : `${label} sent to terminal`;
@@ -1067,19 +1073,27 @@ class CodexAgentPanel {
   startManagedAccountLogin(name) {
     const result = prepareAccountLogin(name);
     if (!result.ok) return result;
-    const command = [
-      "export CODEX_HOME=" + shellQuote(result.codexHome),
-      "codex login --device-auth",
-      "echo",
-      "echo " + shellQuote("Login finished. Return to Codex-Managed-Agent and click Validate or Refresh Usage for " + name + "."),
-    ].join(" && ");
-    const terminal = vscode.window.createTerminal({
+    const doneMessage = "Login finished. Return to Codex-Managed-Agent and click Validate or Refresh Usage for " + name + ".";
+    const command = IS_WINDOWS
+      ? [
+          terminalEnvSet("CODEX_HOME", result.codexHome),
+          "codex login --device-auth",
+          "Write-Host ''",
+          "Write-Host " + quoteForTerminal(doneMessage),
+        ].join("; ")
+      : [
+          terminalEnvSet("CODEX_HOME", result.codexHome),
+          "codex login --device-auth",
+          "echo",
+          "echo " + quoteForTerminal(doneMessage),
+        ].join(" && ");
+    const terminal = vscode.window.createTerminal(managedTerminalOptions({
       name: "Codex Login: " + name,
       cwd: result.codexHome,
       env: {
         CODEX_HOME: result.codexHome,
       },
-    });
+    }));
     terminal.show(true);
     terminal.sendText(command, true);
     return result;
@@ -1088,6 +1102,12 @@ class CodexAgentPanel {
 
 function shellQuote(value) {
   return "'" + String(value || "").replace(/'/g, "'\"'\"'") + "'";
+}
+
+function normalizeTerminalCommand(command) {
+  const nextCommand = String(command || "");
+  if (!IS_WINDOWS) return nextCommand;
+  return nextCommand.replace(/\s+&&\s+/g, "; if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }; ");
 }
 
 function activate(context) {

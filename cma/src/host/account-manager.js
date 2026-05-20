@@ -5,6 +5,11 @@ const crypto = require("crypto");
 const usageLedger = require("./usage-ledger");
 const { httpsGetJson, httpsPostForm, httpsPostJson } = require("./account-http");
 const { createAccountUsage } = require("./account-usage");
+const {
+  atomicCopyFileSync,
+  isSymlinkPrivilegeError,
+  safeChmodSync,
+} = require("./platform-runtime");
 
 const ACCOUNTS_STATE_VERSION = 1;
 const ACCOUNTS_STATE_FILENAME = "accounts-state.json";
@@ -396,7 +401,7 @@ function writeBackupMetadata(accountName, backupFileName, options = {}) {
   const metadataPath = accountBackupMetadataPath(accountName, backupFileName);
   const tmp = metadataPath + "." + process.pid + "." + Date.now() + ".tmp";
   fs.writeFileSync(tmp, JSON.stringify(finalMetadata, null, 2), "utf8");
-  fs.chmodSync(tmp, 0o600);
+  safeChmodSync(tmp, 0o600);
   fs.renameSync(tmp, metadataPath);
   return {
     backupMetadataPath: metadataPath,
@@ -511,12 +516,12 @@ function refreshBackupCandidateFiles(name, source) {
   fs.mkdirSync(dir, { recursive: true, mode: 0o700 });
   const authDest = accountAuthPath(name);
   fs.copyFileSync(authSource, authDest);
-  fs.chmodSync(authDest, 0o600);
+  safeChmodSync(authDest, 0o600);
   const configSource = source.configTomlPath ? normalizeAuthPath(source.configTomlPath) : null;
   if (configSource && fs.existsSync(configSource)) {
     const configDest = accountConfigPath(name);
     fs.copyFileSync(configSource, configDest);
-    fs.chmodSync(configDest, 0o600);
+    safeChmodSync(configDest, 0o600);
   }
   const existingMeta = readMeta(name) || {};
   writeMeta(name, {
@@ -625,14 +630,14 @@ function adoptCurrentCodexAuthAsProfile(name, authPath, options = {}) {
 
   try {
     fs.renameSync(normalizedAuthPath, authDest);
-    fs.chmodSync(authDest, 0o600);
+    safeChmodSync(authDest, 0o600);
     const linkResult = linkAccountAuthIntoCodexHome(name, authDest, options.codexHome || path.dirname(normalizedAuthPath));
     if (!linkResult.ok) return linkResult;
 
     const configDest = accountConfigPath(name);
     if (!fs.existsSync(configDest)) {
       fs.writeFileSync(configDest, 'cli_auth_credentials_store = "file"\n', "utf8");
-      fs.chmodSync(configDest, 0o600);
+      safeChmodSync(configDest, 0o600);
     }
 
     const auth = readAccountAuth(name);
@@ -644,7 +649,7 @@ function adoptCurrentCodexAuthAsProfile(name, authPath, options = {}) {
       type: accountType,
       origin: "codex-current",
       sourceKind: "current",
-      activationMode: "symlink",
+      activationMode: linkResult.method || "symlink",
       backupCandidate: false,
       discoveredFrom: options.codexHome || path.dirname(normalizedAuthPath),
       fingerprint: getAccountFingerprint(authDest, auth),
@@ -709,7 +714,7 @@ function addAccount(name, options = {}) {
     if (authSource && fs.existsSync(authSource)) {
       const authDest = accountAuthPath(name);
       fs.copyFileSync(authSource, authDest);
-      fs.chmodSync(authDest, 0o600);
+      safeChmodSync(authDest, 0o600);
     }
 
     // Detect account type from imported auth
@@ -724,7 +729,7 @@ function addAccount(name, options = {}) {
       : (sourceHome ? path.join(sourceHome, ACCOUNT_FILE_NAMES.CONFIG) : null);
     if (configSource && fs.existsSync(configSource)) {
       fs.copyFileSync(configSource, configDest);
-      fs.chmodSync(configDest, 0o600);
+      safeChmodSync(configDest, 0o600);
     } else {
       const configContent = 'cli_auth_credentials_store = "file"\n';
       fs.writeFileSync(configDest, configContent, "utf8");
@@ -947,7 +952,7 @@ function prepareAccountLogin(name) {
   const configPath = accountConfigPath(name);
   if (!fs.existsSync(configPath)) {
     fs.writeFileSync(configPath, 'cli_auth_credentials_store = "file"\n', "utf8");
-    fs.chmodSync(configPath, 0o600);
+    safeChmodSync(configPath, 0o600);
   }
 
   const authPath = accountAuthPath(name);
@@ -1065,17 +1070,21 @@ async function activateAccountForCodex(name, codexHome) {
     lastSuccessfulAccount: name,
   });
 
+  const activationMethod = linkResult.method || "symlink";
   try {
     writeMeta(name, {
-      lastActivationStatus: "symlinked",
+      activationMode: activationMethod,
+      lastActivationStatus: activationMethod === "copy" ? "copied" : "symlinked",
       lastActivationAt: new Date().toISOString(),
       lastActivationError: null,
-      lastActivationHint: "Global ~/.codex/auth.json points to this account auth. New terminal codex processes use this account.",
+      lastActivationHint: activationMethod === "copy"
+        ? "Global ~/.codex/auth.json was copied from this account auth because symlink activation is unavailable on this system."
+        : "Global ~/.codex/auth.json points to this account auth. New terminal codex processes use this account.",
     });
   } catch {}
   try { writeActiveProfileMarker(name); } catch {}
 
-  return { ok: true, method: "symlink", targetAuthPath: linkResult.targetAuthPath, sourceAuthPath: sourceAuth };
+  return { ok: true, method: activationMethod, targetAuthPath: linkResult.targetAuthPath, sourceAuthPath: sourceAuth };
 }
 
 function linkAccountAuthIntoCodexHome(name, sourceAuth, targetHome) {
@@ -1094,37 +1103,54 @@ function linkAccountAuthIntoCodexHome(name, sourceAuth, targetHome) {
       if (existingStat.isSymbolicLink()) {
         const resolved = fs.realpathSync(targetAuth);
         if (normalizeAuthPath(resolved) === normalizedSource) {
-          return { ok: true, targetAuthPath: targetAuth, alreadyLinked: true };
+          return { ok: true, method: "symlink", targetAuthPath: targetAuth, alreadyLinked: true };
         }
         fs.unlinkSync(targetAuth);
       } else {
-        const backupDir = accountBackupsPath(name);
-        fs.mkdirSync(backupDir, { recursive: true, mode: 0o700 });
-        const backupFile = "auth-" + new Date().toISOString().replace(/[:.]/g, "-") + ".json";
-        const backupPath = path.join(backupDir, backupFile);
-        const sourceHash = computeFileChecksum(targetAuth);
-        fs.renameSync(targetAuth, backupPath);
-        fs.chmodSync(backupPath, 0o600);
-        writeBackupMetadata(name, backupFile + ".meta", {
-          accountName: name,
-          sourceAuthPath: normalizedTarget,
-          sourceHash,
-          targetAuthPath: targetAuth,
-          backupPath,
-          status: "moved",
-          note: "Moved aside before linking global auth to account " + name,
-        });
+        moveExistingGlobalAuthToBackup(name, targetAuth, normalizedTarget);
       }
     }
 
     const tmpLink = targetAuth + "." + process.pid + "." + Date.now() + ".tmp-link";
     try { fs.unlinkSync(tmpLink); } catch {}
-    fs.symlinkSync(normalizedSource, tmpLink);
-    fs.renameSync(tmpLink, targetAuth);
-    return { ok: true, targetAuthPath: targetAuth };
+    try {
+      fs.symlinkSync(normalizedSource, tmpLink);
+      fs.renameSync(tmpLink, targetAuth);
+      return { ok: true, method: "symlink", targetAuthPath: targetAuth };
+    } catch (error) {
+      try { fs.unlinkSync(tmpLink); } catch {}
+      if (!isSymlinkPrivilegeError(error)) throw error;
+      atomicCopyFileSync(normalizedSource, targetAuth);
+      return {
+        ok: true,
+        method: "copy",
+        targetAuthPath: targetAuth,
+        sourceAuthPath: normalizedSource,
+        symlinkError: error instanceof Error ? error.message : String(error),
+      };
+    }
   } catch (error) {
     return { ok: false, error: "Failed to link global Codex auth: " + (error instanceof Error ? error.message : String(error)) };
   }
+}
+
+function moveExistingGlobalAuthToBackup(name, targetAuth, normalizedTarget) {
+  const backupDir = accountBackupsPath(name);
+  fs.mkdirSync(backupDir, { recursive: true, mode: 0o700 });
+  const backupFile = "auth-" + new Date().toISOString().replace(/[:.]/g, "-") + ".json";
+  const backupPath = path.join(backupDir, backupFile);
+  const sourceHash = computeFileChecksum(targetAuth);
+  fs.renameSync(targetAuth, backupPath);
+  safeChmodSync(backupPath, 0o600);
+  writeBackupMetadata(name, backupFile + ".meta", {
+    accountName: name,
+    sourceAuthPath: normalizedTarget,
+    sourceHash,
+    targetAuthPath: targetAuth,
+    backupPath,
+    status: "moved",
+    note: "Moved aside before activating global auth for account " + name,
+  });
 }
 
 function readAccountRateLimitsFromMeta(meta) {
@@ -1425,7 +1451,7 @@ function detectActiveProfile(codexHome) {
   for (const name of state.accounts) {
     const accountHash = computeFileChecksum(accountAuthPath(name));
     if (accountHash === codexHash) {
-      return Object.assign({ name, method: "checksum" }, baseInfo);
+      return Object.assign({ name, method: "copy" }, baseInfo);
     }
   }
 
@@ -1598,7 +1624,7 @@ async function refreshAccountToken(name, options = {}) {
     var authPath = accountAuthPath(name);
     var tmp = authPath + "." + process.pid + "." + Date.now() + ".tmp";
     fs.writeFileSync(tmp, JSON.stringify(updatedAuth, null, 2), "utf8");
-    fs.chmodSync(tmp, 0o600);
+    safeChmodSync(tmp, 0o600);
     fs.renameSync(tmp, authPath);
 
     const nextTokenInfo = getTokenInfo(updatedAuth);

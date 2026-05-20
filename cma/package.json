@@ -52,6 +52,7 @@
     "validate:role-plugins": "node --test --test-name-pattern \"role|organization template\" src/host/moa-core.test.js && node --test --test-name-pattern \"role|organization template\" src/host/team-coordination.test.js && node --test --test-name-pattern \"role|organization template\" src/webview/render-detail-regression.test.js",
     "package": "node scripts/package-vsix.mjs",
     "publish:vsix": "node scripts/package-vsix.mjs",
+    "publish:vsix:target": "node scripts/package-vsix.mjs",
     "publish:marketplace": "vsce publish"
   },
   "activationEvents": [

@@ -1,5 +1,8 @@
 function createTeamWorkerLauncher(deps = {}) {
   const {
+    resolveExecutablePath,
+  } = require("./platform-runtime");
+  const {
     vscode,
     childProcess,
     fs,
@@ -41,7 +44,8 @@ function createTeamWorkerLauncher(deps = {}) {
 
   function preflightCodexCli(model = "") {
     validateCodexModelName(model);
-    const versionProbe = childProcess.spawnSync("codex", ["--version"], {
+    const codexPath = resolveExecutablePath("codex", { extraDirs: [path.resolve(__dirname, "..", "..", "node_modules", ".bin")] });
+    const versionProbe = childProcess.spawnSync(codexPath || "codex", ["--version"], {
       encoding: "utf8",
       timeout: 2500,
     });
@@ -49,7 +53,7 @@ function createTeamWorkerLauncher(deps = {}) {
     if (versionProbe.status !== 0) {
       throw new Error((versionProbe.stderr || versionProbe.stdout || "codex CLI is not available").trim());
     }
-    const execProbe = childProcess.spawnSync("codex", ["exec", "--help"], {
+    const execProbe = childProcess.spawnSync(codexPath || "codex", ["exec", "--help"], {
       encoding: "utf8",
       timeout: 2500,
     });
@@ -199,7 +203,8 @@ function createTeamWorkerLauncher(deps = {}) {
     });
     let child;
     try {
-      child = childProcess.spawn("codex", args, {
+      const codexPath = resolveExecutablePath("codex", { extraDirs: [path.resolve(__dirname, "..", "..", "node_modules", ".bin")] });
+      child = childProcess.spawn(codexPath || "codex", args, {
         cwd,
         detached: true,
         stdio: ["ignore", out, out],
@@ -281,7 +286,8 @@ function createTeamWorkerLauncher(deps = {}) {
   }
 
   function preflightGeminiCli() {
-    const probe = childProcess.spawnSync("gemini", ["--version"], {
+    const geminiPath = resolveExecutablePath("gemini");
+    const probe = childProcess.spawnSync(geminiPath || "gemini", ["--version"], {
       encoding: "utf8",
       timeout: 8000,
     });
@@ -327,56 +333,23 @@ function createTeamWorkerLauncher(deps = {}) {
       prompt_path: promptPath,
       raw_path: rawPath,
     });
-    const script = `
-  set +e
-  printf '%s\\n' '{"type":"thread.started","provider":"gemini-cli"}' >> "$CMA_LOG_PATH"
-  printf '%s\\n' '{"type":"turn.started","provider":"gemini-cli"}' >> "$CMA_LOG_PATH"
-  status=1
-  selected_model=""
-  while IFS= read -r candidate_model; do
-    [ -n "$candidate_model" ] || continue
-    selected_model="$candidate_model"
-    printf '{"type":"item.completed","item":{"type":"command_execution","text":"gemini --model %s"}}\\n' "$candidate_model" >> "$CMA_LOG_PATH"
-    gemini --model "$candidate_model" -p "$(cat "$CMA_PROMPT_PATH")" -o text > "$CMA_RAW_PATH" 2>&1
-    status=$?
-    [ "$status" -eq 0 ] && break
-  done <<MODELS
-  $CMA_MODEL_PRIORITY
-  MODELS
-  cat "$CMA_RAW_PATH" >> "$CMA_LOG_PATH"
-  node - "$CMA_LOG_PATH" "$CMA_RAW_PATH" "$status" <<'NODE'
-  const fs = require("fs");
-  const [logPath, rawPath, statusText] = process.argv.slice(2);
-  const text = fs.existsSync(rawPath) ? fs.readFileSync(rawPath, "utf8").trim() : "";
-  const status = Number.parseInt(statusText, 10) || 0;
-  fs.appendFileSync(logPath, JSON.stringify({
-    type: "item.completed",
-    item: {
-      type: "message",
-      text,
-    },
-    provider: "gemini-cli",
-  }) + "\\n");
-  fs.appendFileSync(logPath, JSON.stringify({
-    type: "turn.completed",
-    provider: "gemini-cli",
-    exit_code: status,
-  }) + "\\n");
-  NODE
-  exit "$status"
-  `;
-    const child = childProcess.spawn("bash", ["-lc", script], {
+    const runnerPath = path.join(__dirname, "gemini-cli-runner.js");
+    const childEnv = {
+      ...process.env,
+      CMA_LOG_PATH: logPath,
+      CMA_PROMPT_PATH: promptPath,
+      CMA_RAW_PATH: rawPath,
+      CMA_MODEL: model || "",
+      CMA_MODEL_PRIORITY: modelPriority.join("\n"),
+    };
+    if (process.versions && process.versions.electron) {
+      childEnv.ELECTRON_RUN_AS_NODE = "1";
+    }
+    const child = childProcess.spawn(process.execPath, [runnerPath], {
       cwd,
       detached: true,
       stdio: "ignore",
-      env: {
-        ...process.env,
-        CMA_LOG_PATH: logPath,
-        CMA_PROMPT_PATH: promptPath,
-        CMA_RAW_PATH: rawPath,
-        CMA_MODEL: model,
-        CMA_MODEL_PRIORITY: modelPriority.join("\n"),
-      },
+      env: childEnv,
     });
     if (!child.pid) throw new Error("gemini CLI did not start a Team worker");
     child.unref();
