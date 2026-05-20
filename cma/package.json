@@ -2,7 +2,7 @@
   "name": "codex-managed-agent",
   "displayName": "Codex-Managed-Agent",
   "description": "Manage Codex agent threads inside VS Code with trace-backed inspector views, Markdown evidence exports, lifecycle actions, and local dashboard integration.",
-  "version": "1.0.37",
+  "version": "1.0.38",
   "publisher": "harzva",
   "icon": "media/codex-agent.png",
   "license": "MIT",
