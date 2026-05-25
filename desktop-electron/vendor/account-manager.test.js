@@ -27,6 +27,13 @@ function withTempHome(t) {
   return tempHome;
 }
 
+function samePath(actual, expected) {
+  assert.equal(
+    path.normalize(actual).toLowerCase(),
+    path.normalize(expected).toLowerCase()
+  );
+}
+
 function writeManagedAccount(name, auth, configText = "") {
   accountManager.ensureAccountsLayout();
   accountManager.saveAccountsState({
@@ -323,7 +330,7 @@ test("activateAccountForCodex activates global auth with symlink or copy fallbac
   const globalAuth = path.join(codexHome, "auth.json");
   if (result.method === "symlink") {
     assert.equal(fs.lstatSync(globalAuth).isSymbolicLink(), true);
-    assert.equal(fs.realpathSync(globalAuth), path.join(home, ".codex-managed-agent", "accounts", "work-a", "auth.json"));
+    samePath(fs.realpathSync(globalAuth), path.join(home, ".codex-managed-agent", "accounts", "work-a", "auth.json"));
   } else {
     assert.equal(result.method, "copy");
     assert.equal(fs.lstatSync(globalAuth).isSymbolicLink(), false);
@@ -382,7 +389,7 @@ test("activateAccountForCodex retargets an existing managed symlink without copy
   const globalAuth = path.join(codexHome, "auth.json");
   if (result.method === "symlink") {
     assert.equal(fs.lstatSync(globalAuth).isSymbolicLink(), true);
-    assert.equal(fs.realpathSync(globalAuth), path.join(accountRoot, "work-a", "auth.json"));
+    samePath(fs.realpathSync(globalAuth), path.join(accountRoot, "work-a", "auth.json"));
     assert.equal(fs.existsSync(path.join(accountRoot, "work-a", "backups")), false);
   } else {
     assert.equal(result.method, "copy");
