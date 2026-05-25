@@ -5,6 +5,7 @@
 ## 使用方式
 
 - 本文件是桌面版全面复刻 VSIX 的总控路线图；每个阶段完成后在这里打钩。
+- 阶段细化任务后续可以拆到 `desktop-electron/docs/vsix-parity-roadmap-tasks/`，本文件只保留关键门禁、优先级和跨阶段依赖。
 - VSIX 目录 `cma/` 是功能基线，桌面目录 `desktop-electron/` 是落地目标。
 - 任何桌面能力不得破坏 VSIX 发布物；复用逻辑优先从 `cma/src/host/*` 抽取或 vendoring，不能复制出长期分叉。
 - UI 可以借鉴 `qxcnm/Codex-Manager` 的浅色、左侧分组导航、密集表格和蓝绿状态语言，但不能降级为只管理账号的单一产品。
@@ -12,6 +13,26 @@
 - 回归测试不要求每次小改动都证明全部 parity；统一放到阶段门禁和最终三轮审核里执行。
 - VS Code 专属能力需要做桌面等价替代：例如 VS Code sidebar/panel 迁移为桌面多页面、terminal command 迁移为 PowerShell/CMD/PTY 启动、workspace storage 迁移为 Electron `userData`。
 - 本路线图不以“界面像”为完成标准；界面只是入口，真正完成标准是 VSIX 用户能在桌面版完成同等任务。
+
+## Summary
+
+- 当前桌面版已经具备 Electron shell、隔离 backend state、基础 session backend、第一版 CodexManager 风格多模块 UI、Windows/macOS GitHub Actions 打包链路。
+- 当前桌面版距离 VSIX 全功能复刻仍是“大骨架 + 少量真实数据”的阶段；P0 缺口集中在真实账号池、Dashboard/Board/Detail、New Agent/Resume、codex-loop、Team/MOA 编排。
+- VSIX 的真实功能范围明显大于最初 UI 截图：除了账号池，还包含 trace evidence、memory manager、skill manager、state sync、provider visibility、service capabilities、usage ledger、network/proxy、Gemini worker、MOA worker templates。
+- UI 方向确定为“浅色专业控制台 + 密集数据表 + 证据/状态面板”，但不能照搬 Codex-Manager 的功能范围；CMA 桌面版必须是 Codex agent operating console。
+- 技术方向确定为“共享核心优先”：桌面端通过同步脚本、adapter、desktop API wrapper 复用 `cma/src/host`，避免 VSIX 和 EXE 分叉成两个产品。
+- 发布方向确定为 GitHub Actions 构建，不在本地正式打包 EXE；本地只做 build/test/preview，Windows/macOS artifact 从 Actions 获取。
+
+## Key Decisions
+
+- [x] 桌面版与 VSIX 放同仓库同分支推进，保留 `cma/` 与 `desktop-electron/` 边界。
+- [x] UI 借鉴 CodexManager 审美，但产品信息架构以 CMA 功能为准。
+- [x] Windows 是一等桌面环境，所有 terminal、daemon、auth、path、quoting 都要有 Windows 原生实现。
+- [x] 桌面 state 使用 Electron `userData`，不得污染 VSIX workspace/global state。
+- [x] 正式桌面包只由 GitHub Actions 产出；本地不做正式 EXE 打包。
+- [ ] P0 阶段优先实现真实操作闭环，不优先做纯视觉 polish。
+- [ ] 每个 VSIX host 模块必须有归属：共享核心、desktop adapter、desktop-only 替代、或明确不适用。
+- [ ] 所有桌面 API 都要带来源标记和审计日志，尤其是账号激活、终端启动、worker launch、daemon 控制和代理切换。
 
 ## 当前基线
 
@@ -29,6 +50,8 @@
   - [x] `/api/health`、`/api/threads`、`/api/thread/:id`、`/api/watch`、`/api/insights/report`、`/api/codex/active`、`/api/codex/inventory`、基础 lifecycle。
   - [x] 第一版浅色账号池风格 UI。
   - [x] 2026-05-25 已补回多模块导航骨架：仪表盘、账号池、聚合 API、模型目录、密钥、请求日志、系统设置、插件中心、赞助与推荐。
+  - [x] 2026-05-25 已同步到远端 `codex-desktop-monorepo`，提交 `7bc4e7c8212956745fa5d93545a6e15a622c0d4a`。
+  - [x] 2026-05-25 GitHub Actions `Desktop Electron Build` run `26389399308` 已通过 Windows/macOS 打包。
 - 桌面当前风险：
   - [ ] UI 目前多为信息展示骨架，不具备 VSIX 版完整操作闭环。
   - [ ] account-manager、team、loop、clash、new-agent 等 VSIX host 功能还没有桌面 API 层。
@@ -214,6 +237,36 @@
 | Clash/Proxy | 完整 | 缺失 | P2 | 影响高级用户网络体验 |
 | Settings | 完整 VS Code 配置 | 部分 desktop 配置 | P1 | 要补齐配置映射 |
 | Packaging/Release | 可用 | 可用 | P1 | 要加入 parity gate |
+| Trace evidence | 完整 host 逻辑 | 缺失 | P1 | 需要证据浏览、导出和 trace dashboard |
+| Memory manager | 完整 host 逻辑 | 缺失 | P2 | 需要桌面 memory 查看/刷新/导出 |
+| Skill manager | 完整 host 逻辑 | 缺失 | P1 | Loop/Team 前置依赖 |
+| MOA orchestration | 完整 host 逻辑 | 缺失 | P0 | Team 高级编排能力必须纳入 |
+| Provider visibility | 完整 host 逻辑 | 缺失 | P1 | 账号/worker/模型状态需要统一可见性 |
+| Service capabilities | 完整 host 逻辑 | 缺失 | P1 | 桌面需要能力探测和降级说明 |
+| State sync | 完整 host 逻辑 | 缺失 | P1 | Dashboard/Detail 的数据组合层缺失 |
+
+## VSIX Host 模块归属清单
+
+| VSIX 模块 | 主要职责 | Desktop 归属 | 优先级 | 当前动作 |
+|---|---|---|---:|---|
+| `account-manager.js` | 账号导入、激活、auth 切换、Windows copy fallback | shared core + desktop API | P0 | 阶段 2 接入 |
+| `account-http.js` / `account-usage.js` | token health、usage API、账号额度 | shared core + desktop API | P0 | 阶段 2 接入 |
+| `platform-runtime.js` | shell/path/executable/quoting/chmod | shared core | P0 | 阶段 1 抽出并复用 |
+| `lifecycle*.js` | board、new agent、loop、thread lifecycle | adapter + desktop UI | P0 | 阶段 3-5 接入 |
+| `node-backend/*` | session store、usage report、watch、inventory | vendored backend -> synced core | P0 | 阶段 1 固定同步 |
+| `team-*.js` | Team workspace、task、worker、runtime reconciliation | shared core + desktop Team API | P0 | 阶段 6 接入 |
+| `moa-*.js` | MOA DAG、role templates、default workers | shared core + desktop orchestration UI | P0 | 阶段 6A 接入 |
+| `trace-*.js` | trace index、dashboard、report export | shared core + desktop evidence UI | P1 | 阶段 6B 接入 |
+| `thread-insight.js` | thread evidence prompt/report | shared core + desktop detail panel | P1 | 阶段 3/6B 接入 |
+| `usage-ledger.js` | persisted usage ingest/rebuild/report | shared core + desktop usage page | P1 | 阶段 7 接入 |
+| `network-tools.js` | Clash/proxy/probe | shared core + desktop settings/proxy page | P2 | 阶段 7 接入 |
+| `skill-manager.js` / `bundled-skills.js` | bundled skill install/list/open | shared core + desktop plugins page | P1 | 阶段 5/7 接入 |
+| `memory-manager.js` | memory read/update/export | shared core + desktop memory panel | P2 | 阶段 7B 接入 |
+| `provider-visibility.js` | provider/account/model availability | shared core + desktop status layer | P1 | 阶段 2/7 接入 |
+| `service-capabilities.js` | feature flags/capability detection | shared core + diagnostics | P1 | 阶段 1/8 接入 |
+| `state-sync.js` | dashboard aggregate、detail synthesis | shared core + desktop state store | P1 | 阶段 3 接入 |
+| `codex-link.js` | VS Code ChatGPT extension integration | desktop-only replacement | P2 | 改为 terminal/file/browser actions |
+| `panel-view.js` / `commands.js` | VS Code shell/webview bridge | not reused directly | P2 | 转换为 Electron shell/menu/router |
 
 ## 阶段 0：稳定当前桌面 UI 基线
 
@@ -221,8 +274,9 @@
 - [x] 保留 CodexManager 风格语言：左侧分组导航、浅蓝背景、白色表格卡、蓝绿状态色、密集行。
 - [x] 避免只做账号池单页，补回 CMA 多模块导航骨架。
 - [x] 本地 `desktop-electron npm test` 通过。
-- [ ] 把当前 UI 改动同步到 publish worktree，并解决远端分支与本地 tracking 的差异。
-- [ ] 下载最新 Windows artifact 到 `cmabuild/` 并人工启动检查。
+- [x] 把当前 UI 改动同步到 publish worktree，并推送到远端分支。
+- [x] GitHub Actions Windows/macOS 桌面构建通过。
+- [ ] 下载最新 Windows artifact 到 `cmabuild/` 并人工启动检查；当前 artifact 约 349MB，命令行下载超时，需要浏览器或分段下载。
 - [ ] 为 renderer 增加基础 smoke：至少校验主要 DOM 节点存在、账号空态和 mock 两行数据渲染。
 
 ## 阶段 1：共享核心与 Vendor 同步治理
@@ -346,6 +400,49 @@
   - [ ] launch payload account binding。
   - [ ] envelope ingest。
 
+## 阶段 6A：MOA / DAG 高级编排复刻
+
+- [ ] 接入 MOA core：
+  - [ ] `moa-core.js`
+  - [ ] `moa-default-workers.js`
+  - [ ] `moa-role-templates.js`
+- [ ] UI 增加 MOA 编排页面：
+  - [ ] DAG 节点列表。
+  - [ ] worker 模型/provider 配置。
+  - [ ] 并发/依赖/汇聚策略。
+  - [ ] prompt preview。
+  - [ ] run timeline。
+- [ ] 与 Team 页面打通：
+  - [ ] Team task 可生成 MOA draft。
+  - [ ] MOA run 可写回 Team trace。
+  - [ ] Worker launch 统一走同一审计日志。
+- [ ] 测试：
+  - [ ] 复用 `moa-core.test.js`。
+  - [ ] DAG serialization snapshot。
+  - [ ] worker template override 防回归。
+
+## 阶段 6B：Trace / Evidence / Report 复刻
+
+- [ ] 接入 trace core：
+  - [ ] `trace-core.js`
+  - [ ] `trace-dashboard.js`
+  - [ ] `trace-report.js`
+  - [ ] `thread-insight.js`
+- [ ] UI 增加证据视图：
+  - [ ] thread timeline。
+  - [ ] file events。
+  - [ ] command events。
+  - [ ] check/error events。
+  - [ ] raw JSONL preview。
+  - [ ] Markdown report export。
+- [ ] Dashboard/Detail 打通：
+  - [ ] thread detail 展示 trace evidence。
+  - [ ] Team worker 展示 mailbox/trace。
+  - [ ] Usage/Trace 互相跳转。
+- [ ] 测试：
+  - [ ] 复用 `trace-core.test.js`、`trace-dashboard.test.js`、`trace-report.test.js`、`thread-insight.test.js`。
+  - [ ] report export fixture 不泄露本地私密路径，必要时脱敏。
+
 ## 阶段 7：Usage / Proxy / Settings 补齐
 
 - [ ] Usage：
@@ -367,6 +464,31 @@
   - [ ] settings normalize。
   - [ ] proxy API mock。
   - [ ] usage report rebuild smoke。
+
+## 阶段 7B：Skills / Memory / Provider Visibility 补齐
+
+- [ ] Skills：
+  - [ ] bundled skill list。
+  - [ ] install/update/open skill folder。
+  - [ ] codex-loop/gemini-loop/kimi-loop 状态识别。
+  - [ ] skill install logs。
+- [ ] Memory：
+  - [ ] memory root 探测。
+  - [ ] memory summary 查看。
+  - [ ] rollout summary 索引。
+  - [ ] memory refresh/export。
+- [ ] Provider visibility：
+  - [ ] provider/account/model availability 聚合。
+  - [ ] wrapper/bundled/system/workspace 来源分类。
+  - [ ] capability warning。
+  - [ ] degraded mode 提示。
+- [ ] Service capabilities：
+  - [ ] 桌面启动时跑 capability snapshot。
+  - [ ] 设置页展示 missing tools 和修复建议。
+  - [ ] release manifest 写入 capability schema version。
+- [ ] 测试：
+  - [ ] 复用 `skill-manager.test.js`、`memory-manager.test.js`、`provider-visibility` fixtures、`service-capabilities.test.js`。
+  - [ ] Windows 无 bash/tmux 时不显示错误能力，只显示降级路径。
 
 ## 阶段 8：UI 精修与生产发布
 
@@ -402,6 +524,10 @@
 - P0 parity 完成前必须通过：
   - [ ] `cma node --test src/host/account-manager.test.js`
   - [ ] `cma node --test src/host/team-coordination.test.js`
+  - [ ] `cma node --test src/host/moa-core.test.js`
+  - [ ] `cma node --test src/host/trace-core.test.js`
+  - [ ] `cma node --test src/host/usage-ledger.test.js`
+  - [ ] `cma node --test src/host/skill-manager.test.js`
   - [ ] `cma node --test src/host/node-backend/node-backend.test.js`
   - [ ] `desktop-electron node --test test/*.test.js`
 - 发布前必须验证：
@@ -439,6 +565,11 @@
 - [ ] Team 编排能创建 workspace、保存 DAG、启动 worker、读取 envelope、展示 trace。
 - [ ] Usage Insights 能 ingest/rebuild/export。
 - [ ] Proxy/Clash/Network probe 能配置、检测、切换。
+- [ ] Trace/Evidence 能浏览、过滤、导出并与 Thread/Team 互跳。
+- [ ] MOA 编排能创建 DAG、预览 worker prompt、启动 worker、展示运行结果。
+- [ ] Skill Manager 能安装/查看 bundled skills，并支撑 loop 能力。
+- [ ] Memory Manager 能查看 memory summary、rollout summary，并导出必要证据。
+- [ ] Provider Visibility/Service Capabilities 能解释当前机器可用能力和降级原因。
 - [ ] Settings 覆盖 VSIX 配置的桌面等价项。
 - [ ] CI 能证明 desktop 与 VSIX 的共享后端不漂移。
 - [ ] Windows/macOS 桌面包均能安装启动并通过 smoke。
