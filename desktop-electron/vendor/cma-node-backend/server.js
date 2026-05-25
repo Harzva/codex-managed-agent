@@ -5,6 +5,12 @@ const { URL } = require("url");
 const os = require("os");
 const path = require("path");
 const {
+  dedupePaths: dedupeRuntimePaths,
+  executableNames,
+  pathCompareKey,
+  resolveExecutablePath,
+} = require("../platform-runtime");
+const {
   applyLifecycleAction,
   closeSessionWorkerPool,
   discoverSessionThreadsParallel,
@@ -93,9 +99,19 @@ function classifyCodexExecutableSource(executablePath) {
     if (pathLower.startsWith(`${home}/.local/bin/`) || pathLower.startsWith(`${home}/bin/`) || pathLower.startsWith(`${home}/.npm/`) || pathLower.startsWith(`${home}/.npm-global/`)) {
       labelSet.add("user");
     }
+    if (process.platform === "win32" && (
+      pathLower.startsWith(`${home}/appdata/roaming/npm/`)
+      || pathLower.startsWith(`${home}/appdata/local/npm/`)
+      || pathLower.startsWith(`${home}/scoop/`)
+    )) {
+      labelSet.add("user");
+    }
   }
 
   if (pathLower.startsWith("/usr/local/bin/") || pathLower.startsWith("/usr/bin/") || pathLower.startsWith("/usr/sbin/") || pathLower.startsWith("/opt/homebrew/bin/") || pathLower.startsWith("/bin/") || pathLower.startsWith("/sbin/")) {
+    labelSet.add("system");
+  }
+  if (process.platform === "win32" && (/^c:\/program files\//i.test(pathLower) || /^c:\/programdata\//i.test(pathLower))) {
     labelSet.add("system");
   }
 
@@ -134,9 +150,12 @@ function detectCodexExecutablePath(command, env) {
     env,
     stdio: ["ignore", "pipe", "pipe"],
   });
-  if (lookup.error || lookup.status !== 0) return null;
+  if (lookup.error || lookup.status !== 0) {
+    const fallback = resolveExecutablePath(command, { env, extraDirs: bundledExecutableDirs() });
+    return fallback && fallback !== command ? fallback : null;
+  }
   const rawPath = String(lookup.stdout || "").split(/\r?\n/).find((line) => line && line.trim());
-  return rawPath ? String(rawPath).trim() : null;
+  return rawPath ? String(rawPath).trim() : resolveExecutablePath(command, { env, extraDirs: bundledExecutableDirs() });
 }
 
 function collectCodexExecutablePaths(command, env = process.env) {
@@ -147,38 +166,37 @@ function collectCodexExecutablePaths(command, env = process.env) {
     env,
     stdio: ["ignore", "pipe", "pipe"],
   });
-  const candidateSet = new Set();
+  const candidates = [];
 
   if (!lookup.error && lookup.status === 0) {
     String(lookup.stdout || "")
       .split(/\r?\n/)
       .map((entry) => String(entry || "").trim())
       .filter(Boolean)
-      .forEach((entry) => candidateSet.add(entry));
+      .forEach((entry) => candidates.push(entry));
   }
 
-  const pathEntries = String((env && env.PATH) || "")
+  const pathEntries = String((env && (env.PATH || env.Path || env.path)) || "")
     .split(process.platform === "win32" ? ";" : ":")
     .map((entry) => String(entry || "").trim())
     .filter(Boolean);
 
-  pathEntries.forEach((entry) => {
-    const joined = path.join(entry, process.platform === "win32" ? `${command}.cmd` : command);
-    candidateSet.add(joined);
+  pathEntries.concat(bundledExecutableDirs()).forEach((entry) => {
+    executableNames(command).forEach((name) => candidates.push(path.join(entry, name)));
   });
 
   [
     path.join(os.homedir(), ".local", "bin", command),
     path.join(os.homedir(), "bin", command),
+    path.join(os.homedir(), "AppData", "Roaming", "npm", process.platform === "win32" ? `${command}.cmd` : command),
     "/usr/local/bin/codex",
     "/usr/bin/codex",
     "/opt/homebrew/bin/codex",
-    path.join(process.cwd(), "node_modules", ".bin", process.platform === "win32" ? `${command}.cmd` : command),
   ].forEach((entry) => {
-    candidateSet.add(entry);
+    candidates.push(entry);
   });
 
-  return [...candidateSet];
+  return dedupeRuntimePaths(candidates);
 }
 
 function dedupePaths(values) {
@@ -194,12 +212,19 @@ function dedupePaths(values) {
         return text;
       }
     })();
-    const key = process.platform === "win32" ? resolved.toLowerCase() : resolved;
+    const key = pathCompareKey(resolved);
     if (seen.has(key)) continue;
     seen.add(key);
     out.push(resolved);
   }
   return out;
+}
+
+function bundledExecutableDirs() {
+  return [
+    path.resolve(__dirname, "..", "..", "..", "node_modules", ".bin"),
+    path.join(process.cwd(), "node_modules", ".bin"),
+  ];
 }
 
 function readCodexVersionAtPath(command, executablePath, env = process.env, source = "candidate") {
@@ -272,7 +297,8 @@ function readActiveCodex(options = {}) {
     ...(options.env && typeof options.env === "object" ? options.env : {}),
   };
   const commandPath = detectCodexExecutablePath(command, env);
-  const probe = childProcess.spawnSync(command, ["--version"], {
+  const executable = commandPath || resolveExecutablePath(command, { env, extraDirs: bundledExecutableDirs() });
+  const probe = childProcess.spawnSync(executable || command, ["--version"], {
     encoding: "utf8",
     timeout: 2500,
     env,
@@ -284,8 +310,8 @@ function readActiveCodex(options = {}) {
       command,
       error: probe.error.message || "codex version probe failed",
       checkedAt: new Date().toISOString(),
-      source: commandPath ? "path" : "env",
-      path: commandPath || null,
+      source: executable ? "path" : "env",
+      path: executable || null,
     };
   }
   if (probe.status !== 0) {
@@ -294,16 +320,16 @@ function readActiveCodex(options = {}) {
       command,
       error: String((probe.stderr || probe.stdout || "codex --version returned non-zero exit status")).trim(),
       checkedAt: new Date().toISOString(),
-      source: commandPath ? "path" : "env",
-      path: commandPath || null,
+      source: executable ? "path" : "env",
+      path: executable || null,
     };
   }
   return {
     ok: true,
     command,
-    path: commandPath || null,
+    path: executable || null,
     version: parseCodexVersionText(probe.stdout || probe.stderr),
-    source: commandPath ? "path+version" : "version-only",
+    source: executable ? "path+version" : "version-only",
     checkedAt: new Date().toISOString(),
   };
 }

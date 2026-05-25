@@ -281,11 +281,12 @@
 
 ## 阶段 1：共享核心与 Vendor 同步治理
 
-- [ ] 建立 `scripts/sync-vsix-host-to-desktop.mjs`，同步 Node backend、host helpers 和必要 tests。
-- [ ] 明确 desktop vendor 来源：从 `cma/src/host/node-backend` 自动复制，不手改 vendor。
-- [ ] 增加 CI 检查：`desktop-electron/vendor/cma-node-backend/server.js` 与 `cma/src/host/node-backend/server.js` 的允许差异清单。
-- [ ] 抽出跨平台 runtime helper 给 desktop 使用，避免 VSIX 和 EXE 各自维护 Windows 兼容逻辑。
-- [ ] 形成 `desktop-electron/docs/ARCHITECTURE.md`：说明 main/preload/renderer/backend/account/team/loop 的边界。
+- [x] 建立 `scripts/sync-vsix-host-to-desktop.mjs`，同步 Node backend、host helpers 和必要 tests。
+- [x] 明确 desktop vendor 来源：从 `cma/src/host/node-backend` 自动复制，不手改 vendor。
+- [x] 增加 parity 检查：`desktop-electron/vendor/cma-node-backend/*` 与 `cma/src/host/node-backend/*` 必须一致。
+- [x] 同步跨平台 `platform-runtime.js` 给 desktop 使用，避免 VSIX 和 EXE 各自维护 Windows 兼容逻辑。
+- [x] 形成 `desktop-electron/docs/ARCHITECTURE.md`：说明 main/preload/renderer/backend/account/team/loop 的边界。
+- [x] GitHub Actions 通过 `npm test` 运行 `npm run check:vsix-host`，桌面构建前会阻断 vendor 漂移。
 
 ## 阶段 2：真实账号池复刻
 
