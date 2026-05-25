@@ -5,6 +5,7 @@
 ## 使用方式
 
 - 本文件是桌面版全面复刻 VSIX 的总控路线图；每个阶段完成后在这里打钩。
+- VSIX 功能导图和桌面一对一复刻检查表见 `VSIX_FEATURE_MAP.md`；本路线图的阶段任务必须能回填到功能 ID。
 - 阶段细化任务后续可以拆到 `desktop-electron/docs/vsix-parity-roadmap-tasks/`，本文件只保留关键门禁、优先级和跨阶段依赖。
 - VSIX 目录 `cma/` 是功能基线，桌面目录 `desktop-electron/` 是落地目标。
 - 任何桌面能力不得破坏 VSIX 发布物；复用逻辑优先从 `cma/src/host/*` 抽取或 vendoring，不能复制出长期分叉。
