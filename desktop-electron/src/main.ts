@@ -24,7 +24,7 @@ type NodeBackendModule = {
   createNodeBackendServer: (options?: Record<string, unknown>) => http.Server;
 };
 
-const APP_NAME = "Codex Managed Agent Desktop";
+const APP_NAME = "CodexManager";
 const DEFAULT_PORT = 18787;
 const PORT_SCAN_COUNT = 80;
 
@@ -219,12 +219,12 @@ async function callBackendApi(input: {
 function createWindow(): BrowserWindow {
   const root = appRoot();
   const win = new BrowserWindow({
-    width: 1360,
-    height: 860,
+    width: 1440,
+    height: 900,
     minWidth: 980,
     minHeight: 680,
     title: APP_NAME,
-    backgroundColor: "#111213",
+    backgroundColor: "#eef6ff",
     show: false,
     icon: path.join(root, "assets", "codex-agent.png"),
     webPreferences: {

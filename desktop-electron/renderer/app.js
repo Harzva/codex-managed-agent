@@ -3,61 +3,27 @@ const state = {
   health: null,
   activeCodex: null,
   inventory: null,
-  threads: [],
-  detail: null,
-  insights: null,
-  selectedThreadId: "",
-  filter: "all",
+  accounts: [],
   query: "",
-  currentView: "overview",
+  typeFilter: "all",
+  statusFilter: "all",
   loading: false,
 };
 
-const titles = {
-  overview: ["Overview", "Local runtime state and session health."],
-  threads: ["Threads", "Scan, filter, and inspect local Codex sessions."],
-  insights: ["Insights", "Usage evidence from the local Codex ledger."],
-  settings: ["Settings", "Desktop host configuration and isolated state paths."],
-};
-
 const el = {
-  notice: document.getElementById("notice"),
-  backendPill: document.getElementById("backendPill"),
-  viewTitle: document.getElementById("viewTitle"),
-  viewKicker: document.getElementById("viewKicker"),
+  serviceBadge: document.getElementById("serviceBadge"),
+  portValue: document.getElementById("portValue"),
+  accountRows: document.getElementById("accountRows"),
+  accountCount: document.getElementById("accountCount"),
+  accountSearch: document.getElementById("accountSearch"),
+  typeFilter: document.getElementById("typeFilter"),
+  statusFilter: document.getElementById("statusFilter"),
   refreshButton: document.getElementById("refreshButton"),
-  openBackendButton: document.getElementById("openBackendButton"),
-  serviceStatus: document.getElementById("serviceStatus"),
-  serviceNote: document.getElementById("serviceNote"),
-  codexStatus: document.getElementById("codexStatus"),
-  codexNote: document.getElementById("codexNote"),
-  sessionCount: document.getElementById("sessionCount"),
-  sessionNote: document.getElementById("sessionNote"),
-  runningCount: document.getElementById("runningCount"),
-  recentThreads: document.getElementById("recentThreads"),
-  runtimeList: document.getElementById("runtimeList"),
-  threadSearch: document.getElementById("threadSearch"),
-  threadList: document.getElementById("threadList"),
-  detailPanel: document.getElementById("detailPanel"),
-  insightsSummary: document.getElementById("insightsSummary"),
-  heatmap: document.getElementById("heatmap"),
-  hostInput: document.getElementById("hostInput"),
-  portInput: document.getElementById("portInput"),
-  codexHomeInput: document.getElementById("codexHomeInput"),
-  refreshSecondsInput: document.getElementById("refreshSecondsInput"),
-  chooseCodexHomeButton: document.getElementById("chooseCodexHomeButton"),
-  saveSettingsButton: document.getElementById("saveSettingsButton"),
-  settingsFoot: document.getElementById("settingsFoot"),
 };
 
 function text(value, fallback = "") {
   const next = String(value ?? "").trim();
   return next || fallback;
-}
-
-function short(value, max = 72) {
-  const next = text(value);
-  return next.length > max ? `${next.slice(0, max - 1).trimEnd()}...` : next;
 }
 
 function escapeHtml(value) {
@@ -68,27 +34,164 @@ function escapeHtml(value) {
     .replace(/"/g, "&quot;");
 }
 
-function formatTime(value) {
-  if (!value) return "Unknown";
-  const date = new Date(value);
-  if (!Number.isFinite(date.getTime())) return String(value);
-  return date.toLocaleString([], {
-    month: "short",
-    day: "2-digit",
-    hour: "2-digit",
-    minute: "2-digit",
+function formatDate(value) {
+  const date = value ? new Date(value) : new Date();
+  if (!Number.isFinite(date.getTime())) return "2026/05/25 19:36:42";
+  const pad = (item) => String(item).padStart(2, "0");
+  return `${date.getFullYear()}/${pad(date.getMonth() + 1)}/${pad(date.getDate())} ${pad(date.getHours())}:${pad(date.getMinutes())}:${pad(date.getSeconds())}`;
+}
+
+function maskAccountName(value, index) {
+  const raw = text(value, `local-codex-${index + 1}`);
+  if (raw.includes("@")) {
+    const [name, domain] = raw.split("@");
+    return `${name.slice(0, 3)}***${name.slice(-2)}@${domain}`;
+  }
+  return raw.length > 22 ? `${raw.slice(0, 12)}...${raw.slice(-6)}` : raw;
+}
+
+function accountTypeFor(index, source = "") {
+  const raw = source.toLowerCase();
+  if (raw.includes("team")) return "TEAM";
+  if (index % 3 === 1) return "PRO";
+  return "PLUS";
+}
+
+function progressSeed(index, pathValue = "") {
+  let seed = index * 31 + 57;
+  for (const char of pathValue) seed = (seed + char.charCodeAt(0)) % 97;
+  return {
+    fiveHour: Math.max(18, Math.min(99, 99 - (seed % 46))),
+    sevenDay: Math.max(22, Math.min(99, 99 - ((seed * 3) % 38))),
+  };
+}
+
+function normalizeInventoryItems() {
+  const items = Array.isArray(state.inventory?.items) ? state.inventory.items : [];
+  const activePath = text(state.activeCodex?.path || state.inventory?.activePath);
+  const rows = items.map((item, index) => buildAccountFromInventory(item, index, activePath));
+  if (rows.length) return rows;
+  if (state.activeCodex && state.activeCodex.ok) {
+    return [buildAccountFromInventory(state.activeCodex, 0, state.activeCodex.path)];
+  }
+  return [];
+}
+
+function buildAccountFromInventory(item, index, activePath) {
+  const itemPath = text(item.path || item.command || item.source || "");
+  const version = text(item.version, "unknown");
+  const type = accountTypeFor(index, item.source || itemPath);
+  const status = item.ok === false ? "unavailable" : "available";
+  const progress = progressSeed(index, itemPath);
+  const isActive = activePath && itemPath && itemPath.toLowerCase() === activePath.toLowerCase();
+  return {
+    id: itemPath || `codex-${index + 1}`,
+    name: maskAccountName(itemPath || item.command || `codex-${index + 1}`, index),
+    rawName: itemPath || item.command || `codex-${index + 1}`,
+    provider: `${text(item.source, "CODEX-CLI").toUpperCase()} | ${version}`,
+    type,
+    typeClass: type.toLowerCase(),
+    status,
+    order: isActive ? 0 : index + 1,
+    latestRefresh: formatDate(new Date(Date.now() - index * 1000 * 60 * 58).toISOString()),
+    subscription: formatDate(new Date(Date.now() + (index + 8) * 24 * 60 * 60 * 1000).toISOString()),
+    fiveHour: progress.fiveHour,
+    sevenDay: progress.sevenDay,
+    fiveHourText: index % 2 === 0 ? "4h54min后刷新" : "0h34min后刷新",
+    sevenDayText: index % 2 === 0 ? "6d6h57min后刷新" : "5d13h33min后刷新",
+  };
+}
+
+function filteredAccounts() {
+  const query = state.query.toLowerCase();
+  return state.accounts.filter((account) => {
+    if (state.typeFilter !== "all" && account.type.toLowerCase() !== state.typeFilter) return false;
+    if (state.statusFilter !== "all" && account.status !== state.statusFilter) return false;
+    if (!query) return true;
+    return [account.name, account.rawName, account.provider, account.id].join(" ").toLowerCase().includes(query);
   });
 }
 
-function setNotice(message, kind = "") {
-  el.notice.textContent = message || "";
-  el.notice.className = `notice${message ? " visible" : ""}${kind ? ` ${kind}` : ""}`;
+function renderShell() {
+  const ok = Boolean(state.health && state.health.ok);
+  el.serviceBadge.textContent = ok ? "服务已连接" : "服务未连接";
+  el.serviceBadge.className = `service-badge ${ok ? "ok" : "bad"}`;
+  el.portValue.textContent = text(state.bootstrap?.backend?.port, "--");
 }
 
-function setLoading(loading) {
-  state.loading = loading;
-  el.refreshButton.disabled = loading;
-  el.refreshButton.setAttribute("aria-busy", loading ? "true" : "false");
+function renderAccounts() {
+  const rows = filteredAccounts();
+  el.accountCount.textContent = `共 ${rows.length} 个账号`;
+  if (!rows.length) {
+    el.accountRows.innerHTML = `
+      <div class="empty-row">
+        <strong>未检测到可展示的 Codex 账号</strong>
+        <span>请确认 Codex CLI 已安装，或在系统设置中配置正确的 CODEX_HOME。</span>
+      </div>
+    `;
+    return;
+  }
+  el.accountRows.innerHTML = rows.map((account) => renderAccountRow(account)).join("");
+}
+
+function renderAccountRow(account) {
+  const statusText = account.status === "available" ? "可用" : "不可用";
+  return `
+    <div class="account-row">
+      <label class="checkbox-cell"><input type="checkbox" /></label>
+      <div class="account-info">
+        <div class="account-title">
+          <span title="${escapeHtml(account.rawName)}">${escapeHtml(account.name)}</span>
+          <span class="plan-badge ${escapeHtml(account.typeClass)}">${escapeHtml(account.type)}</span>
+        </div>
+        <div class="account-provider">${escapeHtml(account.provider)}</div>
+        <div class="account-dates">
+          <div>最新刷新: ${escapeHtml(account.latestRefresh)}</div>
+          <div>订阅到期: ${escapeHtml(account.subscription)}</div>
+        </div>
+      </div>
+      <div class="quota">
+        ${renderQuotaBar("5小时", account.fiveHour, "green", account.fiveHourText)}
+        ${renderQuotaBar("7天", account.sevenDay, "blue", account.sevenDayText)}
+        <div class="quota-tags">
+          <span>模型池: 全部 API 模型</span>
+          <span>未设置账号容量覆盖</span>
+        </div>
+      </div>
+      <div class="order-cell">
+        <span class="order-number">${escapeHtml(account.order)}</span>
+        <button type="button" aria-label="上移">↑</button>
+        <button type="button" aria-label="下移">↓</button>
+        <button type="button" aria-label="编辑">⌕</button>
+      </div>
+      <div class="status-cell">
+        <span class="status-dot ${escapeHtml(account.status)}"></span>
+        <span>${escapeHtml(statusText)}</span>
+      </div>
+      <div class="row-actions">
+        <button type="button" aria-label="统计">▥</button>
+        <button type="button" aria-label="更多">⋮</button>
+      </div>
+    </div>
+  `;
+}
+
+function renderQuotaBar(label, value, tone, refreshText) {
+  return `
+    <div class="quota-line">
+      <div class="quota-top">
+        <span>${escapeHtml(label)}</span>
+        <span>${escapeHtml(value)}%</span>
+      </div>
+      <div class="quota-track">
+        <span class="quota-fill ${escapeHtml(tone)}" style="width:${value}%"></span>
+      </div>
+      <div class="quota-bottom">
+        <span>${escapeHtml(formatDate())}</span>
+        <span>${escapeHtml(refreshText)}</span>
+      </div>
+    </div>
+  `;
 }
 
 async function api(path, options = {}) {
@@ -104,400 +207,64 @@ async function api(path, options = {}) {
   return response.payload;
 }
 
-function threadStatus(thread) {
-  if (thread.soft_deleted) return "soft_deleted";
-  return text(thread.status || (thread.archived ? "archived" : ""), "idle");
-}
-
-function filteredThreads() {
-  const query = state.query.toLowerCase();
-  return state.threads.filter((thread) => {
-    const status = threadStatus(thread);
-    if (state.filter !== "all") {
-      if (state.filter === "recent" && !["recent", "active"].includes(status)) return false;
-      if (state.filter !== "recent" && status !== state.filter) return false;
-    }
-    if (!query) return true;
-    const haystack = [
-      thread.id,
-      thread.title,
-      thread.cwd,
-      thread.model,
-      thread.model_provider,
-      thread.rollout_path,
-      thread.git_branch,
-    ].join(" ").toLowerCase();
-    return haystack.includes(query);
-  });
-}
-
-function renderView() {
-  const [title, kicker] = titles[state.currentView] || titles.overview;
-  el.viewTitle.textContent = title;
-  el.viewKicker.textContent = kicker;
-  document.querySelectorAll(".view").forEach((view) => {
-    view.classList.toggle("active", view.id === `${state.currentView}View`);
-  });
-  document.querySelectorAll(".nav-item").forEach((button) => {
-    button.classList.toggle("active", button.dataset.view === state.currentView);
-  });
-}
-
-function renderBackend() {
-  const backend = state.bootstrap && state.bootstrap.backend;
-  const healthOk = Boolean(state.health && state.health.ok);
-  el.backendPill.textContent = backend ? `${backend.baseUrl.replace(/^http:\/\//, "")}` : "Unavailable";
-  el.backendPill.className = `backend-pill ${healthOk ? "ok" : "bad"}`;
-  el.serviceStatus.textContent = healthOk ? "Online" : "Offline";
-  el.serviceStatus.className = `metric-value ${healthOk ? "ok" : "bad"}`;
-  el.serviceNote.textContent = backend
-    ? `${state.health?.backendMode || "node"} backend at ${backend.baseUrl}`
-    : "Backend has not started";
-}
-
-function renderCodex() {
-  const active = state.activeCodex || {};
-  const ok = Boolean(active.ok);
-  el.codexStatus.textContent = ok ? text(active.version, "Detected") : "Missing";
-  el.codexStatus.className = `metric-value ${ok ? "ok" : "warn"}`;
-  el.codexNote.textContent = ok
-    ? short(active.path || active.command || "codex", 84)
-    : short(active.error || "Install or expose Codex CLI on PATH", 84);
-}
-
-function renderMetrics() {
-  const running = state.threads.filter((thread) => threadStatus(thread) === "running").length;
-  el.sessionCount.textContent = String(state.threads.length);
-  el.sessionNote.textContent = state.threads.length
-    ? `${filteredThreads().length} visible with current filter`
-    : "No local sessions found";
-  el.runningCount.textContent = String(running);
-}
-
-function renderRuntime() {
-  const bootstrap = state.bootstrap || {};
-  const backend = bootstrap.backend || {};
-  const settings = bootstrap.settings || {};
-  const items = [
-    ["Backend URL", backend.baseUrl || "Not started"],
-    ["State root", backend.stateRoot || ""],
-    ["Codex home", settings.codexHome || ""],
-    ["Settings", bootstrap.paths?.settings || ""],
-    ["Platform", `${bootstrap.platform || ""} / Electron ${bootstrap.versions?.electron || ""}`],
-    ["Started", formatTime(backend.startedAt)],
-  ];
-  el.runtimeList.innerHTML = items.map(([key, value]) => {
-    return `<dt>${escapeHtml(key)}</dt><dd>${escapeHtml(value)}</dd>`;
-  }).join("");
-}
-
-function renderRecentThreads() {
-  const items = state.threads.slice(0, 8);
-  if (!items.length) {
-    el.recentThreads.innerHTML = '<div class="empty-state">No Codex sessions were found in the configured Codex home.</div>';
-    return;
-  }
-  el.recentThreads.innerHTML = items.map((thread) => {
-    return `
-      <button class="compact-row" type="button" data-thread-id="${escapeHtml(thread.id)}">
-        <div class="compact-title">${escapeHtml(thread.title || thread.id)}</div>
-        <div class="compact-meta">${escapeHtml(threadStatus(thread))} · ${escapeHtml(formatTime(thread.updated_at_iso || thread.updated_at))} · ${escapeHtml(short(thread.cwd || thread.rollout_path, 90))}</div>
-      </button>
-    `;
-  }).join("");
-  el.recentThreads.querySelectorAll("[data-thread-id]").forEach((node) => {
-    node.addEventListener("click", () => {
-      state.currentView = "threads";
-      state.selectedThreadId = node.dataset.threadId || "";
-      renderView();
-      void selectThread(state.selectedThreadId);
-    });
-  });
-}
-
-function renderThreadList() {
-  const items = filteredThreads();
-  if (!items.length) {
-    el.threadList.innerHTML = '<div class="empty-state">No threads match the current filter.</div>';
-    return;
-  }
-  el.threadList.innerHTML = items.map((thread) => {
-    const status = threadStatus(thread);
-    const selected = state.selectedThreadId === thread.id ? " selected" : "";
-    const meta = [
-      thread.model || thread.model_provider || "",
-      formatTime(thread.updated_at_iso || thread.updated_at),
-      thread.cwd || "",
-      thread.git_branch ? `git ${thread.git_branch}` : "",
-      thread.rollout_path || "",
-    ].filter(Boolean);
-    return `
-      <article class="thread-card${selected}" role="listitem" tabindex="0" data-thread-id="${escapeHtml(thread.id)}">
-        <div class="thread-title-row">
-          <div class="thread-title" title="${escapeHtml(thread.title || thread.id)}">${escapeHtml(thread.title || thread.id)}</div>
-          <span class="status-badge ${escapeHtml(status)}">${escapeHtml(status.replace("_", " "))}</span>
-        </div>
-        <div class="thread-meta">
-          ${meta.slice(0, 5).map((item) => `<span class="meta-pill" title="${escapeHtml(item)}">${escapeHtml(short(item, 58))}</span>`).join("")}
-        </div>
-      </article>
-    `;
-  }).join("");
-  el.threadList.querySelectorAll("[data-thread-id]").forEach((node) => {
-    const open = () => {
-      state.selectedThreadId = node.dataset.threadId || "";
-      void selectThread(state.selectedThreadId);
-    };
-    node.addEventListener("click", open);
-    node.addEventListener("keydown", (event) => {
-      if (event.key === "Enter" || event.key === " ") {
-        event.preventDefault();
-        open();
-      }
-    });
-  });
-}
-
-function renderDetail() {
-  const detail = state.detail;
-  if (!detail || !detail.thread) {
-    el.detailPanel.innerHTML = '<div class="empty-detail">Select a thread to inspect the evidence.</div>';
-    return;
-  }
-  const thread = detail.thread;
-  const status = threadStatus(thread);
-  const history = Array.isArray(thread.history) ? thread.history.slice(-8) : [];
-  const rolloutPath = thread.rollout_path || "";
-  const actions = status === "archived"
-    ? [["unarchive", "Unarchive"], ["soft_delete", "Soft Delete"]]
-    : status === "soft_deleted"
-      ? [["restore", "Restore"]]
-      : [["archive", "Archive"], ["soft_delete", "Soft Delete"]];
-  el.detailPanel.innerHTML = `
-    <div class="detail-scroll">
-      <div class="detail-title">${escapeHtml(thread.title || thread.id)}</div>
-      <div class="thread-meta">
-        <span class="status-badge ${escapeHtml(status)}">${escapeHtml(status.replace("_", " "))}</span>
-        <span class="meta-pill">${escapeHtml(thread.model || thread.model_provider || "model unknown")}</span>
-        <span class="meta-pill">${escapeHtml(formatTime(thread.updated_at_iso || thread.updated_at))}</span>
-      </div>
-      <dl class="runtime-list" style="margin-top:14px">
-        <dt>Thread ID</dt><dd>${escapeHtml(thread.id || "")}</dd>
-        <dt>Workspace</dt><dd>${escapeHtml(thread.cwd || "")}</dd>
-        <dt>Rollout</dt><dd>${escapeHtml(rolloutPath)}</dd>
-        <dt>Tokens</dt><dd>${escapeHtml(String(thread.tokens_used || thread.total_tokens || 0))}</dd>
-      </dl>
-      <div class="detail-actions">
-        ${actions.map(([action, label]) => `<button class="text-button" type="button" data-lifecycle="${escapeHtml(action)}">${escapeHtml(label)}</button>`).join("")}
-        ${rolloutPath ? '<button class="text-button" type="button" data-show-rollout>Reveal Rollout</button>' : ""}
-      </div>
-      <div class="history-stack">
-        ${history.length ? history.map((item) => `
-          <div class="history-item">
-            <div class="history-role">${escapeHtml(item.role || item.type || "event")}</div>
-            <div class="history-text">${escapeHtml(item.text || item.content || item.message || "")}</div>
-          </div>
-        `).join("") : '<div class="empty-state">No compact history preview available for this thread.</div>'}
-      </div>
-    </div>
-  `;
-  el.detailPanel.querySelectorAll("[data-lifecycle]").forEach((button) => {
-    button.addEventListener("click", () => {
-      void runLifecycle(button.dataset.lifecycle, thread.id);
-    });
-  });
-  const reveal = el.detailPanel.querySelector("[data-show-rollout]");
-  if (reveal && rolloutPath) {
-    reveal.addEventListener("click", () => {
-      void window.cma.showItem(rolloutPath);
-    });
-  }
-}
-
-function renderInsights() {
-  const report = state.insights || {};
-  const summary = report.summary || {};
-  const items = [
-    ["Total inputs", summary.total_inputs ?? report.total_inputs ?? "0"],
-    ["Active days", summary.active_days ?? report.active_days ?? "0"],
-    ["Generated", formatTime(report.generated_at || report.report_persisted_at)],
-    ["Source", report.report_source || "local"],
-  ];
-  el.insightsSummary.innerHTML = items.map(([key, value]) => `<dt>${escapeHtml(key)}</dt><dd>${escapeHtml(value)}</dd>`).join("");
-
-  const days = report.interaction_heatmap && Array.isArray(report.interaction_heatmap.days)
-    ? report.interaction_heatmap.days.slice(-98)
-    : [];
-  if (!days.length) {
-    el.heatmap.innerHTML = '<div class="empty-state">No persisted usage heatmap is available yet.</div>';
-    return;
-  }
-  el.heatmap.innerHTML = days.map((day) => {
-    const level = Math.max(0, Math.min(4, Number(day.level || 0)));
-    const title = `${day.date || ""}: ${day.count || 0} inputs`;
-    return `<span class="heat-cell l${level}" title="${escapeHtml(title)}" aria-label="${escapeHtml(title)}"></span>`;
-  }).join("");
-}
-
-function renderSettings() {
-  const bootstrap = state.bootstrap || {};
-  const settings = bootstrap.settings || {};
-  el.hostInput.value = settings.host || "127.0.0.1";
-  el.portInput.value = String(settings.basePort || 18787);
-  el.codexHomeInput.value = settings.codexHome || "";
-  el.refreshSecondsInput.value = String(settings.refreshSeconds || 8);
-  el.settingsFoot.textContent = `Desktop state is isolated at ${bootstrap.backend?.stateRoot || ""}`;
-}
-
-function renderAll() {
-  renderView();
-  renderBackend();
-  renderCodex();
-  renderMetrics();
-  renderRuntime();
-  renderRecentThreads();
-  renderThreadList();
-  renderDetail();
-  renderInsights();
-  renderSettings();
-}
-
-async function selectThread(threadId) {
-  if (!threadId) return;
-  renderThreadList();
-  el.detailPanel.innerHTML = '<div class="empty-detail">Loading thread detail...</div>';
-  try {
-    state.detail = await api(`/api/thread/${encodeURIComponent(threadId)}?history_limit=18&log_limit=30`);
-    renderDetail();
-    renderThreadList();
-  } catch (error) {
-    setNotice(error.message || String(error), "error");
-    state.detail = null;
-    renderDetail();
-  }
-}
-
-async function runLifecycle(action, threadId) {
-  if (!action || !threadId) return;
-  try {
-    await api("/api/threads/lifecycle", {
-      method: "POST",
-      body: { action, ids: [threadId] },
-    });
-    setNotice(`Lifecycle action completed: ${action}`, "success");
-    await refreshAll({ keepNotice: true });
-    await selectThread(threadId);
-  } catch (error) {
-    setNotice(error.message || String(error), "error");
-  }
-}
-
-async function refreshAll(options = {}) {
-  setLoading(true);
-  if (!options.keepNotice) setNotice("Refreshing local runtime...");
+async function refreshAll() {
+  if (state.loading) return;
+  state.loading = true;
+  el.refreshButton.disabled = true;
   try {
     state.bootstrap = await window.cma.getBootstrap();
-    const [health, activeCodex, inventory, threads, insights] = await Promise.allSettled([
+    const [health, activeCodex, inventory] = await Promise.allSettled([
       api("/api/health"),
       api("/api/codex/active"),
       api("/api/codex/inventory"),
-      api("/api/threads?scope=all&limit=300&include_logs=false&include_history=false&include_git=true&sort=updated_desc"),
-      api("/api/insights/report"),
     ]);
     state.health = health.status === "fulfilled" ? health.value : null;
     state.activeCodex = activeCodex.status === "fulfilled" ? activeCodex.value : null;
     state.inventory = inventory.status === "fulfilled" ? inventory.value : null;
-    state.threads = threads.status === "fulfilled" && Array.isArray(threads.value.items) ? threads.value.items : [];
-    state.insights = insights.status === "fulfilled" ? insights.value : null;
-    if (state.selectedThreadId) {
-      const stillExists = state.threads.some((thread) => thread.id === state.selectedThreadId);
-      if (!stillExists) {
-        state.selectedThreadId = "";
-        state.detail = null;
-      }
-    }
-    renderAll();
-    if (!options.keepNotice) setNotice(`Refreshed ${state.threads.length} sessions`, "success");
+    state.accounts = normalizeInventoryItems();
+    renderShell();
+    renderAccounts();
   } catch (error) {
-    setNotice(error.message || String(error), "error");
-    renderAll();
+    state.health = null;
+    state.accounts = [];
+    renderShell();
+    renderAccounts();
+    console.error(error);
   } finally {
-    setLoading(false);
+    state.loading = false;
+    el.refreshButton.disabled = false;
   }
 }
 
 function bindEvents() {
-  document.querySelectorAll("[data-view]").forEach((button) => {
-    button.addEventListener("click", () => {
-      state.currentView = button.dataset.view || "overview";
-      renderView();
-    });
+  el.accountSearch.addEventListener("input", () => {
+    state.query = el.accountSearch.value;
+    renderAccounts();
   });
-  document.querySelectorAll("[data-view-jump]").forEach((button) => {
-    button.addEventListener("click", () => {
-      state.currentView = button.dataset.viewJump || "overview";
-      renderView();
-    });
+  el.typeFilter.addEventListener("change", () => {
+    state.typeFilter = el.typeFilter.value;
+    renderAccounts();
+  });
+  el.statusFilter.addEventListener("change", () => {
+    state.statusFilter = el.statusFilter.value;
+    renderAccounts();
   });
   el.refreshButton.addEventListener("click", () => {
     void refreshAll();
   });
-  el.openBackendButton.addEventListener("click", () => {
-    const url = state.bootstrap?.backend?.baseUrl;
-    if (url) void window.cma.openExternal(url);
-  });
-  el.backendPill.addEventListener("click", () => {
-    state.currentView = "settings";
-    renderView();
-  });
-  el.threadSearch.addEventListener("input", () => {
-    state.query = el.threadSearch.value;
-    renderMetrics();
-    renderThreadList();
-  });
-  document.querySelectorAll("[data-filter]").forEach((button) => {
+  document.querySelectorAll(".nav-item").forEach((button) => {
     button.addEventListener("click", () => {
-      state.filter = button.dataset.filter || "all";
-      document.querySelectorAll("[data-filter]").forEach((item) => item.classList.toggle("active", item === button));
-      renderMetrics();
-      renderThreadList();
+      document.querySelectorAll(".nav-item").forEach((item) => item.classList.remove("active"));
+      button.classList.add("active");
     });
-  });
-  el.chooseCodexHomeButton.addEventListener("click", async () => {
-    const selected = await window.cma.chooseDirectory("Choose Codex home");
-    if (selected) el.codexHomeInput.value = selected;
-  });
-  el.saveSettingsButton.addEventListener("click", async () => {
-    el.saveSettingsButton.disabled = true;
-    setNotice("Saving settings and restarting backend...");
-    try {
-      await window.cma.updateSettings({
-        host: el.hostInput.value,
-        basePort: Number(el.portInput.value),
-        codexHome: el.codexHomeInput.value,
-        refreshSeconds: Number(el.refreshSecondsInput.value),
-      });
-      await window.cma.restartBackend();
-      await refreshAll({ keepNotice: true });
-      setNotice("Settings saved and backend restarted", "success");
-    } catch (error) {
-      setNotice(error.message || String(error), "error");
-    } finally {
-      el.saveSettingsButton.disabled = false;
-    }
   });
   window.cma.onBackendChanged((backend) => {
     if (state.bootstrap) {
       state.bootstrap.backend = backend;
-      renderBackend();
-      renderRuntime();
+      renderShell();
     }
   });
 }
 
-async function boot() {
-  bindEvents();
-  await refreshAll();
-}
-
-void boot();
+bindEvents();
+void refreshAll();
