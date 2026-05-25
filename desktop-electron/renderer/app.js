@@ -3,10 +3,13 @@ const state = {
   health: null,
   activeCodex: null,
   inventory: null,
+  threads: [],
+  insights: null,
   accounts: [],
   query: "",
   typeFilter: "all",
   statusFilter: "all",
+  currentView: "accounts",
   loading: false,
 };
 
@@ -19,6 +22,10 @@ const el = {
   typeFilter: document.getElementById("typeFilter"),
   statusFilter: document.getElementById("statusFilter"),
   refreshButton: document.getElementById("refreshButton"),
+  dashboardStats: document.getElementById("dashboardStats"),
+  sessionRows: document.getElementById("sessionRows"),
+  insightPanel: document.getElementById("insightPanel"),
+  settingsPanel: document.getElementById("settingsPanel"),
 };
 
 function text(value, fallback = "") {
@@ -41,13 +48,18 @@ function formatDate(value) {
   return `${date.getFullYear()}/${pad(date.getMonth() + 1)}/${pad(date.getDate())} ${pad(date.getHours())}:${pad(date.getMinutes())}:${pad(date.getSeconds())}`;
 }
 
+function short(value, max = 64) {
+  const next = text(value);
+  return next.length > max ? `${next.slice(0, max - 1).trimEnd()}...` : next;
+}
+
 function maskAccountName(value, index) {
   const raw = text(value, `local-codex-${index + 1}`);
   if (raw.includes("@")) {
     const [name, domain] = raw.split("@");
     return `${name.slice(0, 3)}***${name.slice(-2)}@${domain}`;
   }
-  return raw.length > 22 ? `${raw.slice(0, 12)}...${raw.slice(-6)}` : raw;
+  return raw.length > 24 ? `${raw.slice(0, 12)}...${raw.slice(-7)}` : raw;
 }
 
 function accountTypeFor(index, source = "") {
@@ -112,11 +124,45 @@ function filteredAccounts() {
   });
 }
 
+function threadStatus(thread) {
+  if (thread.soft_deleted) return "已删除";
+  if (thread.archived) return "已归档";
+  return text(thread.status, "可用");
+}
+
 function renderShell() {
   const ok = Boolean(state.health && state.health.ok);
   el.serviceBadge.textContent = ok ? "服务已连接" : "服务未连接";
   el.serviceBadge.className = `service-badge ${ok ? "ok" : "bad"}`;
   el.portValue.textContent = text(state.bootstrap?.backend?.port, "--");
+}
+
+function renderView() {
+  document.querySelectorAll(".nav-item").forEach((button) => {
+    button.classList.toggle("active", button.dataset.view === state.currentView);
+  });
+  document.querySelectorAll(".view").forEach((view) => {
+    view.classList.toggle("active", view.dataset.view === state.currentView);
+  });
+}
+
+function renderDashboard() {
+  if (!el.dashboardStats) return;
+  const running = state.threads.filter((thread) => String(thread.status || "").toLowerCase() === "running").length;
+  const okAccounts = state.accounts.filter((account) => account.status === "available").length;
+  const stats = [
+    ["账号池", `${okAccounts}/${state.accounts.length}`, "可用账号 / 全部账号"],
+    ["Codex 会话", String(state.threads.length), "本地会话索引"],
+    ["运行中", String(running), "进程证据检测"],
+    ["后端端口", text(state.bootstrap?.backend?.port, "--"), "桌面隔离服务"],
+  ];
+  el.dashboardStats.innerHTML = stats.map(([label, value, note]) => `
+    <article class="stat-card">
+      <div class="stat-label">${escapeHtml(label)}</div>
+      <div class="stat-value">${escapeHtml(value)}</div>
+      <div class="stat-note">${escapeHtml(note)}</div>
+    </article>
+  `).join("");
 }
 
 function renderAccounts() {
@@ -194,6 +240,75 @@ function renderQuotaBar(label, value, tone, refreshText) {
   `;
 }
 
+function renderSessions() {
+  if (!el.sessionRows) return;
+  const rows = state.threads.slice(0, 50);
+  if (!rows.length) {
+    el.sessionRows.innerHTML = '<div class="empty-row"><strong>暂无 Codex 会话</strong><span>配置 CODEX_HOME 后会自动扫描本地 rollout 记录。</span></div>';
+    return;
+  }
+  el.sessionRows.innerHTML = rows.map((thread) => `
+    <div class="session-row">
+      <div>
+        <strong title="${escapeHtml(thread.id)}">${escapeHtml(short(thread.title || thread.id, 72))}</strong>
+        <span>${escapeHtml(short(thread.cwd || thread.rollout_path || "", 96))}</span>
+      </div>
+      <div>${escapeHtml(thread.model || thread.model_provider || "unknown")}</div>
+      <div>${escapeHtml(threadStatus(thread))}</div>
+      <div>${escapeHtml(formatDate(thread.updated_at_iso || thread.updated_at))}</div>
+    </div>
+  `).join("");
+}
+
+function renderInsights() {
+  if (!el.insightPanel) return;
+  const report = state.insights || {};
+  const summary = report.summary || {};
+  const items = [
+    ["输入总量", summary.total_inputs ?? report.total_inputs ?? "0"],
+    ["活跃天数", summary.active_days ?? report.active_days ?? "0"],
+    ["报告来源", report.report_source || "local"],
+    ["生成时间", formatDate(report.generated_at || report.report_persisted_at)],
+  ];
+  el.insightPanel.innerHTML = items.map(([label, value]) => `
+    <div class="info-line"><span>${escapeHtml(label)}</span><strong>${escapeHtml(value)}</strong></div>
+  `).join("");
+}
+
+function renderSettings() {
+  if (!el.settingsPanel) return;
+  const settings = state.bootstrap?.settings || {};
+  const backend = state.bootstrap?.backend || {};
+  const rows = [
+    ["后端地址", backend.baseUrl || "--"],
+    ["状态目录", backend.stateRoot || "--"],
+    ["Codex Home", settings.codexHome || "--"],
+    ["刷新间隔", `${settings.refreshSeconds || 8}s`],
+  ];
+  el.settingsPanel.innerHTML = rows.map(([label, value]) => `
+    <div class="info-line"><span>${escapeHtml(label)}</span><strong>${escapeHtml(value)}</strong></div>
+  `).join("");
+}
+
+function renderFeaturePlaceholders() {
+  document.querySelectorAll("[data-feature-count]").forEach((node) => {
+    const kind = node.dataset.featureCount;
+    const value = kind === "accounts" ? state.accounts.length : kind === "sessions" ? state.threads.length : 0;
+    node.textContent = String(value);
+  });
+}
+
+function renderAll() {
+  renderShell();
+  renderView();
+  renderDashboard();
+  renderAccounts();
+  renderSessions();
+  renderInsights();
+  renderSettings();
+  renderFeaturePlaceholders();
+}
+
 async function api(path, options = {}) {
   const response = await window.cma.api({
     method: options.method || "GET",
@@ -213,22 +328,24 @@ async function refreshAll() {
   el.refreshButton.disabled = true;
   try {
     state.bootstrap = await window.cma.getBootstrap();
-    const [health, activeCodex, inventory] = await Promise.allSettled([
+    const [health, activeCodex, inventory, threads, insights] = await Promise.allSettled([
       api("/api/health"),
       api("/api/codex/active"),
       api("/api/codex/inventory"),
+      api("/api/threads?scope=all&limit=300&include_logs=false&include_history=false&include_git=true&sort=updated_desc"),
+      api("/api/insights/report"),
     ]);
     state.health = health.status === "fulfilled" ? health.value : null;
     state.activeCodex = activeCodex.status === "fulfilled" ? activeCodex.value : null;
     state.inventory = inventory.status === "fulfilled" ? inventory.value : null;
+    state.threads = threads.status === "fulfilled" && Array.isArray(threads.value.items) ? threads.value.items : [];
+    state.insights = insights.status === "fulfilled" ? insights.value : null;
     state.accounts = normalizeInventoryItems();
-    renderShell();
-    renderAccounts();
+    renderAll();
   } catch (error) {
     state.health = null;
     state.accounts = [];
-    renderShell();
-    renderAccounts();
+    renderAll();
     console.error(error);
   } finally {
     state.loading = false;
@@ -254,14 +371,15 @@ function bindEvents() {
   });
   document.querySelectorAll(".nav-item").forEach((button) => {
     button.addEventListener("click", () => {
-      document.querySelectorAll(".nav-item").forEach((item) => item.classList.remove("active"));
-      button.classList.add("active");
+      state.currentView = button.dataset.view || "accounts";
+      renderView();
     });
   });
   window.cma.onBackendChanged((backend) => {
     if (state.bootstrap) {
       state.bootstrap.backend = backend;
       renderShell();
+      renderSettings();
     }
   });
 }

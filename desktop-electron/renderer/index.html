@@ -105,56 +105,144 @@
         </header>
 
         <section class="content">
-          <div class="toolbar-card">
-            <label class="search-field">
-              <span class="search-icon" aria-hidden="true"></span>
-              <input id="accountSearch" type="search" autocomplete="off" placeholder="搜索账号名 / 编号..." />
-            </label>
-            <select id="typeFilter" aria-label="账号类型">
-              <option value="all">全部类型</option>
-              <option value="plus">PLUS</option>
-              <option value="pro">PRO</option>
-              <option value="team">TEAM</option>
-            </select>
-            <select id="statusFilter" aria-label="账号状态">
-              <option value="all">全部</option>
-              <option value="available">可用</option>
-              <option value="warning">需关注</option>
-              <option value="unavailable">不可用</option>
-            </select>
-            <div class="toolbar-spacer"></div>
-            <button class="action-button" type="button" id="refreshButton">
-              <span class="bolt-icon" aria-hidden="true"></span>
-              <span>预热</span>
-            </button>
-            <button class="action-button" type="button">
-              <span>账号操作</span>
-              <span class="dots" aria-hidden="true"></span>
-            </button>
-          </div>
-
-          <div class="account-card">
-            <div class="account-header">
-              <label class="checkbox-cell"><input type="checkbox" /></label>
-              <div>账号信息</div>
-              <div>额度详情</div>
-              <div>顺序</div>
-              <div>状态</div>
-              <div>操作</div>
+          <section class="view" data-view="dashboard">
+            <div class="summary-grid" id="dashboardStats"></div>
+            <div class="feature-grid">
+              <article class="feature-card">
+                <h2>本地 Codex 运行态</h2>
+                <p>展示 CLI 探测、端口、会话索引和桌面隔离状态。</p>
+              </article>
+              <article class="feature-card">
+                <h2>账号池与模型路由</h2>
+                <p>后续账号容量、模型池、API 聚合都挂在同一套视觉系统下。</p>
+              </article>
             </div>
-            <div class="account-rows" id="accountRows"></div>
-          </div>
+          </section>
 
-          <div class="table-footer">
-            <div id="accountCount">共 0 个账号</div>
-            <div class="pager">
-              <span>每页显示</span>
-              <button class="page-size" type="button">20⌄</button>
-              <button class="page-button" type="button" disabled>上一页</button>
-              <strong>第 1 / 1 页</strong>
-              <button class="page-button" type="button" disabled>下一页</button>
+          <section class="view active" data-view="accounts">
+            <div class="toolbar-card">
+              <label class="search-field">
+                <span class="search-icon" aria-hidden="true"></span>
+                <input id="accountSearch" type="search" autocomplete="off" placeholder="搜索账号名 / 编号..." />
+              </label>
+              <select id="typeFilter" aria-label="账号类型">
+                <option value="all">全部类型</option>
+                <option value="plus">PLUS</option>
+                <option value="pro">PRO</option>
+                <option value="team">TEAM</option>
+              </select>
+              <select id="statusFilter" aria-label="账号状态">
+                <option value="all">全部</option>
+                <option value="available">可用</option>
+                <option value="warning">需关注</option>
+                <option value="unavailable">不可用</option>
+              </select>
+              <div class="toolbar-spacer"></div>
+              <button class="action-button" type="button" id="refreshButton">
+                <span class="bolt-icon" aria-hidden="true"></span>
+                <span>预热</span>
+              </button>
+              <button class="action-button" type="button">
+                <span>账号操作</span>
+                <span class="dots" aria-hidden="true"></span>
+              </button>
             </div>
-          </div>
+
+            <div class="account-card">
+              <div class="account-header">
+                <label class="checkbox-cell"><input type="checkbox" /></label>
+                <div>账号信息</div>
+                <div>额度详情</div>
+                <div>顺序</div>
+                <div>状态</div>
+                <div>操作</div>
+              </div>
+              <div class="account-rows" id="accountRows"></div>
+            </div>
+
+            <div class="table-footer">
+              <div id="accountCount">共 0 个账号</div>
+              <div class="pager">
+                <span>每页显示</span>
+                <button class="page-size" type="button">20⌄</button>
+                <button class="page-button" type="button" disabled>上一页</button>
+                <strong>第 1 / 1 页</strong>
+                <button class="page-button" type="button" disabled>下一页</button>
+              </div>
+            </div>
+          </section>
+
+          <section class="view" data-view="api">
+            <div class="feature-grid">
+              <article class="feature-card wide">
+                <h2>聚合 API</h2>
+                <p>CMA 的 API 聚合视图会在这里承载密钥、路由、请求配额和后端健康状态。</p>
+                <div class="feature-metric"><span data-feature-count="accounts">0</span><small>已检测账号候选</small></div>
+              </article>
+            </div>
+          </section>
+
+          <section class="view" data-view="models">
+            <div class="feature-grid">
+              <article class="feature-card wide">
+                <h2>平台模型目录</h2>
+                <p>用于统一展示 Codex、OpenAI 兼容 API、Gemini worker 和后续模型供应商。</p>
+              </article>
+            </div>
+          </section>
+
+          <section class="view" data-view="keys">
+            <div class="feature-grid">
+              <article class="feature-card wide">
+                <h2>平台密钥</h2>
+                <p>后续会放置本地安全密钥、代理配置、令牌健康检查和权限边界。</p>
+              </article>
+            </div>
+          </section>
+
+          <section class="view" data-view="logs">
+            <div class="account-card compact-card">
+              <div class="section-title">Codex 会话与请求日志</div>
+              <div class="session-header">
+                <div>会话</div>
+                <div>模型</div>
+                <div>状态</div>
+                <div>更新时间</div>
+              </div>
+              <div id="sessionRows"></div>
+            </div>
+          </section>
+
+          <section class="view" data-view="settings">
+            <div class="feature-grid two">
+              <article class="feature-card">
+                <h2>系统设置</h2>
+                <div id="settingsPanel" class="info-stack"></div>
+              </article>
+              <article class="feature-card">
+                <h2>用量洞察</h2>
+                <div id="insightPanel" class="info-stack"></div>
+              </article>
+            </div>
+          </section>
+
+          <section class="view" data-view="plugins">
+            <div class="feature-grid">
+              <article class="feature-card wide">
+                <h2>插件中心</h2>
+                <p>这里预留 CMA 扩展能力入口：worker、loop、外部模型通道、导出与自动化。</p>
+              </article>
+            </div>
+          </section>
+
+          <section class="view" data-view="support">
+            <div class="feature-grid">
+              <article class="feature-card wide">
+                <h2>赞助与推荐</h2>
+                <p>保留产品信息与链接位，但不干扰主要工程操作界面。</p>
+              </article>
+            </div>
+          </section>
         </section>
       </main>
     </div>
