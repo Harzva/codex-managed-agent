@@ -28,7 +28,12 @@ const copyGroups = [
     from: vsixHost,
     to: desktopVendor,
     files: [
+      "account-http.js",
+      "account-manager.js",
+      "account-manager.test.js",
+      "account-usage.js",
       "platform-runtime.js",
+      "usage-ledger.js",
     ],
   },
 ];

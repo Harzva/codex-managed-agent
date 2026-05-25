@@ -880,3 +880,101 @@ test("serves Node write routes with sidecar state", async (t) => {
   assert.equal(hardDelete.statusCode, 409);
   assert.match(hardDelete.body.detail, /hard_delete/);
 });
+
+test("serves account management routes through injected account manager", async (t) => {
+  const calls = [];
+  const payload = {
+    installed: true,
+    accounts: ["alpha"],
+    currentAccount: "alpha",
+    accountDetails: {
+      alpha: {
+        type: "codex",
+        tokenHealth: "ok",
+        lastActivationStatus: "copied",
+      },
+    },
+    activeProfileName: "alpha",
+  };
+  const accountManager = {
+    readAccountsForPayload: () => ({ ...payload, calls: calls.slice() }),
+    importCurrentAuthAsProfile: (name, options) => {
+      calls.push(["importCurrentAuthAsProfile", name, options.codexHome]);
+      return { ok: true, imported: [name] };
+    },
+    importAuthFileAsProfile: (name, options) => {
+      calls.push(["importAuthFileAsProfile", name, options.authPath]);
+      return { ok: true, imported: [name] };
+    },
+    prepareAccountLogin: (name) => {
+      calls.push(["prepareAccountLogin", name]);
+      return { ok: true, name, codexHome: "/tmp/login" };
+    },
+    activateAccountForCodex: async (name, codexHome) => {
+      calls.push(["activateAccountForCodex", name, codexHome]);
+      return { ok: true, name, method: "copy" };
+    },
+    refreshAccountToken: async (name, options) => {
+      calls.push(["refreshAccountToken", name, options.force]);
+      return { ok: true, name };
+    },
+    fetchAccountUsage: async (name) => {
+      calls.push(["fetchAccountUsage", name]);
+      return { ok: true, name, usage: { totalTokens: 42 } };
+    },
+    removeAccount: (name) => {
+      calls.push(["removeAccount", name]);
+      return { ok: true, removed: name };
+    },
+  };
+  const server = createNodeBackendServer({
+    codexHome: "/tmp/codex-home",
+    accountManager,
+  });
+  await new Promise((resolve) => server.listen(0, "127.0.0.1", resolve));
+  const { port } = server.address();
+  const baseUrl = `http://127.0.0.1:${port}`;
+  t.after(() => server.close());
+
+  const list = await requestJson(baseUrl, "GET", "/api/accounts");
+  assert.equal(list.statusCode, 200);
+  assert.deepEqual(list.body.accounts, ["alpha"]);
+
+  const imported = await requestJson(baseUrl, "POST", "/api/accounts/import", { name: "beta" });
+  assert.equal(imported.statusCode, 200);
+  assert.equal(imported.body.ok, true);
+
+  const importedFile = await requestJson(baseUrl, "POST", "/api/accounts/import", { name: "gamma", authPath: "/tmp/auth.json" });
+  assert.equal(importedFile.statusCode, 200);
+  assert.equal(importedFile.body.ok, true);
+
+  const login = await requestJson(baseUrl, "POST", "/api/accounts/login-session", { name: "delta" });
+  assert.equal(login.statusCode, 200);
+  assert.equal(login.body.result.codexHome, "/tmp/login");
+
+  const activated = await requestJson(baseUrl, "POST", "/api/accounts/alpha/activate", {});
+  assert.equal(activated.statusCode, 200);
+  assert.equal(activated.body.result.method, "copy");
+
+  const refreshed = await requestJson(baseUrl, "POST", "/api/accounts/alpha/refresh-token", { force: true });
+  assert.equal(refreshed.statusCode, 200);
+  assert.equal(refreshed.body.result.ok, true);
+
+  const usage = await requestJson(baseUrl, "POST", "/api/accounts/alpha/fetch-usage", {});
+  assert.equal(usage.statusCode, 200);
+  assert.equal(usage.body.result.usage.totalTokens, 42);
+
+  const removed = await requestJson(baseUrl, "DELETE", "/api/accounts/alpha", undefined);
+  assert.equal(removed.statusCode, 200);
+  assert.equal(removed.body.result.removed, "alpha");
+
+  assert.deepEqual(calls.map((call) => call[0]), [
+    "importCurrentAuthAsProfile",
+    "importAuthFileAsProfile",
+    "prepareAccountLogin",
+    "activateAccountForCodex",
+    "refreshAccountToken",
+    "fetchAccountUsage",
+    "removeAccount",
+  ]);
+});

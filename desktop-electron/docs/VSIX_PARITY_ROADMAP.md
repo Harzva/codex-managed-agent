@@ -290,21 +290,22 @@
 
 ## 阶段 2：真实账号池复刻
 
-- [ ] 把 `account-manager.js`、`account-http.js`、`account-usage.js` 接入 desktop main 或 desktop backend。
+- [x] 把 `account-manager.js`、`account-http.js`、`account-usage.js` 接入 desktop backend vendor。
 - [ ] 新增 desktop API：
-  - [ ] `GET /api/accounts`
-  - [ ] `POST /api/accounts/import`
-  - [ ] `POST /api/accounts/:name/activate`
-  - [ ] `POST /api/accounts/:name/refresh-token`
-  - [ ] `POST /api/accounts/:name/fetch-usage`
-  - [ ] `DELETE /api/accounts/:name`
-  - [ ] `POST /api/accounts/login-session`
-- [ ] UI 表格从 Codex executable inventory 改为真实 account payload。
+  - [x] `GET /api/accounts`
+  - [x] `POST /api/accounts/import`
+  - [x] `POST /api/accounts/:name/activate`
+  - [x] `POST /api/accounts/:name/refresh-token`
+  - [x] `POST /api/accounts/:name/fetch-usage`
+  - [x] `DELETE /api/accounts/:name`
+  - [x] `POST /api/accounts/login-session`
+- [x] UI 表格优先读取真实 account payload；无账号时 fallback 到 Codex executable inventory。
 - [ ] 支持 Windows 无开发者模式 copy fallback 的状态文案。
 - [ ] 支持账号类型、token health、quota、usage URL、active profile 标记。
 - [ ] 登录流程：桌面打开 PowerShell/CMD 或内置 terminal，设置 `CODEX_HOME` 后执行 `codex login --device-auth`。
 - [ ] 测试：
-  - [ ] account-manager 原测试在 desktop 环境通过。
+  - [x] account-manager 原测试在 desktop 环境通过。
+  - [x] Node backend account routes 有 injected manager 单元测试。
   - [ ] Windows symlink 失败时 UI 显示 `copy` 激活。
 
 ## 阶段 3：Dashboard / Board / Thread Detail 复刻

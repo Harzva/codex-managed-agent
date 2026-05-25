@@ -18,7 +18,12 @@ const pairs = [
   ["node-backend/session-worker-pool.js", "cma-node-backend/session-worker-pool.js"],
   ["node-backend/session-worker.js", "cma-node-backend/session-worker.js"],
   ["node-backend/usage-report.js", "cma-node-backend/usage-report.js"],
+  ["account-http.js", "account-http.js"],
+  ["account-manager.js", "account-manager.js"],
+  ["account-manager.test.js", "account-manager.test.js"],
+  ["account-usage.js", "account-usage.js"],
   ["platform-runtime.js", "platform-runtime.js"],
+  ["usage-ledger.js", "usage-ledger.js"],
 ];
 
 function readNormalized(file) {

@@ -149,6 +149,20 @@ async function withFixtureServer(run) {
     readActiveCodex: () => fixtureActiveCodex,
     readCodexInventory: () => fixtureCodexInventory,
     readWatchlist: () => fixtureWatchlist,
+    accountManager: {
+      readAccountsForPayload: () => ({
+        installed: true,
+        accounts: ["alpha"],
+        currentAccount: "alpha",
+        accountDetails: {
+          alpha: {
+            type: "codex",
+            tokenHealth: "ok",
+          },
+        },
+        activeProfileName: "alpha",
+      }),
+    },
   });
   await new Promise((resolve) => server.listen(0, "127.0.0.1", resolve));
   const { port } = server.address();
@@ -177,6 +191,7 @@ test("fixture smoke covers Node backend parity endpoints", async () => {
       watch: true,
       rename: false,
       hardDelete: false,
+      accounts: true,
     });
 
     const threads = await getJson(baseUrl, "/api/threads?include_logs=true&include_history=true&scope=live");
@@ -258,6 +273,12 @@ test("fixture smoke covers Node backend parity endpoints", async () => {
     assert.equal(inventory.body.items[1].installSource, "system");
     assert.equal(inventory.body.items[0].installSourceTags.includes("system"), true);
     assert.equal(inventory.body.items[1].installSourceTags.includes("system"), true);
+
+    const accounts = await getJson(baseUrl, "/api/accounts");
+    assert.equal(accounts.statusCode, 200);
+    requiredKeys(accounts.body, ["installed", "accounts", "currentAccount", "accountDetails", "activeProfileName"]);
+    assert.deepEqual(accounts.body.accounts, ["alpha"]);
+    assert.equal(accounts.body.accountDetails.alpha.type, "codex");
 
     const watch = await getJson(baseUrl, "/api/watch");
     assert.equal(watch.statusCode, 200);

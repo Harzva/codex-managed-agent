@@ -10,7 +10,7 @@
     "dev": "npm run build && electron . --dev",
     "sync:vsix-host": "node scripts/sync-vsix-host-to-desktop.mjs",
     "check:vsix-host": "node scripts/check-vsix-host-vendor.mjs",
-    "test": "npm run build && npm run check:vsix-host && node --test test/*.test.js vendor/cma-node-backend/*.test.js",
+    "test": "npm run build && npm run check:vsix-host && node --test test/*.test.js vendor/cma-node-backend/*.test.js vendor/account-manager.test.js",
     "package:dir": "npm run build && electron-builder --dir",
     "package:win": "npm run build && electron-builder --win nsis portable --x64",
     "package:mac": "npm run build && electron-builder --mac dmg zip --universal",

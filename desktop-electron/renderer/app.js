@@ -3,6 +3,7 @@ const state = {
   health: null,
   activeCodex: null,
   inventory: null,
+  accountsPayload: null,
   threads: [],
   insights: null,
   accounts: [],
@@ -87,6 +88,59 @@ function normalizeInventoryItems() {
     return [buildAccountFromInventory(state.activeCodex, 0, state.activeCodex.path)];
   }
   return [];
+}
+
+function normalizeAccountPayload() {
+  const payload = state.accountsPayload;
+  const names = Array.isArray(payload?.accounts) ? payload.accounts : [];
+  const details = payload?.accountDetails && typeof payload.accountDetails === "object" ? payload.accountDetails : {};
+  const activeName = text(payload?.activeProfileName || payload?.currentAccount);
+  const rows = names.map((name, index) => buildAccountFromPayload(name, details[name] || {}, index, activeName));
+  return rows.length ? rows : normalizeInventoryItems();
+}
+
+function accountStatusFromDetail(detail) {
+  const health = text(detail.tokenHealth || detail.rateLimitStatus || detail.lastActivationStatus).toLowerCase();
+  if (["invalid", "expired", "refresh_failed", "activation_failed", "unavailable"].some((marker) => health.includes(marker))) {
+    return "unavailable";
+  }
+  if (["rate_limited", "warning", "unknown", "not_attempted"].some((marker) => health.includes(marker))) {
+    return "warning";
+  }
+  return "available";
+}
+
+function buildAccountFromPayload(name, detail, index, activeName) {
+  const type = text(detail.type, accountTypeFor(index, name)).toUpperCase();
+  const status = accountStatusFromDetail(detail);
+  const rateLimits = detail.rateLimits && typeof detail.rateLimits === "object" ? detail.rateLimits : {};
+  const fiveHour = Number(rateLimits.fiveHour?.percent ?? rateLimits.five_hour?.percent ?? rateLimits["5h"]?.percent);
+  const sevenDay = Number(rateLimits.sevenDay?.percent ?? rateLimits.seven_day?.percent ?? rateLimits["7d"]?.percent);
+  const progress = progressSeed(index, name);
+  const active = activeName && activeName === name;
+  return {
+    id: name,
+    name: maskAccountName(name, index),
+    rawName: name,
+    provider: [
+      text(detail.origin || detail.sourceKind || "CMA-ACCOUNT").toUpperCase(),
+      text(detail.tokenHealth || "unknown"),
+    ].filter(Boolean).join(" | "),
+    type,
+    typeClass: type.toLowerCase(),
+    status,
+    order: active ? 0 : index + 1,
+    latestRefresh: formatDate(detail.usageAccountInfoUpdatedAt || detail.rateLimitUpdatedAt || payloadDateFallback()),
+    subscription: detail.tokenInfo?.expiresAt ? formatDate(detail.tokenInfo.expiresAt) : "未提供",
+    fiveHour: Number.isFinite(fiveHour) ? Math.max(0, Math.min(100, Math.round(fiveHour))) : progress.fiveHour,
+    sevenDay: Number.isFinite(sevenDay) ? Math.max(0, Math.min(100, Math.round(sevenDay))) : progress.sevenDay,
+    fiveHourText: text(detail.rateLimitStatus || detail.lastActivationStatus || "等待用量刷新"),
+    sevenDayText: text(detail.lastUsageFetchError || detail.rateLimitSource || "真实账号池"),
+  };
+}
+
+function payloadDateFallback() {
+  return state.accountsPayload?.updatedAt || state.bootstrap?.backend?.startedAt || new Date().toISOString();
 }
 
 function buildAccountFromInventory(item, index, activePath) {
@@ -181,7 +235,7 @@ function renderAccounts() {
 }
 
 function renderAccountRow(account) {
-  const statusText = account.status === "available" ? "可用" : "不可用";
+  const statusText = account.status === "available" ? "可用" : account.status === "warning" ? "需关注" : "不可用";
   return `
     <div class="account-row">
       <label class="checkbox-cell"><input type="checkbox" /></label>
@@ -201,7 +255,7 @@ function renderAccountRow(account) {
         ${renderQuotaBar("7天", account.sevenDay, "blue", account.sevenDayText)}
         <div class="quota-tags">
           <span>模型池: 全部 API 模型</span>
-          <span>未设置账号容量覆盖</span>
+          <span>${escapeHtml(account.sevenDayText || "未设置账号容量覆盖")}</span>
         </div>
       </div>
       <div class="order-cell">
@@ -328,19 +382,21 @@ async function refreshAll() {
   el.refreshButton.disabled = true;
   try {
     state.bootstrap = await window.cma.getBootstrap();
-    const [health, activeCodex, inventory, threads, insights] = await Promise.allSettled([
+    const [health, activeCodex, inventory, accounts, threads, insights] = await Promise.allSettled([
       api("/api/health"),
       api("/api/codex/active"),
       api("/api/codex/inventory"),
+      api("/api/accounts"),
       api("/api/threads?scope=all&limit=300&include_logs=false&include_history=false&include_git=true&sort=updated_desc"),
       api("/api/insights/report"),
     ]);
     state.health = health.status === "fulfilled" ? health.value : null;
     state.activeCodex = activeCodex.status === "fulfilled" ? activeCodex.value : null;
     state.inventory = inventory.status === "fulfilled" ? inventory.value : null;
+    state.accountsPayload = accounts.status === "fulfilled" ? accounts.value : null;
     state.threads = threads.status === "fulfilled" && Array.isArray(threads.value.items) ? threads.value.items : [];
     state.insights = insights.status === "fulfilled" ? insights.value : null;
-    state.accounts = normalizeInventoryItems();
+    state.accounts = normalizeAccountPayload();
     renderAll();
   } catch (error) {
     state.health = null;

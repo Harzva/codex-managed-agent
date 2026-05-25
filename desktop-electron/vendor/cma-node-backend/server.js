@@ -56,7 +56,34 @@ function healthPayload() {
       watch: true,
       rename: false,
       hardDelete: false,
+      accounts: true,
     },
+  };
+}
+
+function getAccountManager(options = {}) {
+  if (options.accountManager && typeof options.accountManager === "object") return options.accountManager;
+  return require("../account-manager");
+}
+
+function accountNameFromPath(urlPath, suffix) {
+  const prefix = "/api/accounts/";
+  if (!urlPath.startsWith(prefix) || !urlPath.endsWith(suffix)) return null;
+  const encoded = urlPath.slice(prefix.length, urlPath.length - suffix.length);
+  if (!encoded) return null;
+  return decodeURIComponent(encoded);
+}
+
+async function accountOperationPayload(options, operation) {
+  const accountManager = getAccountManager(options);
+  const result = await operation(accountManager);
+  const accounts = typeof accountManager.readAccountsForPayload === "function"
+    ? accountManager.readAccountsForPayload()
+    : null;
+  return {
+    ok: !(result && result.ok === false),
+    result: result || null,
+    accounts,
   };
 }
 
@@ -928,6 +955,64 @@ function createNodeBackendHandler(options = {}) {
       }
       if (req.method === "GET" && url.pathname === "/api/codex/inventory") {
         return jsonResponse(res, 200, resolveCodexInventory(options));
+      }
+      if (req.method === "GET" && url.pathname === "/api/accounts") {
+        const accountManager = getAccountManager(options);
+        return jsonResponse(res, 200, accountManager.readAccountsForPayload());
+      }
+      if (req.method === "POST" && url.pathname === "/api/accounts/import") {
+        requireWatchWriteAuth(req, options);
+        const body = await readJsonBody(req);
+        return jsonResponse(res, 200, await accountOperationPayload(options, (accountManager) => {
+          const name = body.name || body.accountName || "default";
+          if (body.authPath || body.sourceAuthPath) {
+            return accountManager.importAuthFileAsProfile(name, {
+              authPath: body.authPath || body.sourceAuthPath,
+              configTomlPath: body.configTomlPath || body.configPath,
+            });
+          }
+          return accountManager.importCurrentAuthAsProfile(name, {
+            codexHome: body.codexHome || options.codexHome,
+          });
+        }));
+      }
+      if (req.method === "POST" && url.pathname === "/api/accounts/login-session") {
+        requireWatchWriteAuth(req, options);
+        const body = await readJsonBody(req);
+        return jsonResponse(res, 200, await accountOperationPayload(options, (accountManager) => {
+          return accountManager.prepareAccountLogin(body.name || body.accountName || "default");
+        }));
+      }
+      const accountActivateName = req.method === "POST" && accountNameFromPath(url.pathname, "/activate");
+      if (accountActivateName) {
+        requireWatchWriteAuth(req, options);
+        const body = await readJsonBody(req);
+        return jsonResponse(res, 200, await accountOperationPayload(options, (accountManager) => {
+          return accountManager.activateAccountForCodex(accountActivateName, body.codexHome || options.codexHome);
+        }));
+      }
+      const accountRefreshName = req.method === "POST" && accountNameFromPath(url.pathname, "/refresh-token");
+      if (accountRefreshName) {
+        requireWatchWriteAuth(req, options);
+        const body = await readJsonBody(req);
+        return jsonResponse(res, 200, await accountOperationPayload(options, (accountManager) => {
+          return accountManager.refreshAccountToken(accountRefreshName, { force: Boolean(body.force) });
+        }));
+      }
+      const accountUsageName = req.method === "POST" && accountNameFromPath(url.pathname, "/fetch-usage");
+      if (accountUsageName) {
+        requireWatchWriteAuth(req, options);
+        return jsonResponse(res, 200, await accountOperationPayload(options, (accountManager) => {
+          return accountManager.fetchAccountUsage(accountUsageName);
+        }));
+      }
+      const accountDeleteMatch = req.method === "DELETE" && url.pathname.match(/^\/api\/accounts\/([^/]+)$/);
+      if (accountDeleteMatch) {
+        requireWatchWriteAuth(req, options);
+        const name = decodeURIComponent(accountDeleteMatch[1]);
+        return jsonResponse(res, 200, await accountOperationPayload(options, (accountManager) => {
+          return accountManager.removeAccount(name);
+        }));
       }
       if (req.method === "POST" && url.pathname === "/api/threads/scan-codex-sessions") {
         const body = await readJsonBody(req);
